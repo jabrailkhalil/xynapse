@@ -1,0 +1,106 @@
+{
+  "name": "theme-xynapse-extras",
+  "displayName": "Xynapse Extra Themes",
+  "description": "Additional color themes for Xynapse IDE",
+  "version": "1.0.0",
+  "publisher": "xynapse",
+  "license": "MIT",
+  "engines": {
+    "vscode": "*"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "Lavender Dream",
+        "label": "Lavender Dream",
+        "uiTheme": "vs-dark",
+        "path": "./themes/lilac.json"
+      },
+      {
+        "id": "Grape Twilight",
+        "label": "Grape Twilight",
+        "uiTheme": "vs-dark",
+        "path": "./themes/uva.json"
+      },
+      {
+        "id": "Deep Ocean",
+        "label": "Deep Ocean",
+        "uiTheme": "vs-dark",
+        "path": "./themes/azureus.json"
+      },
+      {
+        "id": "Cherry Blossom",
+        "label": "Cherry Blossom",
+        "uiTheme": "vs-dark",
+        "path": "./themes/bordo.json"
+      },
+      {
+        "id": "Sunrise Glow",
+        "label": "Sunrise Glow",
+        "uiTheme": "vs",
+        "path": "./themes/lux.json"
+      },
+      {
+        "id": "Frozen Mist",
+        "label": "Frozen Mist",
+        "uiTheme": "vs-dark",
+        "path": "./themes/sereno.json"
+      },
+      {
+        "id": "Silent Storm",
+        "label": "Silent Storm",
+        "uiTheme": "vs-dark",
+        "path": "./themes/minimus.json"
+      },
+      {
+        "id": "Midnight Soul",
+        "label": "Midnight Soul",
+        "uiTheme": "vs-dark",
+        "path": "./themes/noctis.json"
+      },
+      {
+        "id": "Winter Frost",
+        "label": "Winter Frost",
+        "uiTheme": "vs",
+        "path": "./themes/hibernus.json"
+      },
+      {
+        "id": "Shadow Realm",
+        "label": "Shadow Realm",
+        "uiTheme": "vs-dark",
+        "path": "./themes/obscuro.json"
+      },
+      {
+        "id": "Tokyo Night",
+        "label": "Tokyo Night",
+        "uiTheme": "vs-dark",
+        "path": "./themes/tokyo-night.json"
+      },
+      {
+        "id": "Tokyo Night Storm",
+        "label": "Tokyo Night Storm",
+        "uiTheme": "vs-dark",
+        "path": "./themes/tokyo-night-storm.json"
+      },
+      {
+        "id": "Tokyo Night Light",
+        "label": "Tokyo Night Light",
+        "uiTheme": "vs",
+        "path": "./themes/tokyo-night-light.json"
+      },
+      {
+        "id": "Lunar Eclipse Dark",
+        "label": "Lunar Eclipse Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/lunar-eclipse-dark.json"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xynapse/ide.git"
+  }
+}

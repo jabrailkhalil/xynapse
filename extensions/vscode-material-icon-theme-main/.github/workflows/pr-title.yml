@@ -1,0 +1,32 @@
+name: ✅ Check PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  lint-pr-title:
+    name: Check PR Title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          # Only fetch the config file from the repository
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            commitlint.config.js
+
+      - name: 📦 Install dependencies
+        run: npm install --global @commitlint/config-conventional commitlint
+
+      - name: 🔍 Check PR title with commitlint
+        id: title-check
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          HELP_URL: https://github.com/material-extensions/vscode-material-icon-theme/blob/main/CONTRIBUTING.md#conventional-pull-request-titles
+        run: echo "$PR_TITLE" | npx commitlint --help-url $HELP_URL

@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "Xynapse.xynapse",
+    "vivaxy.vscode-conventional-commits",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "YoavBls.pretty-ts-errors",
+    "github.vscode-github-actions"
+  ]
+}

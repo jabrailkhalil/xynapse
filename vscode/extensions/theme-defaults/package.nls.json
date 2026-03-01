@@ -1,0 +1,13 @@
+{
+	"displayName": "Default Themes",
+	"description": "The default Xynapse light and dark themes",
+	"darkPlusColorThemeLabel": "Dark+",
+	"darkModernThemeLabel": "Xynapse",
+	"lightPlusColorThemeLabel": "Light+",
+	"lightModernThemeLabel": "Light Modern",
+	"darkColorThemeLabel": "Dark Classic",
+	"lightColorThemeLabel": "Light Classic",
+	"hcColorThemeLabel": "Dark High Contrast",
+	"lightHcColorThemeLabel": "Light High Contrast",
+	"minimalIconThemeLabel": "Minimal"
+}

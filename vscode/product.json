@@ -1,0 +1,356 @@
+{
+	"nameShort": "Xynapse",
+	"nameLong": "Xynapse IDE",
+	"applicationName": "xynapse",
+	"dataFolderName": ".xynapse",
+	"win32MutexName": "xynapse",
+	"licenseName": "MIT",
+	"licenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
+	"serverLicenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
+	"serverGreeting": [],
+	"serverLicense": [],
+	"serverLicensePrompt": "",
+	"serverApplicationName": "xynapse-server",
+	"serverDataFolderName": ".xynapse-server",
+	"tunnelApplicationName": "xynapse-tunnel",
+	"win32DirName": "Xynapse",
+	"win32NameVersion": "Xynapse IDE",
+	"win32RegValueName": "Xynapse",
+	"win32x64AppId": "{{D77B7E06-80BA-4137-BCF4-654B95CCEBC5}",
+	"win32arm64AppId": "{{D1ACE434-89C5-48D1-88D3-E2991DF85475}",
+	"win32x64UserAppId": "{{CC6B787D-37A0-49E8-AE24-8559A032BE0C}",
+	"win32arm64UserAppId": "{{3AEBF0C8-F733-4AD4-BADE-FDB816D53D7B}",
+	"win32AppUserModelId": "Xynapse.IDE",
+	"win32ShellNameShort": "X&ynapse",
+	"win32TunnelServiceMutex": "xynapse-tunnelservice",
+	"win32TunnelMutex": "xynapse-tunnel",
+	"darwinBundleIdentifier": "com.xynapse.ide",
+	"darwinProfileUUID": "47827DD9-4734-49A0-AF80-7E19B11495CC",
+	"darwinProfilePayloadUUID": "CF808BE7-53F3-46C6-A7E2-7EDB98A5E959",
+	"linuxIconName": "xynapse",
+	"licenseFileName": "LICENSE.txt",
+	"reportIssueUrl": "https://github.com/microsoft/vscode/issues/new",
+	"nodejsRepository": "https://nodejs.org",
+	"urlProtocol": "xynapse",
+	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
+	"builtInExtensions": [
+		{
+			"name": "ms-vscode.js-debug-companion",
+			"version": "1.1.3",
+			"sha256": "7380a890787452f14b2db7835dfa94de538caf358ebc263f9d46dd68ac52de93",
+			"repo": "https://github.com/microsoft/vscode-js-debug-companion",
+			"metadata": {
+				"id": "99cb0b7f-7354-4278-b8da-6cc79972169d",
+				"publisherId": {
+					"publisherId": "5f5636e7-69ed-4afe-b5d6-8d231fb3d3ee",
+					"publisherName": "ms-vscode",
+					"displayName": "Microsoft",
+					"flags": "verified"
+				},
+				"publisherDisplayName": "Microsoft"
+			}
+		},
+		{
+			"name": "ms-vscode.js-debug",
+			"version": "1.105.0",
+			"sha256": "0c45b90342e8aafd4ff2963b4006de64208ca58c2fd01fea7a710fe61dcfd12a",
+			"repo": "https://github.com/microsoft/vscode-js-debug",
+			"metadata": {
+				"id": "25629058-ddac-4e17-abba-74678e126c5d",
+				"publisherId": {
+					"publisherId": "5f5636e7-69ed-4afe-b5d6-8d231fb3d3ee",
+					"publisherName": "ms-vscode",
+					"displayName": "Microsoft",
+					"flags": "verified"
+				},
+				"publisherDisplayName": "Microsoft"
+			}
+		},
+		{
+			"name": "ms-vscode.vscode-js-profile-table",
+			"version": "1.0.10",
+			"sha256": "7361748ddf9fd09d8a2ed1f2a2d7376a2cf9aae708692820b799708385c38e08",
+			"repo": "https://github.com/microsoft/vscode-js-profile-visualizer",
+			"metadata": {
+				"id": "7e52b41b-71ad-457b-ab7e-0620f1fc4feb",
+				"publisherId": {
+					"publisherId": "5f5636e7-69ed-4afe-b5d6-8d231fb3d3ee",
+					"publisherName": "ms-vscode",
+					"displayName": "Microsoft",
+					"flags": "verified"
+				},
+				"publisherDisplayName": "Microsoft"
+			}
+		}
+	],
+	"defaultChatAgent": {
+		"extensionId": "GitHub.copilot",
+		"chatExtensionId": "GitHub.copilot-chat",
+		"documentationUrl": "https://aka.ms/github-copilot-overview",
+		"termsStatementUrl": "https://aka.ms/github-copilot-terms-statement",
+		"privacyStatementUrl": "https://aka.ms/github-copilot-privacy-statement",
+		"skusDocumentationUrl": "https://aka.ms/github-copilot-plans",
+		"publicCodeMatchesUrl": "https://aka.ms/github-copilot-match-public-code",
+		"manageSettingsUrl": "https://aka.ms/github-copilot-settings",
+		"managePlanUrl": "https://aka.ms/github-copilot-manage-plan",
+		"manageOverageUrl": "https://aka.ms/github-copilot-manage-overage",
+		"upgradePlanUrl": "https://aka.ms/github-copilot-upgrade-plan",
+		"signUpUrl": "https://aka.ms/github-sign-up",
+		"provider": {
+			"default": {
+				"id": "github",
+				"name": "GitHub"
+			},
+			"enterprise": {
+				"id": "github-enterprise",
+				"name": "GHE.com"
+			},
+			"google": {
+				"id": "google",
+				"name": "Google"
+			},
+			"apple": {
+				"id": "apple",
+				"name": "Apple"
+			}
+		},
+		"providerUriSetting": "github-enterprise.uri",
+		"providerScopes": [
+			[
+				"read:user",
+				"user:email",
+				"repo",
+				"workflow"
+			],
+			[
+				"user:email"
+			],
+			[
+				"read:user"
+			]
+		],
+		"entitlementUrl": "https://api.github.com/copilot_internal/user",
+		"entitlementSignupLimitedUrl": "https://api.github.com/copilot_internal/subscribe_limited_user",
+		"chatQuotaExceededContext": "github.copilot.chat.quotaExceeded",
+		"completionsQuotaExceededContext": "github.copilot.completions.quotaExceeded",
+		"walkthroughCommand": "github.copilot.open.walkthrough",
+		"completionsMenuCommand": "github.copilot.toggleStatusMenu",
+		"completionsRefreshTokenCommand": "github.copilot.signIn",
+		"chatRefreshTokenCommand": "github.copilot.refreshToken",
+		"generateCommitMessageCommand": "github.copilot.git.generateCommitMessage",
+		"resolveMergeConflictsCommand": "github.copilot.git.resolveMergeConflicts",
+		"completionsAdvancedSetting": "github.copilot.advanced",
+		"completionsEnablementSetting": "github.copilot.enable",
+		"nextEditSuggestionsSetting": "github.copilot.nextEditSuggestions.enabled"
+	},
+	"trustedExtensionAuthAccess": {
+		"github": [
+			"GitHub.copilot-chat"
+		],
+		"github-enterprise": [
+			"GitHub.copilot-chat"
+		]
+	},
+	"configurationDefaults": {
+		"window.openFilesInNewWindow": "off",
+		"editor.tabSize": 2,
+		"editor.insertSpaces": false,
+		"editor.smoothScrolling": true,
+		"editor.minimap.enabled": false,
+		"editor.detectIndentation": true,
+		"editor.suggestSelection": "first",
+		"editor.multiCursorModifier": "ctrlCmd",
+		"editor.wordWrap": "bounded",
+		"editor.wrappingIndent": "same",
+		"editor.wordWrapColumn": 100,
+		"editor.scrollBeyondLastLine": true,
+		"editor.linkedEditing": true,
+		"html.autoClosingTags": true,
+		"javascript.autoClosingTags": true,
+		"typescript.autoClosingTags": true,
+		"editor.renderControlCharacters": false,
+		"editor.unicodeHighlight.ambiguousCharacters": false,
+		"editor.cursorBlinking": "phase",
+		"editor.cursorStyle": "line-thin",
+		"editor.cursorSmoothCaretAnimation": "explicit",
+		"editor.fontSize": 17,
+		"editor.lineHeight": 22.5,
+		"editor.fontLigatures": true,
+		"editor.fontFamily": "JetBrains Mono, PragmataPro Mono Liga, MonoLisa, Cascadia Code, SF Mono, Fira Code, Ubuntu Mono, monospace",
+		"editor.inlayHints.fontFamily": "PragmataPro",
+		"chat.editor.fontFamily": "PragmataPro",
+		"editor.codeLensFontFamily": "PragmataPro",
+		"debug.console.fontFamily": "PragmataPro",
+		"editor.tokenColorCustomizations": {
+			"textMateRules": [
+				{
+					"scope": [
+						"comment",
+						"entity.name.type.class",
+						"keyword",
+						"constant",
+						"storage.modifier",
+						"storage.type.class.js"
+					],
+					"settings": {
+						"fontStyle": "italic"
+					}
+				},
+				{
+					"scope": [
+						"invalid",
+						"keyword.operator",
+						"constant.numeric.css",
+						"keyword.other.unit.px.css",
+						"constant.numeric.decimal.js",
+						"constant.numeric.json"
+					],
+					"settings": {
+						"fontStyle": ""
+					}
+				}
+			]
+		},
+		"terminal.integrated.fontFamily": "PragmataPro Liga",
+		"terminal.integrated.fontSize": 15,
+		"terminal.integrated.cursorStyle": "line",
+		"explorer.confirmDelete": false,
+		"explorer.confirmDragAndDrop": false,
+		"explorer.compactFolders": false,
+		"workbench.startupEditor": "newUntitledFile",
+		"debug.toolBarLocation": "hidden",
+		"debug.focusWindowOnBreak": false,
+		"debug.showInlineBreakpointCandidates": false,
+		"debug.showBreakpointsInOverviewRuler": false,
+		"emmet.includeLanguages": {
+			"blade": "html",
+			"javascript": "javascriptreact",
+			"svelte": "html"
+		},
+		"emmet.triggerExpansionOnTab": true,
+		"prettier.semi": false,
+		"prettier.useTabs": true,
+		"editor.formatOnSave": true,
+		"prettier.singleQuote": true,
+		"prettier.arrowParens": "avoid",
+		"prettier.htmlWhitespaceSensitivity": "ignore",
+		"prettier.singleAttributePerLine": true,
+		"prettier.bracketSameLine": false,
+		"prettier.printWidth": 80,
+		"prettier.proseWrap": "always",
+		"prettier.trailingComma": "none",
+		"prettier.tabWidth": 2,
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.inlineSuggest.enabled": true,
+		"breadcrumbs.icons": false,
+		"breadcrumbs.showKeys": false,
+		"breadcrumbs.showFiles": false,
+		"breadcrumbs.symbolPath": "off",
+		"breadcrumbs.showArrays": false,
+		"breadcrumbs.showEvents": false,
+		"breadcrumbs.showFields": false,
+		"breadcrumbs.showClasses": false,
+		"breadcrumbs.showMethods": false,
+		"breadcrumbs.showBooleans": false,
+		"breadcrumbs.showFunctions": false,
+		"breadcrumbs.showConstants": false,
+		"breadcrumbs.showEnumMembers": false,
+		"breadcrumbs.showConstructors": false,
+		"javascript.updateImportsOnFileMove.enabled": "always",
+		"typescript.updateImportsOnFileMove.enabled": "always",
+		"typescript.preferences.quoteStyle": "single",
+		"javascript.preferences.quoteStyle": "single",
+		"javascript.format.semicolons": "remove",
+		"typescript.format.semicolons": "remove",
+		"js/ts.implicitProjectConfig.experimentalDecorators": true,
+		"cSpell.language": "en,ru",
+		"cSpell.enabled": true,
+		"editor.unicodeHighlight.allowedCharacters": {
+			"а": true,
+			"с": true,
+			"Т": true,
+			"б": true,
+			"е": true,
+			" ": true
+		},
+		"editor.hideCursorInOverviewRuler": true,
+		"git.enableSmartCommit": true,
+		"files.exclude": {
+			"**/.expo": true,
+			"**/.expo-shared": true,
+			"**/.idea": true,
+			"**/.nuxt": true,
+			"**/.next": true,
+			"**/coverage": true
+		},
+		"files.defaultLanguage": "plaintext",
+		"diffEditor.ignoreTrimWhitespace": false,
+		"security.workspace.trust.untrustedFiles": "open",
+		"window.confirmBeforeClose": "keyboardOnly",
+		"git.openRepositoryInParentFolders": "never",
+		"editor.gotoLocation.multipleDefinitions": "goto",
+		"editor.stickyScroll.scrollWithEditor": false,
+		"workbench.tree.enableStickyScroll": false,
+		"editor.stickyScroll.enabled": true,
+		"workbench.editor.customLabels.patterns": {
+			"**/app/**/[[]*[]]/[[]*[]]/page.tsx": "${dirname(2)}/${dirname(1)}/${dirname}/page.tsx",
+			"**/app/**/[[]*[]]/page.tsx": "${dirname(1)}/${dirname}/page.tsx",
+			"**/app/**/page.tsx": "${dirname}/page.tsx",
+			"**/app/**/[[]*[]]/[[]*[]]/layout.tsx": "${dirname(2)}/${dirname(1)}/${dirname}/layout.tsx",
+			"**/app/**/[[]*[]]/layout.tsx": "${dirname(1)}/${dirname}/layout.tsx",
+			"**/app/**/layout.tsx": "${dirname}/layout.tsx"
+		},
+		"markdown.updateLinksOnFileMove.enabled": "always",
+		"files.associations": {
+			"*.css": "tailwindcss"
+		},
+		"editor.quickSuggestions": {
+			"strings": "on"
+		},
+		"editor.quickSuggestionsDelay": 100,
+		"telemetry.telemetryLevel": "off",
+		"[prisma]": {
+			"editor.defaultFormatter": "Prisma.prisma"
+		},
+		"editor.folding": false,
+		"editor.pasteAs.enabled": false,
+		"editor.pasteAs.showPasteSelector": "never",
+		"tailwindCSS.classAttributes": [
+			"class",
+			"className",
+			"headerClassName"
+		],
+		"advancedNewFile.exclude": {
+			"node_modules": true,
+			"node_modules_electron": true,
+			"dev": true,
+			"dist": true,
+			"ios": true,
+			"android": true,
+			"build": true,
+			".dart_tool": true,
+			"macos": true,
+			"linux": true,
+			"windows": true
+		},
+		"advancedNewFile.showInformationMessages": true,
+		"advancedNewFile.convenienceOptions": [
+			"last",
+			"current",
+			"root"
+		],
+		"workbench.editorAssociations": {
+			"*.svg": "default"
+		},
+		"workbench.editor.highlightModifiedTabs": true,
+		"terminal.integrated.tabs.defaultIcon": "symbol-event",
+		"workbench.editor.limit.perEditorGroup": true,
+		"workbench.editor.limit.enabled": true,
+		"workbench.editor.limit.value": 5,
+		"workbench.editor.tabSizing": "shrink",
+		"window.density.editorTabHeight": "compact",
+		"editor.codeActionsOnSave": {
+			"source.organizeImports": "explicit"
+		}
+	}
+}

@@ -1,0 +1,72 @@
+.DS_Store
+.cache
+npm-debug.log
+Thumbs.db
+node_modules/
+
+# ===========================================
+# SECURITY - API Keys, Credentials, Secrets
+# ===========================================
+.vscode/settings.json
+secrets.local.json
+**/secrets.local.json
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+secrets.json
+secrets.yaml
+secrets.yml
+**/secrets/
+credentials.json
+credentials.yaml
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+api_keys.json
+config.local.json
+*.secret
+.npmrc
+.yarnrc
+
+# ===========================================
+# Claude Code - Prevent contributor attribution
+# ===========================================
+.claude/
+.claude
+CLAUDE.md
+claude.md
+.claudeignore
+**/claude-*
+**/*claude*config*
+
+# ===========================================
+# Logs
+# ===========================================
+logs/
+*.log
+xynapse.log
+.build/
+.vscode/extensions/**/out/
+extensions/**/dist/
+/out*/
+/extensions/**/out/
+build/node_modules
+coverage/
+test_data/
+test-results/
+test-results.xml
+vscode.lsif
+vscode.db
+/.profile-oss
+/cli/target
+/cli/openssl
+product.overrides.json
+*.snap.actual
+*.tsbuildinfo
+.vscode-test
+vscode-telemetry-docs/
