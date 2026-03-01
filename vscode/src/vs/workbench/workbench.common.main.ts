@@ -133,6 +133,7 @@ import './services/dataChannel/browser/dataChannelService.js';
 import './services/inlineCompletions/common/inlineCompletionsUnification.js';
 import './services/chat/common/chatEntitlementService.js';
 import './services/log/common/defaultLogLevels.js';
+import './services/xynapseProfile/common/xynapseProfileService.js';
 
 import { InstantiationType, registerSingleton } from '../platform/instantiation/common/extensions.js';
 import { GlobalExtensionEnablementService } from '../platform/extensionManagement/common/extensionEnablementService.js';
@@ -372,6 +373,9 @@ import './contrib/languageStatus/browser/languageStatus.contribution.js';
 
 // Authentication
 import './contrib/authentication/browser/authentication.contribution.js';
+
+// Xynapse Profile
+import './contrib/xynapseProfile/browser/xynapseProfile.contribution.js';
 
 // User Data Sync
 import './contrib/userDataSync/browser/userDataSync.contribution.js';
