@@ -499,6 +499,16 @@
         "command": "xynapse.rejectJump",
         "key": "escape",
         "when": "editorTextFocus && xynapse.jumpDecorationVisible"
+      },
+      {
+        "command": "xynapse.focusInput",
+        "mac": "ctrl+cmd+i",
+        "key": "ctrl+alt+i"
+      },
+      {
+        "command": "xynapse.focusInput",
+        "mac": "cmd+shift+i",
+        "key": "ctrl+shift+i"
       }
     ],
     "submenus": [

@@ -398,13 +398,6 @@ class PrimaryOpenChatGlobalAction extends OpenChatGlobalAction {
 		super({
 			id: CHAT_OPEN_ACTION_ID,
 			title: localize2('openChat', "Open Chat"),
-			keybinding: {
-				weight: KeybindingWeight.WorkbenchContrib,
-				primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyI,
-				mac: {
-					primary: KeyMod.CtrlCmd | KeyMod.WinCtrl | KeyCode.KeyI
-				}
-			},
 			menu: [{
 				id: MenuId.ChatTitleBarMenu,
 				group: 'a_open',
@@ -435,14 +428,7 @@ export function registerChatActions() {
 	});
 	registerAction2(class extends ModeOpenChatGlobalAction {
 		constructor() {
-			super(ChatMode.Agent, {
-				when: ContextKeyExpr.has(`config.${ChatConfiguration.AgentEnabled}`),
-				weight: KeybindingWeight.WorkbenchContrib,
-				primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyI,
-				linux: {
-					primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.KeyI
-				}
-			},);
+			super(ChatMode.Agent);
 		}
 	});
 	registerAction2(class extends ModeOpenChatGlobalAction {
