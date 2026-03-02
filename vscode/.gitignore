@@ -34,15 +34,30 @@ config.local.json
 .yarnrc
 
 # ===========================================
-# Claude Code - Prevent contributor attribution
+# AI code agents — config/metadata
 # ===========================================
 .claude/
 .claude
+.claude*
 CLAUDE.md
 claude.md
+Claude.md
 .claudeignore
-**/claude-*
-**/*claude*config*
+.clauderc
+.clauderc.*
+.anthropic/
+.anthropic
+.cursor/
+.copilot/
+.agent/
+.ai/
+.aider*
+.continue/
+.continuerc*
+.augment/
+.windsurf/
+.cody/
+.tabnine/
 
 # ===========================================
 # Logs

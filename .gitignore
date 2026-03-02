@@ -24,10 +24,11 @@ build/
 *.tsbuildinfo
 
 # ===========================================
-# Plugins source (not part of distribution)
+# Source directories (not part of distribution)
 # ===========================================
 plugins/
 /continue-main/
+/extensions/
 
 # ===========================================
 # Personal scripts and notes (not part of IDE)
@@ -43,35 +44,52 @@ plugins/
 /0
 
 # ===========================================
-# AI assistants / code agents — config files
+# AI code agents — BLOCK ALL config/metadata
 # ===========================================
-.agent/
+# Claude / Anthropic
 .claude/
 .claude
 .claude*
-CLAUDE.md
-claude.md
-Claude.md
-.claudeignore
-.clauderc
-.clauderc.*
-claude.json
-claude.yaml
-claude.yml
-.anthropic/
-.anthropic
-anthropic.json
-anthropic.yaml
-anthropic.yml
+**/CLAUDE.md
+**/claude.md
+**/Claude.md
+**/.claudeignore
+**/.clauderc
+**/.clauderc.*
+**/claude.json
+**/claude.yaml
+**/claude.yml
+**/.anthropic/
+**/.anthropic
+**/anthropic.json
+**/anthropic.yaml
+**/anthropic.yml
+
+# Cursor
 .cursor/
 .cursor
+
+# Copilot
 .copilot/
 .github/copilot/
+
+# Other AI agents
+.agent/
 .ai/
 .aider*
-.xynapse/
 .tabby/
 .codeium/
+.continue/
+.continuerc*
+.augment/
+.windsurf/
+.devin/
+.sourcegraph/
+.cody/
+.tabnine/
+
+# Runtime config (user-specific, may contain keys)
+.xynapse/
 
 # ===========================================
 # Security — API keys, credentials, secrets
@@ -165,19 +183,3 @@ temp/
 *.bak
 *.backup
 nul
-
-# ===========================================
-# Themes (optional, not used)
-# ===========================================
-themes/
-
-# ===========================================
-# Git LFS pointer stubs (tabby, not needed)
-# ===========================================
-plugins/tabby-main/clients/tabby-agent/wasm/*.wasm
-plugins/tabby-main/clients/vscode/assets/*.png
-plugins/tabby-main/clients/vscode/assets/*.svg
-plugins/tabby-main/clients/vscode/assets/walkthroughs/*.png
-plugins/tabby-main/clients/intellij/src/main/resources/META-INF/pluginIcon.svg
-plugins/tabby-main/website/**/*.png
-plugins/tabby-main/website/**/*.gif
