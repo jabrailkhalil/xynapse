@@ -1,1 +1,0 @@
-DROP TABLE github_provided_repositories;

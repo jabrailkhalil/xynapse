@@ -1,1 +1,0 @@
-ALTER TABLE google_oauth_credential ADD COLUMN redirect_uri VARCHAR(256);

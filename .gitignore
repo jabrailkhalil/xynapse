@@ -24,8 +24,9 @@ build/
 *.tsbuildinfo
 
 # ===========================================
-# Root-level duplicate / temp (not source)
+# Plugins source (not part of distribution)
 # ===========================================
+plugins/
 /continue-main/
 
 # ===========================================

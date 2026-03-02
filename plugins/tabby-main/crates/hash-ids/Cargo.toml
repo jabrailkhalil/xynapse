@@ -1,8 +1,0 @@
-[package]
-name = "hash-ids"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-homepage.workspace = true
-
-[dependencies]

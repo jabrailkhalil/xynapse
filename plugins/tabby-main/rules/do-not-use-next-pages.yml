@@ -1,8 +1,0 @@
-id: do-not-use-next-pages
-message: Don't use next pages routing as we're fully commited to app router.
-severity: error
-language: typescript
-files:
-- ./ee/tabby-ui/**
-rule:
-  pattern: import $$$ from 'next/router'

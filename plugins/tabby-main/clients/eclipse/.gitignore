@@ -1,4 +1,0 @@
-dist
-node_modules
-plugin/tabby-agent
-plugin/chat-panel/tabby-chat-panel.min.js

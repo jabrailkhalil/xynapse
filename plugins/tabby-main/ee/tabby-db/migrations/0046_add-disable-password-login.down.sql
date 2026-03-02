@@ -1,1 +1,0 @@
-ALTER TABLE server_setting DROP column security_disable_password_login;
