@@ -126,12 +126,7 @@ Xynapse/
 │   │   ├── xynapse-assistant/  # Встроенное расширение ассистента
 │   │   └── theme-xynapse-extras/ # Темы Xynapse
 │   └── scripts/                # Скрипты запуска
-├── plugins/
-│   ├── continue-main/          # Исходный код ассистента
-│   │   ├── core/               # Бэкенд, LLM-роутинг, команды
-│   │   ├── gui/                # React/Vite webview UI
-│   │   └── extensions/vscode/  # Мост к extension host
-│   └── tabby-main/             # Движок автодополнения
+├── vscode/extensions/xynapse-assistant/  # AI-ассистент (собранный)
 ├── Pics/                       # Изображения для документации
 ├── xynapse.bat                 # Windows-лаунчер
 └── README.md

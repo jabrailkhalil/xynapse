@@ -126,12 +126,7 @@ Xynapse/
 │   │   ├── xynapse-assistant/  # Built-in AI assistant extension
 │   │   └── theme-xynapse-extras/ # Xynapse themes
 │   └── scripts/                # Launch scripts
-├── plugins/
-│   ├── continue-main/          # Assistant source code
-│   │   ├── core/               # Backend logic, LLM routing, commands
-│   │   ├── gui/                # React/Vite webview UI
-│   │   └── extensions/vscode/  # Extension host bridge
-│   └── tabby-main/             # Autocomplete engine
+├── vscode/extensions/xynapse-assistant/  # AI assistant (built)
 ├── Pics/                       # Documentation images
 ├── xynapse.bat                 # Windows launcher
 └── README.md
