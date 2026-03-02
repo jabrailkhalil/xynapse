@@ -12,9 +12,9 @@ import { BaseLLM } from "../index.js";
  * - requestOptions.extraBodyProperties.scope: API scope (GIGACHAT_API_PERS or GIGACHAT_API_CORP)
  *
  * Available models:
- * - GigaChat - базовая модель
- * - GigaChat-Plus - улучшенная модель
- * - GigaChat-Pro - профессиональная модель
+ * - GigaChat - base model
+ * - GigaChat-Plus - enhanced model
+ * - GigaChat-Pro - professional model
  */
 class GigaChatLLM extends BaseLLM {
     static providerName = "gigachat";
@@ -144,7 +144,7 @@ class GigaChatLLM extends BaseLLM {
         if (!this.apiKey) {
             yield {
                 role: "assistant",
-                content: "❌ Ошибка: Не указан API ключ. Добавьте apiKey в config.yaml.\n\nФормат: Base64 от 'ClientID:ClientSecret' или access token.",
+                content: "Error: API key not specified. Add apiKey to config.yaml.\n\nFormat: Base64 of 'ClientID:ClientSecret' or access token.",
             };
             return;
         }
@@ -155,7 +155,7 @@ class GigaChatLLM extends BaseLLM {
         } catch (error) {
             yield {
                 role: "assistant",
-                content: `❌ Ошибка авторизации GigaChat: ${error instanceof Error ? error.message : String(error)}`,
+                content: `GigaChat authorization error: ${error instanceof Error ? error.message : String(error)}`,
             };
             return;
         }
@@ -193,7 +193,7 @@ class GigaChatLLM extends BaseLLM {
 
                 yield {
                     role: "assistant",
-                    content: `❌ Ошибка GigaChat API (${response.status}): ${errorText}`,
+                    content: `GigaChat API error (${response.status}): ${errorText}`,
                 };
                 return;
             }
@@ -211,7 +211,7 @@ class GigaChatLLM extends BaseLLM {
             const errorMessage = error instanceof Error ? error.message : String(error);
             yield {
                 role: "assistant",
-                content: `❌ Ошибка при запросе к GigaChat: ${errorMessage}`,
+                content: `GigaChat request error: ${errorMessage}`,
             };
         }
     }

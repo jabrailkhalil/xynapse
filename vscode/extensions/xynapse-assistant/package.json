@@ -18,7 +18,7 @@
   "license": "Apache-2.0",
   "displayName": "Xynapse Assistant",
   "pricing": "Free",
-  "description": "AI ассистент для Xynapse IDE с поддержкой YandexGPT и GigaChat",
+  "description": "AI assistant for Xynapse IDE with YandexGPT and GigaChat support",
   "publisher": "xynapse",
   "engines": {
     "vscode": "^1.70.0",

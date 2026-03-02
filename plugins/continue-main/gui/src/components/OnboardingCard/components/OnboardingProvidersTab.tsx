@@ -22,7 +22,7 @@ export function OnboardingProvidersTab({
     isDialog,
   );
 
-  // Xynapse: показываем российские провайдеры первыми, затем западные
+  // Xynapse: show featured providers first, then others
   const providerConfigs = [
     providers["yandex_gpt"],
     providers["gigachat"],

@@ -1,0 +1,1 @@
+{"version":3,"file":"fileTypes.d.ts","sourceRoot":"","sources":["../../../../../../src/core/models/icons/files/fileTypes.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,KAAK,WAAW,EAAE,MAAM,gBAAgB,CAAC;AAClD,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,YAAY,CAAC;AAE3C,MAAM,MAAM,SAAS,GAAG;IACtB;;OAEG;IACH,WAAW,EAAE,WAAW,CAAC;IAEzB;;OAEG;IACH,KAAK,EAAE,QAAQ,EAAE,CAAC;CACnB,CAAC"}

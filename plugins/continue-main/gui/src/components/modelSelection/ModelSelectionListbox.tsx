@@ -58,7 +58,7 @@ function ModelSelectionListbox({
             {topOptions.length > 0 && (
               <div className="py-1">
                 <div className="text-description-muted px-3 py-1 text-xs font-medium uppercase tracking-wider">
-                  Рекомендуемые
+                  Recommended
                 </div>
                 {topOptions.map((option, index) => (
                   <ListboxOption
@@ -99,7 +99,7 @@ function ModelSelectionListbox({
             {otherOptions.length > 0 && (
               <div className="py-1">
                 <div className="text-description-muted px-3 py-1 text-xs font-medium uppercase tracking-wider">
-                  Другие провайдеры
+                  Other Providers
                 </div>
                 {otherOptions.map((option, index) => (
                   <ListboxOption

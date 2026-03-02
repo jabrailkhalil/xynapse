@@ -22,7 +22,7 @@ export function getNonce() {
 }
 
 export function getExtensionUri(): vscode.Uri {
-  // Xynapse: изменён ID расширения
+  // Xynapse: changed extension ID
   return vscode.extensions.getExtension("xynapse.xynapse-assistant")!.extensionUri;
 }
 

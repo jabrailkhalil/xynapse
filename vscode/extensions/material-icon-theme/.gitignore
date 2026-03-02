@@ -2,7 +2,7 @@
 
 # Ignore build output directories
 out
-dist
+# dist is tracked — needed for built-in extension in Xynapse IDE
 
 # Ignore node_modules directory
 node_modules

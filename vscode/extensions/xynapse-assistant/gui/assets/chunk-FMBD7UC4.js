@@ -1,4 +1,4 @@
-import{_ as o}from"./index.js";(function(){try{var e=typeof window<"u"?window:typeof global<"u"?global:typeof globalThis<"u"?globalThis:typeof self<"u"?self:{};e.SENTRY_RELEASE={id:"2e27e8fdc854ea0d850d0c23338a90d4460ce01e"}}catch{}})();try{(function(){var e=typeof window<"u"?window:typeof global<"u"?global:typeof globalThis<"u"?globalThis:typeof self<"u"?self:{},n=new e.Error().stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="0b08a79c-948a-40e6-b1a8-23c7bfb2688b",e._sentryDebugIdIdentifier="sentry-dbid-0b08a79c-948a-40e6-b1a8-23c7bfb2688b")})()}catch{}var i=o(()=>`
+import{_ as o}from"./index.js";(function(){try{var e=typeof window<"u"?window:typeof global<"u"?global:typeof globalThis<"u"?globalThis:typeof self<"u"?self:{};e.SENTRY_RELEASE={id:"fd729d7affc3e8409b88a510b2b81d6b8ffbfdda"}}catch{}})();try{(function(){var e=typeof window<"u"?window:typeof global<"u"?global:typeof globalThis<"u"?globalThis:typeof self<"u"?self:{},n=new e.Error().stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="0b08a79c-948a-40e6-b1a8-23c7bfb2688b",e._sentryDebugIdIdentifier="sentry-dbid-0b08a79c-948a-40e6-b1a8-23c7bfb2688b")})()}catch{}var d=o(()=>`
   /* Font Awesome icon styling - consolidated */
   .label-icon {
     display: inline-block;
@@ -12,5 +12,5 @@ import{_ as o}from"./index.js";(function(){try{var e=typeof window<"u"?window:ty
     stroke: revert;
     stroke-width: revert;
   }
-`,"getIconStyles");export{i as g};
+`,"getIconStyles");export{d as g};
 //# sourceMappingURL=chunk-FMBD7UC4.js.map

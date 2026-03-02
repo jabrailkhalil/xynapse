@@ -16,7 +16,7 @@ export function EmptyChatBody({
       <div className="mx-2 mt-6 flex flex-col items-center gap-3 text-center opacity-70">
         <FolderIcon className="h-10 w-10" />
         <div>
-          <p className="text-base font-medium">Откройте папку проекта</p>
+          <p className="text-base font-medium">Open a project folder</p>
           <p className="mt-1 text-xs opacity-60">
             File &rarr; Open Folder
           </p>

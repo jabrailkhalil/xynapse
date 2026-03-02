@@ -20,7 +20,7 @@ interface AddModelFormProps {
   hideFreeTrialLimitMessage?: boolean;
 }
 
-// Xynapse: обновлены URL документации
+// Xynapse: updated documentation URLs
 const MODEL_PROVIDERS_URL =
   "https://docs.xynapse.dev/customize/model-providers";
 const CODESTRAL_URL = "https://console.mistral.ai/codestral";
@@ -30,7 +30,7 @@ export function AddModelForm({
   onDone,
   hideFreeTrialLimitMessage,
 }: AddModelFormProps) {
-  // Xynapse: по умолчанию выбираем YandexGPT
+  // Xynapse: default to YandexGPT
   const [selectedProvider, setSelectedProvider] = useState<ProviderInfo>(
     providers["yandex_gpt"]!,
   );
@@ -42,7 +42,7 @@ export function AddModelForm({
   const formMethods = useForm();
   const ideMessenger = useContext(IdeMessengerContext);
 
-  // Xynapse: только российские провайдеры как популярные
+  // Xynapse: featured providers
   const popularProviderTitles = [
     "YandexGPT",
     "GigaChat",
@@ -54,7 +54,7 @@ export function AddModelForm({
     .filter((provider) => !!provider)
     .map((provider) => provider!); // for type checking
 
-  // Xynapse: сохраняем порядок из popularProviderTitles
+  // Xynapse: preserve order from popularProviderTitles
   const popularProviders = popularProviderTitles
     .map(title => allProviders.find(p => p.title === title))
     .filter((provider): provider is ProviderInfo => !!provider);
@@ -132,11 +132,11 @@ export function AddModelForm({
     <FormProvider {...formMethods}>
       <form onSubmit={formMethods.handleSubmit(onSubmit)}>
         <div className="mx-auto max-w-md p-6">
-          <h1 className="mb-0 text-center text-2xl">Добавить модель</h1>
+          <h1 className="mb-0 text-center text-2xl">Add Model</h1>
 
           <div className="my-8 flex flex-col gap-6">
             <div>
-              <label className="block text-sm font-medium">Провайдер</label>
+              <label className="block text-sm font-medium">Provider</label>
               <ModelSelectionListbox
                 selectedProvider={selectedProvider}
                 setSelectedProvider={(val: DisplayInfo) => {
@@ -151,14 +151,14 @@ export function AddModelForm({
                 otherOptions={otherProviders}
               />
               <span className="text-description-muted mt-1 block text-xs">
-                Не нашли нужный?{" "}
+                Can't find what you need?{" "}
                 <a
                   className="cursor-pointer text-inherit underline hover:text-inherit"
                   onClick={() =>
                     ideMessenger.post("openUrl", MODEL_PROVIDERS_URL)
                   }
                 >
-                  Посмотреть все
+                  View all
                 </a>
               </span>
             </div>
@@ -166,7 +166,7 @@ export function AddModelForm({
             {selectedProvider.downloadUrl && (
               <div>
                 <label className="mb-1 block text-sm font-medium">
-                  Установить провайдер
+                  Install Provider
                 </label>
                 <StyledActionButton onClick={onClickDownloadProvider}>
                   <p className="text-sm underline">
@@ -178,7 +178,7 @@ export function AddModelForm({
             )}
 
             <div>
-              <label className="block text-sm font-medium">Модель</label>
+              <label className="block text-sm font-medium">Model</label>
               <ModelSelectionListbox
                 selectedProvider={selectedModel}
                 setSelectedProvider={(val: DisplayInfo) => {
@@ -219,13 +219,13 @@ export function AddModelForm({
               <div>
                 <>
                   <label className="mb-1 block text-sm font-medium">
-                    API ключ
+                    API Key
                   </label>
                   <Input
                     id="apiKey"
                     className="w-full"
                     type="password"
-                    placeholder={`Введите ваш ${selectedProvider.title} API ключ`}
+                    placeholder={`Enter your ${selectedProvider.title} API key`}
                     {...formMethods.register("apiKey")}
                   />
                   <span className="text-description-muted mt-1 block text-xs">
@@ -240,9 +240,9 @@ export function AddModelForm({
                         }
                       }}
                     >
-                      Получить ключ
+                      Get key
                     </a>{" "}
-                    для {selectedProvider.title}
+                    for {selectedProvider.title}
                   </span>
                 </>
               </div>
@@ -278,11 +278,11 @@ export function AddModelForm({
 
           <div className="mt-4 w-full">
             <Button type="submit" className="w-full" disabled={isDisabled()}>
-              Подключить
+              Connect
             </Button>
 
             <span className="text-description-muted block w-full text-center text-xs">
-              Это обновит ваш{" "}
+              This will update your{" "}
               <span
                 className="cursor-pointer underline hover:brightness-125"
                 onClick={() =>
@@ -291,7 +291,7 @@ export function AddModelForm({
                   })
                 }
               >
-                файл конфигурации
+                config file
               </span>
             </span>
           </div>

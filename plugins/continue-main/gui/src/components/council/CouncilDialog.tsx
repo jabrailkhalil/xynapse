@@ -17,16 +17,16 @@ export interface CouncilConfig {
 }
 
 const DEFAULT_ROLES: string[] = [
-  "Архитектор",
-  "Разработчик",
-  "Ревьюер",
-  "Тестировщик",
+  "Architect",
+  "Developer",
+  "Reviewer",
+  "Tester",
 ];
 
 const DIFFICULTY_OPTIONS = [
-  { value: "easy" as const, label: "Легкий (1 раунд)" },
-  { value: "medium" as const, label: "Средний (3 раунда)" },
-  { value: "hard" as const, label: "Сложный (5 раундов)" },
+  { value: "easy" as const, label: "Easy (analysis only)" },
+  { value: "medium" as const, label: "Medium (1 critique round)" },
+  { value: "hard" as const, label: "Hard (2 critique rounds)" },
 ];
 
 interface CouncilDialogProps {
@@ -105,12 +105,12 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
       {/* Task */}
       <div className="mb-2.5 min-w-0">
         <label className="text-description mb-1 block text-2xs uppercase tracking-wider">
-          Задача
+          Task
         </label>
         <textarea
           className="bg-input text-input-foreground border-input-border box-border w-full max-w-full rounded border border-solid p-2 text-xs leading-relaxed placeholder:text-input-placeholder focus:border-border-focus focus:outline-none"
           rows={2}
-          placeholder="Опишите задачу для обсуждения..."
+          placeholder="Describe the task for discussion..."
           value={task}
           onChange={(e) => setTask(e.target.value)}
           autoFocus
@@ -125,7 +125,7 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
       {/* Difficulty */}
       <div className="mb-2.5 min-w-0">
         <label className="text-description mb-1 block text-2xs uppercase tracking-wider">
-          Глубина обсуждения
+          Discussion Depth
         </label>
         <select
           className="bg-input text-input-foreground border-input-border box-border w-full max-w-full cursor-pointer rounded border border-solid px-2 py-1.5 text-xs focus:border-border-focus focus:outline-none"
@@ -144,7 +144,7 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
       <div className="mb-2.5 min-w-0">
         <div className="mb-1 flex min-w-0 items-center justify-between">
           <label className="text-description text-2xs uppercase tracking-wider">
-            Роли и модели
+            Roles & Models
           </label>
           {allModels.length > 1 && (
             <select
@@ -154,7 +154,7 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
                 if (e.target.value) handleSetAllModels(e.target.value);
               }}
             >
-              <option value="">Одна модель для всех...</option>
+              <option value="">Set all models to...</option>
               {allModels.map((m) => (
                 <option key={m.title} value={m.title}>
                   {m.title}
@@ -184,14 +184,14 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
                   </option>
                 ))}
                 {allModels.length === 0 && (
-                  <option value="">Нет моделей</option>
+                  <option value="">No models</option>
                 )}
               </select>
               {canRemoveRole && (
                 <button
                   className="ml-0.5 shrink-0 cursor-pointer border-none bg-transparent p-0 leading-none text-error opacity-50 transition-opacity duration-100 hover:opacity-100"
                   onClick={() => handleRemoveRole(i)}
-                  title="Удалить роль"
+                  title="Remove role"
                   style={{ fontSize: "10px", lineHeight: 1 }}
                 >
                   x
@@ -206,7 +206,7 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
       <div className="mb-2.5 flex min-w-0 gap-1">
         <input
           className="bg-input text-input-foreground border-input-border box-border min-w-0 flex-1 rounded border border-solid px-2 py-0.5 text-2xs placeholder:text-input-placeholder focus:border-border-focus focus:outline-none"
-          placeholder="Добавить роль..."
+          placeholder="Add role..."
           value={newRoleName}
           onChange={(e) => setNewRoleName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddRole()}
@@ -230,7 +230,7 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
             className="accent-primary h-3 w-3 cursor-pointer"
           />
           <span className="text-description text-2xs">
-            Сохранять обсуждение
+            Save discussion
           </span>
         </label>
       </div>
@@ -240,20 +240,20 @@ function CouncilDialog({ onClose, onSubmit }: CouncilDialogProps) {
         <div>
           {allModels.length === 0 && (
             <span className="text-warning text-2xs">
-              Нет моделей
+              No models
             </span>
           )}
         </div>
         <div className="flex gap-1.5">
           <Button variant="outline" size="sm" onClick={onClose}>
-            Отмена
+            Cancel
           </Button>
           <Button
             size="sm"
             onClick={handleSubmit}
             disabled={!task.trim() || allModels.length === 0}
           >
-            Запустить
+            Run
           </Button>
         </div>
       </div>

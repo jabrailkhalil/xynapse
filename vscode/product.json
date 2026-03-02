@@ -149,6 +149,7 @@
 		"explorer.confirmDelete": false,
 		"explorer.confirmDragAndDrop": false,
 		"explorer.compactFolders": false,
+		"workbench.iconTheme": "material-icon-theme",
 		"workbench.startupEditor": "newUntitledFile",
 		"debug.toolBarLocation": "hidden",
 		"debug.focusWindowOnBreak": false,

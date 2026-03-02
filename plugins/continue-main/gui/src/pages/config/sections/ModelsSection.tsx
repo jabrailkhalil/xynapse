@@ -65,15 +65,15 @@ export function ModelsSection() {
   return (
     <div className="space-y-4">
       <ConfigHeader
-        title="Модели"
+        title="Models"
         onAddClick={handleAddModel}
-        addButtonTooltip="Добавить модель"
+        addButtonTooltip="Add model"
       />
 
       <Card>
         <ModelRoleRow
           role="chat"
-          displayName="Чат"
+          displayName="Chat"
           shortcut={
             <span className="text-2xs text-description-muted">
               (<Shortcut>{`cmd ${jetbrains ? "J" : "L"}`}</Shortcut>)
@@ -81,7 +81,7 @@ export function ModelsSection() {
           }
           description={
             <span>
-              Используется в режимах Чат, План, Агент
+              Used in Chat, Plan, and Agent modes
             </span>
           }
           models={config.modelsByRole.chat}
@@ -95,10 +95,10 @@ export function ModelsSection() {
 
         <ModelRoleRow
           role="autocomplete"
-          displayName="Автодополнение"
+          displayName="Autocomplete"
           description={
             <span>
-              Используется для подсказок кода при вводе
+              Used for code suggestions while typing
             </span>
           }
           models={config.modelsByRole.autocomplete}
@@ -114,7 +114,7 @@ export function ModelsSection() {
             <Divider />
             <ModelRoleRow
               role="edit"
-              displayName="Редактирование"
+              displayName="Edit"
               shortcut={
                 <span className="text-2xs text-description-muted">
                   (<Shortcut>cmd I</Shortcut>)
@@ -122,7 +122,7 @@ export function ModelsSection() {
               }
               description={
                 <span>
-                  Используется для трансформации выделенного кода
+                  Used for transforming selected code
                 </span>
               }
               models={config.modelsByRole.edit}
@@ -139,14 +139,14 @@ export function ModelsSection() {
         <Toggle
           isOpen={showAdditionalRoles}
           onToggle={() => setShowAdditionalRoles(!showAdditionalRoles)}
-          title="Дополнительные роли"
-          subtitle="Применение, Эмбеддинги, Ранжирование"
+          title="Additional Roles"
+          subtitle="Apply, Embeddings, Reranking"
         >
           <div className="flex flex-col">
             <ModelRoleRow
               role="apply"
-              displayName="Применение"
-              description="Используется для применения сгенерированных блоков кода к файлам"
+              displayName="Apply"
+              description="Used for applying generated code blocks to files"
               models={config.modelsByRole.apply}
               selectedModel={config.selectedModelByRole.apply ?? undefined}
               onSelect={(model) => handleRoleUpdate("apply", model)}
@@ -158,8 +158,8 @@ export function ModelsSection() {
 
             <ModelRoleRow
               role="embed"
-              displayName="Эмбеддинги"
-              description="Используется для создания и поиска эмбеддингов (@codebase и @docs)"
+              displayName="Embeddings"
+              description="Used for creating and searching embeddings (@codebase and @docs)"
               models={config.modelsByRole.embed}
               selectedModel={config.selectedModelByRole.embed ?? undefined}
               onSelect={(model) => handleRoleUpdate("embed", model)}
@@ -171,8 +171,8 @@ export function ModelsSection() {
 
             <ModelRoleRow
               role="rerank"
-              displayName="Ранжирование"
-              description="Используется для ранжирования результатов (@codebase и @docs)"
+              displayName="Reranking"
+              description="Used for reranking results (@codebase and @docs)"
               models={config.modelsByRole.rerank}
               selectedModel={config.selectedModelByRole.rerank ?? undefined}
               onSelect={(model) => handleRoleUpdate("rerank", model)}

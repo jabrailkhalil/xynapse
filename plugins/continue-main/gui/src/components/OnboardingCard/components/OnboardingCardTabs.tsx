@@ -68,7 +68,7 @@ export function OnboardingCardTabs({
   activeTab,
   onTabClick,
 }: OnboardingCardTabsProps) {
-  // Xynapse: убран Models Add-On (Credits), API_KEY первый
+  // Xynapse: removed Models Add-On (Credits), API_KEY first
   const tabs = [
     OnboardingModes.API_KEY,
     OnboardingModes.LOCAL,

@@ -373,7 +373,7 @@ class YandexGptLLM extends BaseLLM {
       yield {
         role: "assistant",
         content:
-          '❌ Ошибка: Не указан folderId.\n\nУкажите folderId в модели (поле folderId) или в requestOptions.extraBodyProperties.folderId.\nТакже можно использовать переменную окружения YANDEX_FOLDER_ID\nили формат apiKey: "ВАШ_API_КЛЮЧ:ВАШ_FOLDER_ID".',
+          'Error: folderId not specified.\n\nSet folderId in the model config (folderId field) or in requestOptions.extraBodyProperties.folderId.\nYou can also use the YANDEX_FOLDER_ID environment variable\nor the apiKey format: "YOUR_API_KEY:YOUR_FOLDER_ID".',
       };
       return;
     }
@@ -382,7 +382,7 @@ class YandexGptLLM extends BaseLLM {
       yield {
         role: "assistant",
         content:
-          '❌ Ошибка: Не указан API ключ.\n\nУкажите поле apiKey или переменную окружения YANDEX_API_KEY.\nПоддерживается формат apiKey: "ВАШ_API_КЛЮЧ:ВАШ_FOLDER_ID".',
+          'Error: API key not specified.\n\nSet the apiKey field or the YANDEX_API_KEY environment variable.\nSupported apiKey format: "YOUR_API_KEY:YOUR_FOLDER_ID".',
       };
       return;
     }
@@ -427,7 +427,7 @@ class YandexGptLLM extends BaseLLM {
         const errorText = await response.text();
         yield {
           role: "assistant",
-          content: `❌ Ошибка YandexGPT API (${response.status}): ${errorText}`,
+          content: `YandexGPT API error (${response.status}): ${errorText}`,
         };
         return;
       }
@@ -438,7 +438,7 @@ class YandexGptLLM extends BaseLLM {
       if (!alternative) {
         yield {
           role: "assistant",
-          content: `❌ Неожиданный формат ответа: ${JSON.stringify(result)}`,
+          content: `Unexpected response format: ${JSON.stringify(result)}`,
         };
         return;
       }
@@ -494,7 +494,7 @@ class YandexGptLLM extends BaseLLM {
       } else {
         yield {
           role: "assistant",
-          content: `❌ Неожиданный формат ответа: ${JSON.stringify(result)}`,
+          content: `Unexpected response format: ${JSON.stringify(result)}`,
         };
       }
     } catch (error) {
@@ -502,7 +502,7 @@ class YandexGptLLM extends BaseLLM {
         error instanceof Error ? error.message : String(error);
       yield {
         role: "assistant",
-        content: `❌ Ошибка при запросе к YandexGPT: ${errorMessage}`,
+        content: `YandexGPT request error: ${errorMessage}`,
       };
     }
   }
