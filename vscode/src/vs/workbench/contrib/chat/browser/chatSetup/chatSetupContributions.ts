@@ -337,19 +337,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 							ChatContextKeys.Entitlement.planFree
 						)
 					),
-					menu: {
-						id: MenuId.ChatTitleBarMenu,
-						group: 'a_first',
-						order: 1,
-						when: ContextKeyExpr.and(
-							ChatContextKeys.Entitlement.planFree,
-							ContextKeyExpr.or(
-								ChatContextKeys.chatQuotaExceeded,
-								ChatContextKeys.completionsQuotaExceeded
-							)
-						)
-					}
-				});
+					});
 			}
 
 			override async run(accessor: ServicesAccessor): Promise<void> {
@@ -393,22 +381,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 							ChatContextKeys.Entitlement.planProPlus,
 						)
 					),
-					menu: {
-						id: MenuId.ChatTitleBarMenu,
-						group: 'a_first',
-						order: 1,
-						when: ContextKeyExpr.and(
-							ContextKeyExpr.or(
-								ChatContextKeys.Entitlement.planPro,
-								ChatContextKeys.Entitlement.planProPlus,
-							),
-							ContextKeyExpr.or(
-								ChatContextKeys.chatQuotaExceeded,
-								ChatContextKeys.completionsQuotaExceeded
-							)
-						)
-					}
-				});
+					});
 			}
 
 			override async run(accessor: ServicesAccessor): Promise<void> {
@@ -728,13 +701,7 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
 					f1: true,
 					category: CHAT_CATEGORY,
 					precondition: ChatContextKeys.Setup.hidden.negate(),
-					menu: {
-						id: MenuId.ChatTitleBarMenu,
-						group: 'z_hide',
-						order: 1,
-						when: ChatContextKeys.Setup.installed.negate()
-					}
-				});
+					});
 			}
 
 			override async run(accessor: ServicesAccessor): Promise<void> {

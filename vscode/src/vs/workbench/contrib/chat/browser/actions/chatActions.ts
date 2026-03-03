@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isAncestorOfActiveElement } from '../../../../../base/browser/dom.js';
-import { mainWindow } from '../../../../../base/browser/window.js';
 import { toAction, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../../base/common/actions.js';
 import { coalesce } from '../../../../../base/common/arrays.js';
 import { timeout } from '../../../../../base/common/async.js';
@@ -398,11 +397,6 @@ class PrimaryOpenChatGlobalAction extends OpenChatGlobalAction {
 		super({
 			id: CHAT_OPEN_ACTION_ID,
 			title: localize2('openChat', "Open Chat"),
-			menu: [{
-				id: MenuId.ChatTitleBarMenu,
-				group: 'a_open',
-				order: 1
-			}]
 		});
 	}
 }
@@ -496,10 +490,6 @@ export function registerChatActions() {
 					when: ContextKeyExpr.and(ChatContextKeys.inChatSession, ChatContextKeys.inChatEditor)
 				},
 				menu: [{
-					id: MenuId.ChatTitleBarMenu,
-					group: 'b_new',
-					order: 0
-				}, {
 					id: MenuId.ChatNewMenu,
 					group: '2_new',
 					order: 2
@@ -527,10 +517,6 @@ export function registerChatActions() {
 				category: CHAT_CATEGORY,
 				precondition: ChatContextKeys.enabled,
 				menu: [{
-					id: MenuId.ChatTitleBarMenu,
-					group: 'b_new',
-					order: 1
-				}, {
 					id: MenuId.ChatNewMenu,
 					group: '2_new',
 					order: 3
@@ -678,13 +664,7 @@ export function registerChatActions() {
 					),
 					nonEnterpriseCopilotUsers
 				),
-				menu: {
-					id: MenuId.ChatTitleBarMenu,
-					group: 'y_manage',
-					order: 1,
-					when: nonEnterpriseCopilotUsers
-				}
-			});
+				});
 		}
 
 		override async run(accessor: ServicesAccessor): Promise<void> {
@@ -722,12 +702,7 @@ export function registerChatActions() {
 					ChatContextKeys.Setup.disabled.negate(),
 					ChatContextKeys.Setup.untrusted.negate()
 				),
-				menu: {
-					id: MenuId.ChatTitleBarMenu,
-					group: 'f_completions',
-					order: 10,
-				}
-			});
+				});
 		}
 
 		override async run(accessor: ServicesAccessor): Promise<void> {
@@ -922,38 +897,92 @@ const defaultChat = {
 	completionsMenuCommand: product.defaultChatAgent?.completionsMenuCommand ?? '',
 };
 
-// Add next to the command center if command center is disabled
+// Add next to the command center
 MenuRegistry.appendMenuItem(MenuId.CommandCenter, {
 	submenu: MenuId.ChatTitleBarMenu,
-	title: localize('title4', "Chat"),
+	title: localize('title4', "Xynapse"),
 	icon: Codicon.chatSparkle,
-	when: ContextKeyExpr.and(
-		ChatContextKeys.supported,
-		ContextKeyExpr.and(
-			ChatContextKeys.Setup.hidden.negate(),
-			ChatContextKeys.Setup.disabled.negate()
-		),
-		ContextKeyExpr.has('config.chat.commandCenter.enabled')
-	),
+	when: ContextKeyExpr.has('config.chat.commandCenter.enabled'),
 	order: 10001 // to the right of command center
 });
 
 // Add to the global title bar if command center is disabled
 MenuRegistry.appendMenuItem(MenuId.TitleBar, {
 	submenu: MenuId.ChatTitleBarMenu,
-	title: localize('title4', "Chat"),
+	title: localize('title4', "Xynapse"),
 	group: 'navigation',
 	icon: Codicon.chatSparkle,
 	when: ContextKeyExpr.and(
-		ChatContextKeys.supported,
-		ContextKeyExpr.and(
-			ChatContextKeys.Setup.hidden.negate(),
-			ChatContextKeys.Setup.disabled.negate()
-		),
 		ContextKeyExpr.has('config.chat.commandCenter.enabled'),
 		ContextKeyExpr.has('config.window.commandCenter').negate(),
 	),
 	order: 1
+});
+
+// --- Xynapse Title Bar Menu Items
+registerAction2(class XynapseOpenChat extends Action2 {
+	constructor() {
+		super({
+			id: 'xynapse.titlebar.openChat',
+			title: localize2('xynapse.openChat', "Open Xynapse Chat"),
+			menu: { id: MenuId.ChatTitleBarMenu, group: 'a_open', order: 1 },
+		});
+	}
+	async run(accessor: ServicesAccessor) {
+		await accessor.get(ICommandService).executeCommand('xynapse.focusInput');
+	}
+});
+
+registerAction2(class XynapseInlineEdit extends Action2 {
+	constructor() {
+		super({
+			id: 'xynapse.titlebar.inlineEdit',
+			title: localize2('xynapse.inlineEdit', "Inline Edit"),
+			menu: { id: MenuId.ChatTitleBarMenu, group: 'a_open', order: 2 },
+		});
+	}
+	async run(accessor: ServicesAccessor) {
+		await accessor.get(ICommandService).executeCommand('xynapse.focusEdit');
+	}
+});
+
+registerAction2(class XynapseNewSession extends Action2 {
+	constructor() {
+		super({
+			id: 'xynapse.titlebar.newSession',
+			title: localize2('xynapse.newSession', "New Session"),
+			menu: { id: MenuId.ChatTitleBarMenu, group: 'b_new', order: 1 },
+		});
+	}
+	async run(accessor: ServicesAccessor) {
+		await accessor.get(ICommandService).executeCommand('xynapse.newSession');
+	}
+});
+
+registerAction2(class XynapseOpenInNewWindow extends Action2 {
+	constructor() {
+		super({
+			id: 'xynapse.titlebar.openInNewWindow',
+			title: localize2('xynapse.openInNewWindow', "Open in New Window"),
+			menu: { id: MenuId.ChatTitleBarMenu, group: 'b_new', order: 2 },
+		});
+	}
+	async run(accessor: ServicesAccessor) {
+		await accessor.get(ICommandService).executeCommand('xynapse.openInNewWindow');
+	}
+});
+
+registerAction2(class XynapseSettings extends Action2 {
+	constructor() {
+		super({
+			id: 'xynapse.titlebar.settings',
+			title: localize2('xynapse.settings', "Xynapse Settings"),
+			menu: { id: MenuId.ChatTitleBarMenu, group: 'y_settings', order: 1 },
+		});
+	}
+	async run(accessor: ServicesAccessor) {
+		await accessor.get(ICommandService).executeCommand('xynapse.openConfigPage');
+	}
 });
 
 registerAction2(class ToggleCopilotControl extends ToggleTitleBarConfigAction {
@@ -962,14 +991,7 @@ registerAction2(class ToggleCopilotControl extends ToggleTitleBarConfigAction {
 			'chat.commandCenter.enabled',
 			localize('toggle.chatControl', 'Chat Controls'),
 			localize('toggle.chatControlsDescription', "Toggle visibility of the Chat Controls in title bar"), 5,
-			ContextKeyExpr.and(
-				ContextKeyExpr.and(
-					ChatContextKeys.Setup.hidden.negate(),
-					ChatContextKeys.Setup.disabled.negate()
-				),
-				IsCompactTitleBarContext.negate(),
-				ChatContextKeys.supported
-			)
+			IsCompactTitleBarContext.negate()
 		);
 	}
 });
@@ -984,49 +1006,27 @@ export class CopilotTitleBarMenuRendering extends Disposable implements IWorkben
 	) {
 		super();
 
-		const disposable = actionViewItemService.register(MenuId.CommandCenter, MenuId.ChatTitleBarMenu, (action, options, instantiationService, windowId) => {
+		const disposable = actionViewItemService.register(MenuId.CommandCenter, MenuId.ChatTitleBarMenu, (action, options, instantiationService, _windowId) => {
 			if (!(action instanceof SubmenuItemAction)) {
 				return undefined;
 			}
 
 			const dropdownAction = toAction({
-				id: 'copilot.titleBarMenuRendering.more',
+				id: 'xynapse.titleBarMenuRendering.more',
 				label: localize('more', "More..."),
 				run() { }
 			});
 
-			const chatSentiment = chatEntitlementService.sentiment;
-			const chatQuotaExceeded = chatEntitlementService.quotas.chat?.percentRemaining === 0;
-			const signedOut = chatEntitlementService.entitlement === ChatEntitlement.Unknown;
-			const anonymous = chatEntitlementService.anonymous;
-			const free = chatEntitlementService.entitlement === ChatEntitlement.Free;
+			const primaryActionId = 'xynapse.titlebar.openChat';
+			const primaryActionTitle = localize('openXynapseChat', "Open Xynapse Chat");
+			const primaryActionIcon = Codicon.chatSparkle;
 
-			const isAuxiliaryWindow = windowId !== mainWindow.vscodeWindowId;
-			let primaryActionId = isAuxiliaryWindow ? CHAT_OPEN_ACTION_ID : TOGGLE_CHAT_ACTION_ID;
-			let primaryActionTitle = isAuxiliaryWindow ? localize('openChat', "Open Chat") : localize('toggleChat', "Toggle Chat");
-			let primaryActionIcon = Codicon.chatSparkle;
-			if (chatSentiment.installed && !chatSentiment.disabled) {
-				if (signedOut && !anonymous) {
-					primaryActionId = CHAT_SETUP_ACTION_ID;
-					primaryActionTitle = localize('signInToChatSetup', "Sign in to use AI features...");
-					primaryActionIcon = Codicon.chatSparkleError;
-				} else if (chatQuotaExceeded && free) {
-					primaryActionId = OPEN_CHAT_QUOTA_EXCEEDED_DIALOG;
-					primaryActionTitle = localize('chatQuotaExceededButton', "GitHub Copilot Free plan chat messages quota reached. Click for details.");
-					primaryActionIcon = Codicon.chatSparkleWarning;
-				}
-			}
 			return instantiationService.createInstance(DropdownWithPrimaryActionViewItem, instantiationService.createInstance(MenuItemAction, {
 				id: primaryActionId,
 				title: primaryActionTitle,
 				icon: primaryActionIcon,
 			}, undefined, undefined, undefined, undefined), dropdownAction, action.actions, '', { ...options, skipTelemetry: true });
-		}, Event.any(
-			chatEntitlementService.onDidChangeSentiment,
-			chatEntitlementService.onDidChangeQuotaExceeded,
-			chatEntitlementService.onDidChangeEntitlement,
-			chatEntitlementService.onDidChangeAnonymous
-		));
+		});
 
 		// Reduces flicker a bit on reload/restart
 		markAsSingleton(disposable);

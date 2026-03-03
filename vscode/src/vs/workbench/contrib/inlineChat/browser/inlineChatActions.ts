@@ -74,10 +74,6 @@ export class StartSessionAction extends Action2 {
 				group: '1_chat',
 				order: 3,
 				when: inlineChatContextKey
-			}, {
-				id: MenuId.ChatTitleBarMenu,
-				group: 'a_open',
-				order: 3,
 			}]
 		});
 	}

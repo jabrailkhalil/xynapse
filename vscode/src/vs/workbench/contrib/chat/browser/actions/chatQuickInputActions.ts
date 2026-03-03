@@ -78,11 +78,6 @@ class QuickChatGlobalAction extends Action2 {
 				weight: KeybindingWeight.WorkbenchContrib,
 				primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyMod.Alt | KeyCode.KeyL,
 			},
-			menu: {
-				id: MenuId.ChatTitleBarMenu,
-				group: 'a_open',
-				order: 4
-			},
 			metadata: {
 				description: localize('toggle.desc', 'Toggle the quick chat'),
 				args: [{
