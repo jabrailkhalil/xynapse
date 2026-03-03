@@ -13,6 +13,7 @@ import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { ClearDisplayLanguageAction, ConfigureDisplayLanguageAction } from './localizationsActions.js';
 import { IExtensionFeatureTableRenderer, IRenderedData, ITableData, IRowData, IExtensionFeaturesRegistry, Extensions } from '../../../services/extensionManagement/common/extensionFeatures.js';
 import { ExtensionsRegistry } from '../../../services/extensions/common/extensionsRegistry.js';
+import './localeStatusBarItem.js';
 
 export class BaseLocalizationWorkbenchContribution extends Disposable implements IWorkbenchContribution {
 	constructor() {

@@ -6,6 +6,9 @@ name: "Xynapse Config"
 version: "1.0.0"
 schema: "v1"
 
+# Response language for the assistant (en, ru, es, fr, de, zh, ja, ko, etc.)
+responseLanguage: "en"
+
 # Models configuration
 models:
   # YandexGPT Pro - primary model for chat and edit
@@ -85,6 +88,8 @@ slashCommands:
     description: "Generate tests"
   - name: "council"
     description: "Council"
+  - name: "bvc"
+    description: "BVC — Budgeted Verified Council"
 
 # Custom prompts for context menu actions
 experimental:
