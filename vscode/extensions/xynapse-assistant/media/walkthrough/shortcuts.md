@@ -1,33 +1,33 @@
-# Горячие клавиши Xynapse
+# Xynapse Keyboard Shortcuts
 
-Запомните основные сочетания для эффективной работы:
+Learn the key shortcuts for efficient work:
 
-## Основные
+## Essential
 
-| Действие | Windows/Linux | macOS |
-|----------|--------------|-------|
-| Открыть чат | `Ctrl+L` | `Cmd+L` |
-| Inline-редактирование | `Ctrl+I` | `Cmd+I` |
-| Принять автодополнение | `Tab` | `Tab` |
-| Отклонить автодополнение | `Esc` | `Esc` |
-| Принять diff | `Ctrl+Shift+Enter` | `Cmd+Shift+Enter` |
-| Отклонить diff | `Ctrl+Shift+Backspace` | `Cmd+Shift+Backspace` |
-| Добавить код в контекст | `Ctrl+Shift+L` | `Cmd+Shift+L` |
+| Action | Windows/Linux | macOS |
+|--------|--------------|-------|
+| Open chat | `Ctrl+L` | `Cmd+L` |
+| Inline editing | `Ctrl+I` | `Cmd+I` |
+| Accept autocomplete | `Tab` | `Tab` |
+| Dismiss autocomplete | `Esc` | `Esc` |
+| Accept diff | `Ctrl+Shift+Enter` | `Cmd+Shift+Enter` |
+| Reject diff | `Ctrl+Shift+Backspace` | `Cmd+Shift+Backspace` |
+| Add code to context | `Ctrl+Shift+L` | `Cmd+Shift+L` |
 
-## Slash-команды
+## Slash Commands
 
-Введите в чат:
-- `/edit` — редактировать выделенный код
-- `/explain` — объяснить код
-- `/test` — сгенерировать тесты
-- `/review` — обзор кода
-- `/council` — мультиагентное обсуждение
+Type in the chat:
+- `/edit` — edit selected code
+- `/explain` — explain code
+- `/test` — generate tests
+- `/review` — code review
+- `/council` — multi-agent discussion
 
-## Контекст (@-провайдеры)
+## Context (@-providers)
 
-Используйте `@` в чате для добавления контекста:
-- `@code` — текущий файл
-- `@diff` — git-изменения
-- `@terminal` — вывод терминала
-- `@problems` — ошибки и предупреждения
-- `@codebase` — поиск по проекту
+Use `@` in chat to add context:
+- `@code` — current file
+- `@diff` — git changes
+- `@terminal` — terminal output
+- `@problems` — errors and warnings
+- `@codebase` — project search

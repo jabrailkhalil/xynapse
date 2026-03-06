@@ -1,10 +1,10 @@
-# Настройте AI-модели
+# Configure AI Models
 
-Xynapse поддерживает любые OpenAI-совместимые провайдеры, а также YandexGPT и GigaChat.
+Xynapse supports any OpenAI-compatible provider, as well as YandexGPT and GigaChat.
 
-## Файл конфигурации
+## Configuration File
 
-Откройте `~/.xynapse/config.yaml` и добавьте модели:
+Open `~/.xynapse/config.yaml` and add your models:
 
 ```yaml
 models:
@@ -18,13 +18,13 @@ models:
     provider: yandex
     model: yandexgpt/latest
     folderId: b1g...
-    apiKey: ваш-ключ
+    apiKey: your-key
     roles: [chat]
 
   - title: GigaChat
     provider: gigachat
-    clientId: ваш-id
-    clientSecret: ваш-секрет
+    clientId: your-id
+    clientSecret: your-secret
     roles: [chat]
 
   - title: GPT-4o Mini
@@ -34,15 +34,15 @@ models:
     roles: [autocomplete]
 ```
 
-## Роли моделей
+## Model Roles
 
-Каждая модель назначается на роли:
-- **chat** — диалог с ассистентом
-- **edit** — генерация инструкций редактирования
-- **apply** — применение изменений к коду
-- **autocomplete** — подсказки при вводе (Tab)
-- **summarize** — сжатие контекста
+Each model is assigned to roles:
+- **chat** — conversation with the assistant
+- **edit** — generating edit instructions
+- **apply** — applying changes to code
+- **autocomplete** — inline suggestions (Tab)
+- **summarize** — context compression
 
-## Совет
+## Tip
 
-Используйте быструю модель для `autocomplete` (GPT-4o-mini, локальная модель) и мощную для `chat` и `edit` (GPT-4o, Claude, YandexGPT Pro).
+Use a fast model for `autocomplete` (GPT-4o-mini, local model) and a powerful one for `chat` and `edit` (GPT-4o, Claude, YandexGPT Pro).

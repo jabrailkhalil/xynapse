@@ -1,22 +1,22 @@
-# Добро пожаловать в Xynapse IDE
+# Welcome to Xynapse IDE
 
-Xynapse IDE — это интегрированная среда разработки с встроенным AI-ассистентом.
+Xynapse IDE is an integrated development environment with a built-in AI assistant.
 
-## Что умеет Xynapse
+## What Xynapse Can Do
 
-- **Чат с AI** — задавайте вопросы по коду, получайте объяснения и генерируйте решения
-- **Автодополнение** — умные подсказки прямо в редакторе (Tab для принятия)
-- **Inline-редактирование** — выделите код и нажмите `Ctrl+I` для AI-редактирования
-- **Контекст проекта** — ассистент видит ваш код, diff, терминал и ошибки
-- **Council** — мультиагентное обсуждение архитектурных решений (`/council`)
-- **Российские модели** — поддержка YandexGPT и GigaChat из коробки
+- **AI Chat** — ask questions about code, get explanations and generate solutions
+- **Autocomplete** — smart suggestions right in the editor (Tab to accept)
+- **Inline Editing** — select code and press `Ctrl+I` for AI-powered editing
+- **Project Context** — the assistant sees your code, diff, terminal output and errors
+- **Council** — multi-agent discussion of architectural decisions (`/council`)
+- **Russian Models** — built-in support for YandexGPT and GigaChat
 
-## Ваши данные в безопасности
+## Your Data is Safe
 
-Xynapse не отправляет данные на серверы IDE. Все API-ключи хранятся **локально** в `~/.xynapse/config.yaml`. Телеметрия полностью отключена.
+Xynapse does not send data to IDE servers. All API keys are stored **locally** in `~/.xynapse/config.yaml`. Telemetry is completely disabled.
 
-## Начните работу
+## Get Started
 
-1. Откройте боковую панель **Xynapse** (иконка слева)
-2. Настройте модели в `~/.xynapse/config.yaml`
-3. Используйте `Ctrl+L` для чата, `Ctrl+I` для редактирования, `Tab` для автодополнения
+1. Open the **Xynapse** sidebar panel (icon on the left)
+2. Configure models in `~/.xynapse/config.yaml`
+3. Use `Ctrl+L` for chat, `Ctrl+I` for editing, `Tab` for autocomplete

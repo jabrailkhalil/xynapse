@@ -123,7 +123,13 @@ class NativeLocaleService implements ILocaleService {
 				return;
 			}
 			await this.writeLocaleValue(locale);
-			await this.hostService.restart();
+			// Xynapse: In dev mode (VSCODE_DEV=1), restart() kills the process then fails
+			// to find the Electron binary at .build/electron. Use reload() instead.
+			if (!this.environmentService.isBuilt) {
+				await this.hostService.reload();
+			} else {
+				await this.hostService.restart();
+			}
 		} catch (err) {
 			this.notificationService.error(err);
 		}

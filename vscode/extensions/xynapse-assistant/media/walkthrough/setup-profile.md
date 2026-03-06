@@ -1,31 +1,31 @@
-# Создайте свой профиль Xynapse
+# Create Your Xynapse Profile
 
-Профиль Xynapse — это ваша локальная учётная запись. Никакой регистрации на сторонних серверах.
+Your Xynapse profile is a local account. No registration on third-party servers required.
 
-## Как создать профиль
+## How to Create a Profile
 
-1. Откройте палитру команд: `Ctrl+Shift+P`
-2. Введите: **Xynapse: Set Up Profile**
-3. Укажите ваше имя и email
+1. Open the command palette: `Ctrl+Shift+P`
+2. Type: **Xynapse: Set Up Profile**
+3. Enter your name and email
 
-Профиль сохраняется в `~/.xynapse/profile.json` и используется для идентификации в git-коммитах и логах ассистента.
+The profile is saved in `~/.xynapse/profile.json` and is used for identification in git commits and assistant logs.
 
-## Зашифрованный бэкап
+## Encrypted Backup
 
-Все ваши настройки и API-ключи можно экспортировать в зашифрованный файл:
+You can export all your settings and API keys to an encrypted file:
 
 1. `Ctrl+Shift+P` → **Xynapse: Export Encrypted Config Backup**
-2. Введите пароль шифрования
-3. Сохраните файл `.enc`
+2. Enter an encryption password
+3. Save the `.enc` file
 
-Для восстановления на другом компьютере:
+To restore on another computer:
 1. `Ctrl+Shift+P` → **Xynapse: Import Encrypted Config Backup**
-2. Выберите файл и введите пароль
+2. Select the file and enter the password
 
-## Синхронизация через Git
+## Sync via Git
 
-Вы можете пушить зашифрованный конфиг в свой git-репозиторий:
+You can push the encrypted config to your own git repository:
 - **Push**: `Ctrl+Shift+P` → **Xynapse: Push Encrypted Config to Git**
 - **Pull**: `Ctrl+Shift+P` → **Xynapse: Pull Encrypted Config from Git**
 
-Файл шифруется AES-256-GCM — безопасно даже в публичном репозитории.
+The file is encrypted with AES-256-GCM — safe even in a public repository.
