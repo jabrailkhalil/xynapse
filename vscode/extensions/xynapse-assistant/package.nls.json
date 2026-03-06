@@ -1,0 +1,12 @@
+{
+  "walkthrough.title": "Xynapse IDE",
+  "walkthrough.description": "Get started with Xynapse IDE and AI Assistant",
+  "walkthrough.welcome.title": "Welcome to Xynapse IDE",
+  "walkthrough.welcome.description": "Learn what Xynapse can do for you.\n\n[Open Xynapse Panel](command:xynapse.focusInput)",
+  "walkthrough.profile.title": "Create Your Profile",
+  "walkthrough.profile.description": "Set up your local Xynapse profile — no cloud registration needed.\n\n[Set Up Profile](command:xynapse.profile.setup)",
+  "walkthrough.models.title": "Configure AI Models",
+  "walkthrough.models.description": "Add your AI models: OpenAI, YandexGPT, GigaChat, or any compatible provider.\n\n[Open Config](command:xynapse.openConfigFile)",
+  "walkthrough.shortcuts.title": "Learn Shortcuts",
+  "walkthrough.shortcuts.description": "Master the essential keyboard shortcuts for chat, editing, and autocomplete."
+}

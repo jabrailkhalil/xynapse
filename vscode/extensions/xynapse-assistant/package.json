@@ -724,15 +724,15 @@
     "walkthroughs": [
       {
         "id": "xynapse.welcome",
-        "title": "Xynapse IDE",
-        "description": "Get started with Xynapse IDE and AI Assistant",
+        "title": "%walkthrough.title%",
+        "description": "%walkthrough.description%",
         "steps": [
           {
             "id": "xynapse.welcome.overview",
-            "title": "Welcome to Xynapse IDE",
-            "description": "Learn what Xynapse can do for you.\n\n[Open Xynapse Panel](command:xynapse.focusInput)",
+            "title": "%walkthrough.welcome.title%",
+            "description": "%walkthrough.welcome.description%",
             "media": {
-              "markdown": "media/walkthrough/welcome-en.md"
+              "markdown": "media/walkthrough/welcome.md"
             },
             "completionEvents": [
               "onCommand:xynapse.focusInput"
@@ -740,10 +740,10 @@
           },
           {
             "id": "xynapse.welcome.profile",
-            "title": "Create Your Profile",
-            "description": "Set up your local Xynapse profile — no cloud registration needed.\n\n[Set Up Profile](command:xynapse.profile.setup)",
+            "title": "%walkthrough.profile.title%",
+            "description": "%walkthrough.profile.description%",
             "media": {
-              "markdown": "media/walkthrough/setup-profile-en.md"
+              "markdown": "media/walkthrough/setup-profile.md"
             },
             "completionEvents": [
               "onCommand:xynapse.profile.setup"
@@ -751,10 +751,10 @@
           },
           {
             "id": "xynapse.welcome.models",
-            "title": "Configure AI Models",
-            "description": "Add your AI models: OpenAI, YandexGPT, GigaChat, or any compatible provider.\n\n[Open Config](command:xynapse.openConfigFile)",
+            "title": "%walkthrough.models.title%",
+            "description": "%walkthrough.models.description%",
             "media": {
-              "markdown": "media/walkthrough/configure-models-en.md"
+              "markdown": "media/walkthrough/configure-models.md"
             },
             "completionEvents": [
               "onCommand:xynapse.openConfigFile"
@@ -762,10 +762,10 @@
           },
           {
             "id": "xynapse.welcome.shortcuts",
-            "title": "Learn Shortcuts",
-            "description": "Master the essential keyboard shortcuts for chat, editing, and autocomplete.",
+            "title": "%walkthrough.shortcuts.title%",
+            "description": "%walkthrough.shortcuts.description%",
             "media": {
-              "markdown": "media/walkthrough/shortcuts-en.md"
+              "markdown": "media/walkthrough/shortcuts.md"
             },
             "completionEvents": [
               "onCommand:xynapse.focusInput"

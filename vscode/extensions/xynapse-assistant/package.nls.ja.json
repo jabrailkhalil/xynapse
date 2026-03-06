@@ -1,0 +1,12 @@
+{
+  "walkthrough.title": "Xynapse IDE",
+  "walkthrough.description": "Xynapse IDE と AI アシスタントを始めましょう",
+  "walkthrough.welcome.title": "Xynapse IDE へようこそ",
+  "walkthrough.welcome.description": "Xynapse ができることを学びましょう。\n\n[Xynapse パネルを開く](command:xynapse.focusInput)",
+  "walkthrough.profile.title": "プロフィールを作成",
+  "walkthrough.profile.description": "ローカル Xynapse プロフィールを設定 — クラウド登録不要。\n\n[プロフィールを設定](command:xynapse.profile.setup)",
+  "walkthrough.models.title": "AI モデルを設定",
+  "walkthrough.models.description": "AI モデルを追加：OpenAI、YandexGPT、GigaChat、または互換プロバイダー。\n\n[設定を開く](command:xynapse.openConfigFile)",
+  "walkthrough.shortcuts.title": "ショートカットを学ぶ",
+  "walkthrough.shortcuts.description": "チャット、編集、オートコンプリートの基本的なキーボードショートカットをマスターしましょう。"
+}

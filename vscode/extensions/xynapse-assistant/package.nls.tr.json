@@ -1,0 +1,12 @@
+{
+  "walkthrough.title": "Xynapse IDE",
+  "walkthrough.description": "Xynapse IDE ve AI Asistan ile baslayin",
+  "walkthrough.welcome.title": "Xynapse IDE'ye Hosgeldiniz",
+  "walkthrough.welcome.description": "Xynapse'in sizin icin neler yapabilecegini ogrenin.\n\n[Xynapse Panelini Ac](command:xynapse.focusInput)",
+  "walkthrough.profile.title": "Profilinizi olusturun",
+  "walkthrough.profile.description": "Yerel Xynapse profilinizi ayarlayin — bulut kaydina gerek yok.\n\n[Profil Ayarla](command:xynapse.profile.setup)",
+  "walkthrough.models.title": "AI modellerini yapilandirin",
+  "walkthrough.models.description": "AI modellerinizi ekleyin: OpenAI, YandexGPT, GigaChat veya uyumlu bir saglayici.\n\n[Yapilandirmayi Ac](command:xynapse.openConfigFile)",
+  "walkthrough.shortcuts.title": "Kisayollari ogrenin",
+  "walkthrough.shortcuts.description": "Sohbet, duzenleme ve otomatik tamamlama icin temel klavye kisayollarini ogrenin."
+}

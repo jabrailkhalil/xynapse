@@ -1,0 +1,12 @@
+{
+  "walkthrough.title": "Xynapse IDE",
+  "walkthrough.description": "Почнiть роботу з Xynapse IDE та AI-асистентом",
+  "walkthrough.welcome.title": "Ласкаво просимо до Xynapse IDE",
+  "walkthrough.welcome.description": "Дiзнайтесь, що Xynapse може зробити для вас.\n\n[Вiдкрити панель Xynapse](command:xynapse.focusInput)",
+  "walkthrough.profile.title": "Створiть свiй профiль",
+  "walkthrough.profile.description": "Налаштуйте локальний профiль Xynapse — без реєстрацiї в хмарi.\n\n[Налаштувати профiль](command:xynapse.profile.setup)",
+  "walkthrough.models.title": "Налаштуйте AI-моделi",
+  "walkthrough.models.description": "Додайте свої AI-моделi: OpenAI, YandexGPT, GigaChat або будь-який сумiсний провайдер.\n\n[Вiдкрити конфiгурацiю](command:xynapse.openConfigFile)",
+  "walkthrough.shortcuts.title": "Вивчiть гарячi клавiшi",
+  "walkthrough.shortcuts.description": "Освойте основнi сполучення клавiш для чату, редагування та автодоповнення."
+}

@@ -1,0 +1,12 @@
+{
+  "walkthrough.title": "Xynapse IDE",
+  "walkthrough.description": "开始使用 Xynapse IDE 和 AI 助手",
+  "walkthrough.welcome.title": "欢迎使用 Xynapse IDE",
+  "walkthrough.welcome.description": "了解 Xynapse 能为您做什么。\n\n[打开 Xynapse 面板](command:xynapse.focusInput)",
+  "walkthrough.profile.title": "创建个人资料",
+  "walkthrough.profile.description": "设置本地 Xynapse 个人资料 — 无需云端注册。\n\n[设置个人资料](command:xynapse.profile.setup)",
+  "walkthrough.models.title": "配置 AI 模型",
+  "walkthrough.models.description": "添加您的 AI 模型：OpenAI、YandexGPT、GigaChat 或任何兼容的提供商。\n\n[打开配置](command:xynapse.openConfigFile)",
+  "walkthrough.shortcuts.title": "学习快捷键",
+  "walkthrough.shortcuts.description": "掌握聊天、编辑和自动补全的核心键盘快捷键。"
+}
