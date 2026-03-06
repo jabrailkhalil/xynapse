@@ -98,13 +98,9 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 			return URI.file(join(vscodePortable, 'argv.json'));
 		}
 
-		// In dev mode, main.ts appends '-dev' to dataFolderName (e.g. '.xynapse' → '.xynapse-dev').
-		// We must match that so locale writes go to the same argv.json that main.ts reads on startup.
-		let dataFolderName = this.productService.dataFolderName;
-		if (env['VSCODE_DEV']) {
-			dataFolderName = `${dataFolderName}-dev`;
-		}
-		return joinPath(this.userHome, dataFolderName, 'argv.json');
+		// productService.dataFolderName already includes '-dev' suffix in dev mode
+		// (set by product.ts when VSCODE_DEV is detected), matching main.ts behavior.
+		return joinPath(this.userHome, this.productService.dataFolderName, 'argv.json');
 	}
 
 	@memoize
