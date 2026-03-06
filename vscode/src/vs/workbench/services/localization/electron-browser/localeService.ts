@@ -97,25 +97,26 @@ class NativeLocaleService implements ILocaleService {
 			// and only if the language pack is not installed
 			if (!installedLanguages.some(installedLanguage => installedLanguage.id === languagePackItem.id)) {
 
-				// Only actually install a language pack from Microsoft
-				if (languagePackItem.galleryExtension?.publisher.toLowerCase() !== 'ms-ceintl') {
-					// Show the view so the user can see the language pack that they should install
-					// as of now, there are no 3rd party language packs available on the Marketplace.
-					const viewlet = await this.paneCompositePartService.openPaneComposite(EXTENSIONS_VIEWLET_ID, ViewContainerLocation.Sidebar);
-					(viewlet?.getViewPaneContainer() as IExtensionsViewPaneContainer).search(`@id:${languagePackItem.extensionId}`);
-					return;
-				}
+				// If a gallery extension is provided, try to install or show search
+				if (languagePackItem.galleryExtension) {
+					if (languagePackItem.galleryExtension.publisher.toLowerCase() !== 'ms-ceintl') {
+						// Show the view so the user can see the language pack that they should install
+						const viewlet = await this.paneCompositePartService.openPaneComposite(EXTENSIONS_VIEWLET_ID, ViewContainerLocation.Sidebar);
+						(viewlet?.getViewPaneContainer() as IExtensionsViewPaneContainer).search(`@id:${languagePackItem.extensionId}`);
+						return;
+					}
 
-				await this.progressService.withProgress(
-					{
-						location: ProgressLocation.Notification,
-						title: localize('installing', "Installing {0} language support...", languagePackItem.label),
-					},
-					progress => this.extensionManagementService.installFromGallery(languagePackItem.galleryExtension!, {
-						// Setting this to false is how you get the extension to be synced with Settings Sync (if enabled).
-						isMachineScoped: false,
-					})
-				);
+					await this.progressService.withProgress(
+						{
+							location: ProgressLocation.Notification,
+							title: localize('installing', "Installing {0} language support...", languagePackItem.label),
+						},
+						progress => this.extensionManagementService.installFromGallery(languagePackItem.galleryExtension!, {
+							isMachineScoped: false,
+						})
+					);
+				}
+				// If no gallery extension, skip installation — just set locale directly
 			}
 
 			if (!skipDialog && !await this.showRestartDialog(languagePackItem.label)) {

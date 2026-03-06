@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { hostname, release } from 'os';
+// import { hostname, release } from 'os'; // Xynapse: unused — telemetry disabled
 import { MessagePortMain, MessageEvent } from '../../../base/parts/sandbox/node/electronTypes.js';
 import { toErrorMessage } from '../../../base/common/errorMessage.js';
 import { onUnexpectedError, setUnexpectedErrorHandler } from '../../../base/common/errors.js';
@@ -50,12 +50,9 @@ import { IProductService } from '../../../platform/product/common/productService
 import { IRequestService } from '../../../platform/request/common/request.js';
 import { ISharedProcessConfiguration } from '../../../platform/sharedProcess/node/sharedProcess.js';
 import { IStorageService } from '../../../platform/storage/common/storage.js';
-import { resolveCommonProperties } from '../../../platform/telemetry/common/commonProperties.js';
 import { ICustomEndpointTelemetryService, ITelemetryService } from '../../../platform/telemetry/common/telemetry.js';
 import { TelemetryAppenderChannel } from '../../../platform/telemetry/common/telemetryIpc.js';
-import { TelemetryLogAppender } from '../../../platform/telemetry/common/telemetryLogAppender.js';
-import { TelemetryService } from '../../../platform/telemetry/common/telemetryService.js';
-import { supportsTelemetry, ITelemetryAppender, NullAppender, NullTelemetryService, getPiiPathsFromEnvironment, isInternalTelemetry, isLoggingOnly } from '../../../platform/telemetry/common/telemetryUtils.js';
+import { ITelemetryAppender, NullAppender, NullTelemetryService } from '../../../platform/telemetry/common/telemetryUtils.js';
 import { CustomEndpointTelemetryService } from '../../../platform/telemetry/node/customEndpointTelemetryService.js';
 import { ExtensionStorageService, IExtensionStorageService } from '../../../platform/extensionManagement/common/extensionStorage.js';
 import { IgnoredExtensionsManagementService, IIgnoredExtensionsManagementService } from '../../../platform/userDataSync/common/ignoredExtensions.js';
@@ -92,7 +89,7 @@ import { IExtensionsProfileScannerService } from '../../../platform/extensionMan
 import { PolicyChannelClient } from '../../../platform/policy/common/policyIpc.js';
 import { IPolicyService, NullPolicyService } from '../../../platform/policy/common/policy.js';
 import { UserDataProfilesService } from '../../../platform/userDataProfile/common/userDataProfileIpc.js';
-import { OneDataSystemAppender } from '../../../platform/telemetry/node/1dsAppender.js';
+// import { OneDataSystemAppender } from '../../../platform/telemetry/node/1dsAppender.js'; // Xynapse: telemetry disabled
 import { UserDataProfilesCleaner } from './contrib/userDataProfilesCleaner.js';
 import { IRemoteTunnelService } from '../../../platform/remoteTunnel/common/remoteTunnel.js';
 import { UserDataSyncResourceProviderService } from '../../../platform/userDataSync/common/userDataSyncResourceProvider.js';
@@ -303,30 +300,9 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 		const activeWindowRouter = new StaticRouter(ctx => activeWindowManager.getActiveClientId().then(id => ctx === id));
 		services.set(IExtensionRecommendationNotificationService, new ExtensionRecommendationNotificationServiceChannelClient(this.server.getChannel('extensionRecommendationNotification', activeWindowRouter)));
 
-		// Telemetry
-		let telemetryService: ITelemetryService;
-		const appenders: ITelemetryAppender[] = [];
-		const internalTelemetry = isInternalTelemetry(productService, configurationService);
-		if (supportsTelemetry(productService, environmentService)) {
-			const logAppender = new TelemetryLogAppender('', false, loggerService, environmentService, productService);
-			appenders.push(logAppender);
-			if (!isLoggingOnly(productService, environmentService) && productService.aiConfig?.ariaKey) {
-				const collectorAppender = new OneDataSystemAppender(requestService, internalTelemetry, 'monacoworkbench', null, productService.aiConfig.ariaKey);
-				this._register(toDisposable(() => collectorAppender.flush())); // Ensure the 1DS appender is disposed so that it flushes remaining data
-				appenders.push(collectorAppender);
-			}
-
-			telemetryService = new TelemetryService({
-				appenders,
-				commonProperties: resolveCommonProperties(release(), hostname(), process.arch, productService.commit, productService.version, this.configuration.machineId, this.configuration.sqmId, this.configuration.devDeviceId, internalTelemetry, productService.date),
-				sendErrorTelemetry: true,
-				piiPaths: getPiiPathsFromEnvironment(environmentService),
-			}, configurationService, productService);
-		} else {
-			telemetryService = NullTelemetryService;
-			const nullAppender = NullAppender;
-			appenders.push(nullAppender);
-		}
+		// Xynapse: telemetry completely disabled — no 1DS appender, no data collection
+		const telemetryService: ITelemetryService = NullTelemetryService;
+		const appenders: ITelemetryAppender[] = [NullAppender];
 
 		this.server.registerChannel('telemetryAppender', new TelemetryAppenderChannel(appenders));
 		services.set(ITelemetryService, telemetryService);

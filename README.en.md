@@ -78,8 +78,13 @@ This allows, for example, using a fast lightweight model for autocomplete and a 
 Xynapse supports any OpenAI-compatible provider, plus specialized integrations:
 
 **Russian providers (native support):**
-- **YandexGPT** (Pro, Lite, 32K) — native Yandex Cloud integration with folderId and IAM tokens
-- **GigaChat** (Sber) — native integration with OAuth authorization
+- **YandexGPT** — native Yandex Cloud integration with folderId and IAM tokens
+  - YandexGPT Pro, YandexGPT Lite, YandexGPT 32K
+  - Llama 3.1 8B (Yandex), Llama 3.1 70B (Yandex)
+- **GigaChat** (Sber) — native integration with OAuth authorization and Russian Trusted Root CA
+  - GigaChat, GigaChat-2, GigaChat Plus
+  - GigaChat Pro, GigaChat-2 Pro
+  - GigaChat Max, GigaChat-2 Max
 
 **International providers:**
 - OpenAI (GPT-4, GPT-4o, o1, o3)
@@ -95,14 +100,37 @@ Xynapse supports any OpenAI-compatible provider, plus specialized integrations:
 
 ---
 
+## Multilingual Interface
+
+Xynapse supports **16 languages** for both the IDE and assistant:
+
+🇷🇺 Russian, 🇺🇸 English, 🇪🇸 Spanish, 🇫🇷 French, 🇩🇪 German, 🇨🇳 Chinese, 🇯🇵 Japanese, 🇰🇷 Korean, 🇧🇷 Portuguese, 🇮🇹 Italian, 🇹🇷 Turkish, 🇺🇦 Ukrainian, 🇵🇱 Polish, 🇸🇦 Arabic, 🇮🇳 Hindi, 🇳🇱 Dutch
+
+- **IDE Language** (globe icon in status bar) — switches the editor interface language
+- **Assistant Language** (chat icon in status bar) — switches AI response language, rules, context prompts, and slash command descriptions
+
+When changing the assistant language, rules, context prompts, slash command descriptions, and the `responseLanguage` directive in config are all updated automatically. Config reloads instantly — no window restart needed.
+
+---
+
 ## Xynapse Autocomplete
 
-Inline code completion runs in parallel with the assistant and doesn't interfere with the chat.
+Line completion system — inline code completion runs in parallel with the assistant and doesn't interfere with the chat.
 
 - **Real-time** — suggestions appear as you type, with no visible latency
 - **Separate model** — autocomplete uses its own model with the `autocomplete` role, independent of the chat model
 - **Configurable trigger** — control delay, minimum request length, and display conditions
 - **Tab acceptance** — accept the full suggestion with Tab
+
+---
+
+## Encrypted Config Backup
+
+Xynapse uses local accounts — no cloud login required. To transfer configuration between PCs:
+
+- **Export** (`Ctrl+Shift+P` → "Xynapse: Export Encrypted Config Backup") — bundles `config.yaml`, `config.json`, `profile.json` into a single `.enc` file, encrypted with AES-256-GCM + PBKDF2
+- **Import** (`Ctrl+Shift+P` → "Xynapse: Import Encrypted Config Backup") — decrypts and restores configuration
+- **Git sync** — the `.enc` file can be stored in any git repo for cross-machine synchronization
 
 ---
 

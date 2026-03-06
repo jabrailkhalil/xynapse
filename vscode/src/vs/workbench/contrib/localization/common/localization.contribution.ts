@@ -13,7 +13,16 @@ import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { ClearDisplayLanguageAction, ConfigureDisplayLanguageAction } from './localizationsActions.js';
 import { IExtensionFeatureTableRenderer, IRenderedData, ITableData, IRowData, IExtensionFeaturesRegistry, Extensions } from '../../../services/extensionManagement/common/extensionFeatures.js';
 import { ExtensionsRegistry } from '../../../services/extensions/common/extensionsRegistry.js';
+import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
+import { ILocaleService } from '../../../services/localization/common/locale.js';
+import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import './localeStatusBarItem.js';
+
+// Xynapse: programmatic locale setter (callable from extensions)
+CommandsRegistry.registerCommand('_xynapse.setLocale', async (accessor: ServicesAccessor, localeId: string, label?: string) => {
+	const localeService = accessor.get(ILocaleService);
+	await localeService.setLocale({ id: localeId, label: label || localeId }, true);
+});
 
 export class BaseLocalizationWorkbenchContribution extends Disposable implements IWorkbenchContribution {
 	constructor() {

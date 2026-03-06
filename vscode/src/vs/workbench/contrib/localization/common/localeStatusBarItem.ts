@@ -6,7 +6,7 @@
 import { Disposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { getNLSLanguage } from '../../../../nls.js';
 import { StatusbarAlignment, IStatusbarService, IStatusbarEntryAccessor } from '../../../services/statusbar/browser/statusbar.js';
-import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
+import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { ConfigureDisplayLanguageAction } from './localizationsActions.js';
 
 export class LocaleStatusBarContribution extends Disposable implements IWorkbenchContribution {
@@ -40,4 +40,5 @@ export class LocaleStatusBarContribution extends Disposable implements IWorkbenc
 	}
 }
 
-registerWorkbenchContribution2(LocaleStatusBarContribution.ID, LocaleStatusBarContribution, WorkbenchPhase.BlockRestore);
+// Disabled: Xynapse extension provides its own IDE language globe + assistant language items
+// registerWorkbenchContribution2(LocaleStatusBarContribution.ID, LocaleStatusBarContribution, WorkbenchPhase.BlockRestore);

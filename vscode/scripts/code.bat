@@ -21,6 +21,7 @@ if "%~1"=="--builtin" goto builtin
 :: Configuration
 set NODE_ENV=development
 set VSCODE_DEV=1
+set NODE_EXTRA_CA_CERTS=%~dp0\..\extensions\xynapse-assistant\russian_trusted_root_ca.cer
 set VSCODE_CLI=1
 set ELECTRON_ENABLE_LOGGING=1
 set ELECTRON_ENABLE_STACK_DUMPING=1

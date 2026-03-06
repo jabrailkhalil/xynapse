@@ -29,6 +29,7 @@ build/
 plugins/
 /continue-main/
 /extensions/
+/диплом/
 
 # ===========================================
 # Personal scripts and notes (not part of IDE)

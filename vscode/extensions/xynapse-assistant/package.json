@@ -153,6 +153,54 @@
           "type": "number",
           "default": 60,
           "description": "The period of time in minutes between automatic syncs."
+        },
+        "xynapse.ideLanguage": {
+          "type": "string",
+          "default": "en",
+          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "it", "tr", "uk", "pl", "ar", "hi", "nl"],
+          "enumDescriptions": [
+            "Russian",
+            "English",
+            "Spanish",
+            "French",
+            "German",
+            "Chinese",
+            "Japanese",
+            "Korean",
+            "Portuguese",
+            "Italian",
+            "Turkish",
+            "Ukrainian",
+            "Polish",
+            "Arabic",
+            "Hindi",
+            "Dutch"
+          ],
+          "description": "IDE display language. Changes the locale in argv.json and requires a restart."
+        },
+        "xynapse.assistantLanguage": {
+          "type": "string",
+          "default": "en",
+          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "it", "tr", "uk", "pl", "ar", "hi", "nl"],
+          "enumDescriptions": [
+            "Russian",
+            "English",
+            "Spanish",
+            "French",
+            "German",
+            "Chinese",
+            "Japanese",
+            "Korean",
+            "Portuguese",
+            "Italian",
+            "Turkish",
+            "Ukrainian",
+            "Polish",
+            "Arabic",
+            "Hindi",
+            "Dutch"
+          ],
+          "description": "Language that Xynapse Assistant responds in. Changes prompts and rules in config.yaml."
         }
       }
     },
@@ -380,6 +428,30 @@
         "command": "xynapse.openInNewWindow",
         "category": "Xynapse",
         "title": "Open in new window",
+        "group": "Xynapse"
+      },
+      {
+        "command": "xynapse.ideLanguage",
+        "category": "Xynapse",
+        "title": "Change IDE Display Language",
+        "group": "Xynapse"
+      },
+      {
+        "command": "xynapse.assistantLanguage",
+        "category": "Xynapse",
+        "title": "Change Assistant Response Language",
+        "group": "Xynapse"
+      },
+      {
+        "command": "xynapse.profile.setup",
+        "category": "Xynapse",
+        "title": "Setup Profile",
+        "group": "Xynapse"
+      },
+      {
+        "command": "xynapse.openConfigFile",
+        "category": "Xynapse",
+        "title": "Open Config File",
         "group": "Xynapse"
       }
     ],
@@ -649,6 +721,59 @@
         }
       ]
     },
+    "walkthroughs": [
+      {
+        "id": "xynapse.welcome",
+        "title": "Xynapse IDE",
+        "description": "Get started with Xynapse IDE and AI Assistant",
+        "steps": [
+          {
+            "id": "xynapse.welcome.overview",
+            "title": "Welcome to Xynapse IDE",
+            "description": "Learn what Xynapse can do for you.\n\n[Open Xynapse Panel](command:xynapse.focusInput)",
+            "media": {
+              "markdown": "media/walkthrough/welcome-en.md"
+            },
+            "completionEvents": [
+              "onCommand:xynapse.focusInput"
+            ]
+          },
+          {
+            "id": "xynapse.welcome.profile",
+            "title": "Create Your Profile",
+            "description": "Set up your local Xynapse profile — no cloud registration needed.\n\n[Set Up Profile](command:xynapse.profile.setup)",
+            "media": {
+              "markdown": "media/walkthrough/setup-profile-en.md"
+            },
+            "completionEvents": [
+              "onCommand:xynapse.profile.setup"
+            ]
+          },
+          {
+            "id": "xynapse.welcome.models",
+            "title": "Configure AI Models",
+            "description": "Add your AI models: OpenAI, YandexGPT, GigaChat, or any compatible provider.\n\n[Open Config](command:xynapse.openConfigFile)",
+            "media": {
+              "markdown": "media/walkthrough/configure-models-en.md"
+            },
+            "completionEvents": [
+              "onCommand:xynapse.openConfigFile"
+            ]
+          },
+          {
+            "id": "xynapse.welcome.shortcuts",
+            "title": "Learn Shortcuts",
+            "description": "Master the essential keyboard shortcuts for chat, editing, and autocomplete.",
+            "media": {
+              "markdown": "media/walkthrough/shortcuts-en.md"
+            },
+            "completionEvents": [
+              "onCommand:xynapse.focusInput"
+            ]
+          }
+        ]
+      }
+    ],
     "jsonValidation": [
       {
         "fileMatch": "**/.xynapse*/config.json",

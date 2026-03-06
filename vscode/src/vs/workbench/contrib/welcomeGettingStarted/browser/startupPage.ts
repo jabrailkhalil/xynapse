@@ -145,6 +145,12 @@ export class StartupPageRunnerContribution extends Disposable implements IWorkbe
 						this.storageService.store('xynapse.hasSeenThemePicker', 'true', StorageScope.PROFILE, StorageTarget.USER);
 						this.commandService.executeCommand('workbench.action.selectTheme');
 					}
+					// Xynapse: Open walkthrough on first launch
+					const hasSeenWalkthrough = this.storageService.get('xynapse.hasSeenWalkthrough', StorageScope.PROFILE);
+					if (!hasSeenWalkthrough) {
+						this.storageService.store('xynapse.hasSeenWalkthrough', 'true', StorageScope.PROFILE, StorageTarget.USER);
+						this.commandService.executeCommand('workbench.action.openWalkthrough', { category: 'xynapse.xynapse-assistant#xynapse.welcome', step: 'xynapse.xynapse-assistant#xynapse.welcome.overview' }, true);
+					}
 				} else if (startupEditorSetting.value === 'terminal') {
 					this.commandService.executeCommand(TerminalCommandId.CreateTerminalEditor);
 				}

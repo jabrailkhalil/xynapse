@@ -22,6 +22,19 @@ import { NativeParsedArgs } from './vs/platform/environment/common/argv.js';
 
 perf.mark('code/didStartMain');
 
+// Add Russian Trusted Root CA for GigaChat API (Sber uses Mintsifry CA)
+// Note: NODE_EXTRA_CA_CERTS is read at process startup, so this only helps child processes
+// (e.g. extension host). For the main process, code.bat sets it before Electron launches.
+if (!process.env['NODE_EXTRA_CA_CERTS']) {
+	// In dev: __dirname = vscode/src/, so go up one level to vscode/
+	// In prod: __dirname = app root where extensions/ is a sibling
+	const root = path.basename(__dirname) === 'src' ? path.dirname(__dirname) : __dirname;
+	const certPath = path.join(root, 'extensions', 'xynapse-assistant', 'russian_trusted_root_ca.cer');
+	if (fs.existsSync(certPath)) {
+		process.env['NODE_EXTRA_CA_CERTS'] = certPath;
+	}
+}
+
 perf.mark('code/willLoadMainBundle', {
 	// When built, the main bundle is a single JS file with all
 	// dependencies inlined. As such, we mark `willLoadMainBundle`
@@ -90,6 +103,12 @@ perf.mark('code/didStartCrashReporter');
 // (https://github.com/microsoft/vscode/issues/56651)
 if (portable.isPortable) {
 	app.setAppLogsPath(path.join(userDataPath, 'logs'));
+
+	// Xynapse: redirect extension config to portable directory
+	// so that ~/.xynapse/ is not created on the host system
+	if (!process.env['XYNAPSE_GLOBAL_DIR']) {
+		process.env['XYNAPSE_GLOBAL_DIR'] = path.join(portable.portableDataPath, '.xynapse');
+	}
 }
 
 // Register custom schemes with privileges
@@ -521,7 +540,7 @@ function configureCrashReporter(): void {
 
 	// Start crash reporter for all processes
 	const productName = (product.crashReporter ? product.crashReporter.productName : undefined) || product.nameShort;
-	const companyName = (product.crashReporter ? product.crashReporter.companyName : undefined) || 'Microsoft';
+	const companyName = (product.crashReporter ? product.crashReporter.companyName : undefined) || 'Xynapse';
 	const uploadToServer = Boolean(!process.env['VSCODE_DEV'] && submitURL && !crashReporterDirectory);
 	crashReporter.start({
 		companyName,

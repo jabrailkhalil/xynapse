@@ -90,7 +90,7 @@ import { UnsupportedExtensionsMigrationContrib } from './unsupportedExtensionsMi
 // Singletons
 registerSingleton(IExtensionsWorkbenchService, ExtensionsWorkbenchService, InstantiationType.Eager /* Auto updates extensions */);
 registerSingleton(IExtensionRecommendationNotificationService, ExtensionRecommendationNotificationService, InstantiationType.Delayed);
-registerSingleton(IExtensionRecommendationsService, ExtensionRecommendationsService, InstantiationType.Eager /* Prompts recommendations in the background */);
+registerSingleton(IExtensionRecommendationsService, ExtensionRecommendationsService, InstantiationType.Delayed /* Xynapse: changed from Eager to Delayed — recommendations won't prompt proactively */);
 
 // Quick Access
 Registry.as<IQuickAccessRegistry>(Extensions.Quickaccess).registerQuickAccessProvider({

@@ -4,19 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ITelemetryService, ITelemetryData, TelemetryLevel } from '../../../../platform/telemetry/common/telemetry.js';
-import { supportsTelemetry, NullTelemetryService, getPiiPathsFromEnvironment, isInternalTelemetry } from '../../../../platform/telemetry/common/telemetryUtils.js';
+import { NullTelemetryService } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { INativeWorkbenchEnvironmentService } from '../../environment/electron-browser/environmentService.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { ISharedProcessService } from '../../../../platform/ipc/electron-browser/services.js';
-import { TelemetryAppenderClient } from '../../../../platform/telemetry/common/telemetryIpc.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { resolveWorkbenchCommonProperties } from '../common/workbenchCommonProperties.js';
-import { TelemetryService as BaseTelemetryService, ITelemetryServiceConfig } from '../../../../platform/telemetry/common/telemetryService.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { ClassifiedEvent, StrictPropertyCheck, OmitMetadata, IGDPRProperty } from '../../../../platform/telemetry/common/gdprTypings.js';
-import { process } from '../../../../base/parts/sandbox/electron-browser/globals.js';
 
 export class TelemetryService extends Disposable implements ITelemetryService {
 
@@ -41,20 +37,8 @@ export class TelemetryService extends Disposable implements ITelemetryService {
 	) {
 		super();
 
-		if (supportsTelemetry(productService, environmentService)) {
-			const isInternal = isInternalTelemetry(productService, configurationService);
-			const channel = sharedProcessService.getChannel('telemetryAppender');
-			const config: ITelemetryServiceConfig = {
-				appenders: [new TelemetryAppenderClient(channel)],
-				commonProperties: resolveWorkbenchCommonProperties(storageService, environmentService.os.release, environmentService.os.hostname, productService.commit, productService.version, environmentService.machineId, environmentService.sqmId, environmentService.devDeviceId, isInternal, process, productService.date, environmentService.remoteAuthority),
-				piiPaths: getPiiPathsFromEnvironment(environmentService),
-				sendErrorTelemetry: true
-			};
-
-			this.impl = this._register(new BaseTelemetryService(config, configurationService, productService));
-		} else {
-			this.impl = NullTelemetryService;
-		}
+		// Xynapse: telemetry completely disabled — always use NullTelemetryService
+		this.impl = NullTelemetryService;
 
 		this.sendErrorTelemetry = this.impl.sendErrorTelemetry;
 	}

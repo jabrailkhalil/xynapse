@@ -201,10 +201,15 @@ function resolveLanguagePackLanguage(languagePacks: ILanguagePacks, locale: stri
 function defaultNLSConfiguration(userLocale: string, osLocale: string, nlsMetadataPath: string): INLSConfiguration {
 	mark('code/didGenerateNls');
 
+	// In dev mode (VSCODE_DEV), NLS message files are not available so UI strings stay English,
+	// but resolvedLanguage should still reflect the user's chosen locale so that Language.value()
+	// returns the correct locale for locale-aware features and the setLocale early-return check.
+	const resolvedLanguage = process.env['VSCODE_DEV'] && userLocale && !userLocale.startsWith('en') ? userLocale : 'en';
+
 	return {
 		userLocale,
 		osLocale,
-		resolvedLanguage: 'en',
+		resolvedLanguage,
 		defaultMessagesFile: join(nlsMetadataPath, 'nls.messages.json'),
 
 		// NLS: below 2 are a relic from old times only used by vscode-nls and deprecated
