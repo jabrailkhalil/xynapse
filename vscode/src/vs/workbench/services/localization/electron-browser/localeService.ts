@@ -90,34 +90,7 @@ class NativeLocaleService implements ILocaleService {
 		if (locale === Language.value() || (!locale && Language.isDefaultVariant())) {
 			return;
 		}
-		const installedLanguages = await this.languagePackService.getInstalledLanguages();
 		try {
-
-			// Only Desktop has the concept of installing language packs so we only do this for Desktop
-			// and only if the language pack is not installed
-			if (!installedLanguages.some(installedLanguage => installedLanguage.id === languagePackItem.id)) {
-
-				// If a gallery extension is provided, try to install or show search
-				if (languagePackItem.galleryExtension) {
-					if (languagePackItem.galleryExtension.publisher.toLowerCase() !== 'ms-ceintl') {
-						// Show the view so the user can see the language pack that they should install
-						const viewlet = await this.paneCompositePartService.openPaneComposite(EXTENSIONS_VIEWLET_ID, ViewContainerLocation.Sidebar);
-						(viewlet?.getViewPaneContainer() as IExtensionsViewPaneContainer).search(`@id:${languagePackItem.extensionId}`);
-						return;
-					}
-
-					await this.progressService.withProgress(
-						{
-							location: ProgressLocation.Notification,
-							title: localize('installing', "Installing {0} language support...", languagePackItem.label),
-						},
-						progress => this.extensionManagementService.installFromGallery(languagePackItem.galleryExtension!, {
-							isMachineScoped: false,
-						})
-					);
-				}
-				// If no gallery extension, skip installation — just set locale directly
-			}
 
 			if (!skipDialog && !await this.showRestartDialog(languagePackItem.label)) {
 				return;

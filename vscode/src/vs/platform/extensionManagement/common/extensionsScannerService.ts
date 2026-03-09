@@ -895,7 +895,7 @@ class ExtensionsScanner extends Disposable {
 					}
 				});
 			};
-			if (nlsConfiguration.devMode || nlsConfiguration.pseudo || !nlsConfiguration.language) {
+			if (nlsConfiguration.pseudo || !nlsConfiguration.language) {
 				return c({ localized: joinPath(extensionLocation, 'package.nls.json'), original: null });
 			}
 			loop(nlsConfiguration.language);

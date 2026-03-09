@@ -16,9 +16,9 @@
   },
   "homepage": "https://xynapse.dev",
   "license": "Apache-2.0",
-  "displayName": "Xynapse Assistant",
+  "displayName": "%extension.displayName%",
   "pricing": "Free",
-  "description": "AI assistant for Xynapse IDE with YandexGPT and GigaChat support",
+  "description": "%extension.description%",
   "publisher": "xynapse",
   "engines": {
     "vscode": "^1.70.0",
@@ -90,74 +90,74 @@
       }
     ],
     "configuration": {
-      "title": "Xynapse",
+      "title": "%config.title%",
       "properties": {
         "xynapse.telemetryEnabled": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Xynapse collects anonymous usage data, cleaned of PII, to help us improve the product for our users. Read more  at [xynapse.dev › Telemetry](https://docs.xynapse.dev/telemetry).",
-          "markdownDeprecationMessage": "This setting is deprecated and will be removed in a later version. Please use the _Telemetry > Allow Anonymous Telemetry_ setting in the extension's User Settings page.",
-          "deprecationMessage": "Please use the _Telemetry > Allow Anonymous Telemetry_ setting in the extension's User Settings page."
+          "markdownDescription": "%config.telemetryEnabled%",
+          "markdownDeprecationMessage": "%config.telemetryDeprecation%",
+          "deprecationMessage": "%config.telemetryDeprecationPlain%"
         },
         "xynapse.showInlineTip": {
           "type": "boolean",
           "default": true,
-          "description": "Show inline suggestion to use the Xynapse keyboard shortcuts (e.g. \"Cmd/Ctrl L to select code, Cmd/Ctrl I to edit\")."
+          "description": "%config.showInlineTip%"
         },
         "xynapse.disableQuickFix": {
           "type": "boolean",
           "default": false,
-          "description": "Disable the quick fix feature."
+          "description": "%config.disableQuickFix%"
         },
         "xynapse.enableQuickActions": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable the experimental Quick Actions feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev › Walkthrough: Quick Actions (experimental)](https://docs.xynapse.dev/customize/deep-dives/vscode-actions#quick-actions)"
+          "markdownDescription": "%config.enableQuickActions%"
         },
         "xynapse.enableTabAutocomplete": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable Xynapse tab autocomplete feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev › Walkthrough: Tab Autocomplete (beta)](https://docs.xynapse.dev/features/tab-autocomplete)"
+          "markdownDescription": "%config.enableTabAutocomplete%"
         },
         "xynapse.enableNextEdit": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable Xynapse next edit feature. Read our docs to learn about configuration and how to share feedback: [xynapse.dev › Features › Autocomplete › Next Edit (experimental)](https://docs.xynapse.dev/features/autocomplete/next-edit)"
+          "markdownDescription": "%config.enableNextEdit%"
         },
         "xynapse.pauseTabAutocompleteOnBattery": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Pause Xynapse tab autocomplete feature when your battery is low."
+          "markdownDescription": "%config.pauseTabAutocompleteOnBattery%"
         },
         "xynapse.pauseCodebaseIndexOnStart": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Pause Xynapse codebase index on start."
+          "markdownDescription": "%config.pauseCodebaseIndexOnStart%"
         },
         "xynapse.enableConsole": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable a console to log and explore model inputs and outputs. It can be found in the bottom panel."
+          "markdownDescription": "%config.enableConsole%"
         },
         "xynapse.remoteConfigServerUrl": {
           "type": "string",
           "default": null,
-          "markdownDescription": "If your team is set up to use shared configuration, enter the server URL here and your user token below to enable automatic syncing."
+          "markdownDescription": "%config.remoteConfigServerUrl%"
         },
         "xynapse.userToken": {
           "type": "string",
           "default": null,
-          "markdownDescription": "If your team is set up to use shared configuration, enter your user token here and your server URL above to enable automatic syncing."
+          "markdownDescription": "%config.userToken%"
         },
         "xynapse.remoteConfigSyncPeriod": {
           "type": "number",
           "default": 60,
-          "description": "The period of time in minutes between automatic syncs."
+          "description": "%config.remoteConfigSyncPeriod%"
         },
         "xynapse.ideLanguage": {
           "type": "string",
           "default": "en",
-          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "it", "tr", "uk", "pl", "ar", "hi", "nl"],
+          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "tr", "uk"],
           "enumDescriptions": [
             "Russian",
             "English",
@@ -168,20 +168,15 @@
             "Japanese",
             "Korean",
             "Portuguese",
-            "Italian",
             "Turkish",
-            "Ukrainian",
-            "Polish",
-            "Arabic",
-            "Hindi",
-            "Dutch"
+            "Ukrainian"
           ],
-          "description": "IDE display language. Changes the locale in argv.json and requires a restart."
+          "description": "%config.ideLanguage%"
         },
         "xynapse.assistantLanguage": {
           "type": "string",
           "default": "en",
-          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "it", "tr", "uk", "pl", "ar", "hi", "nl"],
+          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "tr", "uk"],
           "enumDescriptions": [
             "Russian",
             "English",
@@ -192,15 +187,46 @@
             "Japanese",
             "Korean",
             "Portuguese",
-            "Italian",
             "Turkish",
-            "Ukrainian",
-            "Polish",
-            "Arabic",
-            "Hindi",
-            "Dutch"
+            "Ukrainian"
           ],
-          "description": "Language that Xynapse Assistant responds in. Changes prompts and rules in config.yaml."
+          "description": "%config.assistantLanguage%"
+        },
+        "xynapse.yandexGptApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "%config.yandexGptApiKey%",
+          "order": 20
+        },
+        "xynapse.yandexGptFolderId": {
+          "type": "string",
+          "default": "",
+          "description": "%config.yandexGptFolderId%",
+          "order": 21
+        },
+        "xynapse.gigaChatApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "%config.gigaChatApiKey%",
+          "order": 22
+        },
+        "xynapse.gigaChatScope": {
+          "type": "string",
+          "default": "GIGACHAT_API_PERS",
+          "enum": ["GIGACHAT_API_PERS", "GIGACHAT_API_B2B", "GIGACHAT_API_CORP"],
+          "enumDescriptions": [
+            "%config.gigaChatScopePers%",
+            "%config.gigaChatScopeB2B%",
+            "%config.gigaChatScopeCorp%"
+          ],
+          "description": "%config.gigaChatScope%",
+          "order": 23
+        },
+        "xynapse.autoAcceptEdits": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.autoAcceptEdits%",
+          "order": 30
         }
       }
     },
@@ -208,250 +234,251 @@
       {
         "command": "xynapse.applyCodeFromChat",
         "category": "Xynapse",
-        "title": "Apply code from chat",
+        "title": "%command.applyCodeFromChat%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.acceptDiff",
         "category": "Xynapse",
-        "title": "Accept Diff",
+        "title": "%command.acceptDiff%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.rejectDiff",
         "category": "Xynapse",
-        "title": "Reject Diff",
+        "title": "%command.rejectDiff%",
         "group": "Xynapse",
         "icon": "$(stop)"
       },
       {
         "command": "xynapse.acceptVerticalDiffBlock",
         "category": "Xynapse",
-        "title": "Accept Vertical Diff Block",
+        "title": "%command.acceptVerticalDiffBlock%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.rejectVerticalDiffBlock",
         "category": "Xynapse",
-        "title": "Reject Vertical Diff Block",
+        "title": "%command.rejectVerticalDiffBlock%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.focusEdit",
         "category": "Xynapse",
-        "title": "Add to Edit",
+        "title": "%command.focusEdit%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.focusInput",
         "category": "Xynapse",
-        "title": "Add Highlighted Code to Context and Clear Chat",
+        "title": "%command.focusInput%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.focusInputWithoutClear",
         "category": "Xynapse",
-        "title": "Add to Chat",
+        "title": "%command.focusInputWithoutClear%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.debugTerminal",
         "category": "Xynapse",
-        "title": "Debug Terminal",
+        "title": "%command.debugTerminal%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.exitEditMode",
         "category": "Xynapse",
-        "title": "Exit Edit Mode",
+        "title": "%command.exitEditMode%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.openConfigPage",
         "category": "Xynapse",
-        "title": "Open Settings",
+        "title": "%command.openConfigPage%",
         "icon": "$(gear)",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.toggleTabAutocompleteEnabled",
         "category": "Xynapse",
-        "title": "Toggle Autocomplete Enabled",
+        "title": "%command.toggleTabAutocompleteEnabled%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.forceAutocomplete",
-        "title": "Xynapse: Force Autocomplete",
+        "title": "%command.forceAutocomplete%",
         "category": "Xynapse"
       },
       {
         "command": "xynapse.selectFilesAsContext",
         "category": "Xynapse",
-        "title": "Select Files as Context",
+        "title": "%command.selectFilesAsContext%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.newSession",
         "category": "Xynapse",
-        "title": "New Session",
+        "title": "%command.newSession%",
         "icon": "$(add)",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.shareSession",
         "category": "Xynapse",
-        "title": "Share Current Chat Session as Markdown",
+        "title": "%command.shareSession%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.viewHistory",
         "category": "Xynapse",
-        "title": "View History",
+        "title": "%command.viewHistory%",
         "icon": "$(history)",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.viewLogs",
         "category": "Xynapse",
-        "title": "View Logs",
+        "title": "%command.viewLogs%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.clearConsole",
         "category": "Xynapse",
-        "title": "Clear Console",
+        "title": "%command.clearConsole%",
         "icon": "$(clear-all)",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.navigateTo",
         "category": "Xynapse",
-        "title": "Navigate to a path",
+        "title": "%command.navigateTo%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.writeCommentsForCode",
         "category": "Xynapse",
-        "title": "Write Comments for this Code",
+        "title": "%command.writeCommentsForCode%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.writeDocstringForCode",
         "category": "Xynapse",
-        "title": "Write a Docstring for this Code",
+        "title": "%command.writeDocstringForCode%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.fixCode",
         "category": "Xynapse",
-        "title": "Fix this Code",
+        "title": "%command.fixCode%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.optimizeCode",
         "category": "Xynapse",
-        "title": "Optimize this Code",
+        "title": "%command.optimizeCode%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.fixGrammar",
         "category": "Xynapse",
-        "title": "Fix Grammar / Spelling",
+        "title": "%command.fixGrammar%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.codebaseForceReIndex",
         "category": "Xynapse",
-        "title": "Codebase Force Re-Index",
+        "title": "%command.codebaseForceReIndex%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.rebuildCodebaseIndex",
         "category": "Xynapse",
-        "title": "Rebuild codebase index",
+        "title": "%command.rebuildCodebaseIndex%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.docsIndex",
         "category": "Xynapse",
-        "title": "Docs Index",
+        "title": "%command.docsIndex%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.docsReIndex",
         "category": "Xynapse",
-        "title": "Docs Force Re-Index",
+        "title": "%command.docsReIndex%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.enterEnterpriseLicenseKey",
         "category": "Xynapse",
-        "title": "Enter Enterprise License Key",
+        "title": "%command.enterEnterpriseLicenseKey%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.toggleNextEditEnabled",
-        "title": "Xynapse: Toggle Next Edit"
+        "title": "%command.toggleNextEdit%",
+        "category": "Xynapse"
       },
       {
         "command": "xynapse.nextEditWindow.hideNextEditSuggestion",
         "category": "Xynapse",
-        "title": "Hide Next Edit Suggestion"
+        "title": "%command.hideNextEditSuggestion%"
       },
       {
         "command": "xynapse.nextEditWindow.acceptNextEditSuggestion",
         "category": "Xynapse",
-        "title": "Accept Next Edit Suggestion"
+        "title": "%command.acceptNextEditSuggestion%"
       },
       {
         "command": "xynapse.forceNextEdit",
         "category": "Xynapse",
-        "title": "Xynapse: Force Next Edit"
+        "title": "%command.forceNextEdit%"
       },
       {
         "command": "xynapse.acceptJump",
         "category": "Xynapse",
-        "title": "Xynapse: Accept Jump Suggestion"
+        "title": "%command.acceptJump%"
       },
       {
         "command": "xynapse.rejectJump",
         "category": "Xynapse",
-        "title": "Xynapse: Reject Jump Suggestion"
+        "title": "%command.rejectJump%"
       },
       {
         "command": "xynapse.generateRule",
         "category": "Xynapse",
-        "title": "Generate Rule",
+        "title": "%command.generateRule%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.openInNewWindow",
         "category": "Xynapse",
-        "title": "Open in new window",
+        "title": "%command.openInNewWindow%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.ideLanguage",
         "category": "Xynapse",
-        "title": "Change IDE Display Language",
+        "title": "%command.ideLanguage%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.assistantLanguage",
         "category": "Xynapse",
-        "title": "Change Assistant Response Language",
+        "title": "%command.assistantLanguage%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.profile.setup",
         "category": "Xynapse",
-        "title": "Setup Profile",
+        "title": "%command.profileSetup%",
         "group": "Xynapse"
       },
       {
         "command": "xynapse.openConfigFile",
         "category": "Xynapse",
-        "title": "Open Config File",
+        "title": "%command.openConfigFile%",
         "group": "Xynapse"
       }
     ],
@@ -586,7 +613,7 @@
     "submenus": [
       {
         "id": "xynapse.xynapseSubMenu",
-        "label": "Xynapse"
+        "label": "%submenu.xynapse%"
       }
     ],
     "menus": {
@@ -688,14 +715,14 @@
       "activitybar": [
         {
           "id": "xynapse",
-          "title": "Xynapse",
+          "title": "%viewContainer.xynapse%",
           "icon": "media/sidebar-icon.png"
         }
       ],
       "panel": [
         {
           "id": "xynapseConsole",
-          "title": "Xynapse Console",
+          "title": "%viewContainer.console%",
           "icon": "$(window)"
         }
       ]
@@ -705,7 +732,7 @@
         {
           "type": "webview",
           "id": "xynapse.xynapseGUIView",
-          "name": "Xynapse",
+          "name": "%view.xynapse%",
           "icon": "media/sidebar-icon.png",
           "visibility": "visible"
         }
@@ -714,7 +741,7 @@
         {
           "type": "webview",
           "id": "xynapse.xynapseConsoleView",
-          "name": "Xynapse Console",
+          "name": "%view.console%",
           "icon": "$(window)",
           "visibility": "visible",
           "when": "config.xynapse.enableConsole"

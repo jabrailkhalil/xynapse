@@ -1,37 +1,60 @@
 # Xynapse Assistant Configuration
-# This config is used as a reference template.
-# The actual runtime config is at ~/.xynapse/config.yaml
+# Place this file in ~/.xynapse/config.yaml
+#
+# API Keys Setup:
+# 1. Create secrets.local.json in the extension folder with:
+#    {
+#      "apiKey": "your-yandex-api-key",
+#      "folderId": "your-folder-id"
+#    }
+# 2. Or set environment variables:
+#    - YANDEX_API_KEY
+#    - YANDEX_FOLDER_ID
+# 3. Or paste keys directly below (not recommended for shared configs)
 
 name: "Xynapse Config"
 version: "1.0.0"
 schema: "v1"
 
-# Response language for the assistant (en, ru, es, fr, de, zh, ja, ko, etc.)
-responseLanguage: "en"
-
 # Models configuration
 models:
-  # YandexGPT Pro - primary model for chat and edit
-  - name: "YandexGPT Pro"
+  # ── YandexGPT Foundation Models ──
+
+  # YandexGPT Pro 5 — основная модель 5-го поколения
+  - name: "YandexGPT Pro 5"
     provider: "yandex_gpt"
-    model: "yandexgpt"
-    apiKey: "YOUR_YANDEX_API_KEY"
+    model: "yandexgpt/rc"
+    apiKey: "$YANDEX_API_KEY"
     roles:
       - chat
       - edit
-      - apply
     defaultCompletionOptions:
       temperature: 0.3
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "YOUR_FOLDER_ID"
+        folderId: "$YANDEX_FOLDER_ID"
 
-  # YandexGPT Lite - faster, lighter version for autocomplete
-  - name: "YandexGPT Lite"
+  # YandexGPT Pro 5.1 — улучшенная версия Pro 5
+  - name: "YandexGPT Pro 5.1"
     provider: "yandex_gpt"
-    model: "yandexgpt-lite"
-    apiKey: "YOUR_YANDEX_API_KEY"
+    model: "yandexgpt/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - chat
+      - edit
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
+
+  # YandexGPT Lite 5 — лёгкая быстрая модель для автодополнения
+  - name: "YandexGPT Lite 5"
+    provider: "yandex_gpt"
+    model: "yandexgpt-lite/rc"
+    apiKey: "$YANDEX_API_KEY"
     roles:
       - autocomplete
     defaultCompletionOptions:
@@ -39,13 +62,13 @@ models:
       maxTokens: 2048
     requestOptions:
       extraBodyProperties:
-        folderId: "YOUR_FOLDER_ID"
+        folderId: "$YANDEX_FOLDER_ID"
 
-  # YandexGPT 32K - for large context
+  # YandexGPT 32K — модель с расширенным контекстом
   - name: "YandexGPT 32K"
     provider: "yandex_gpt"
-    model: "yandexgpt-32k"
-    apiKey: "YOUR_YANDEX_API_KEY"
+    model: "yandexgpt-32k/rc"
+    apiKey: "$YANDEX_API_KEY"
     roles:
       - summarize
     defaultCompletionOptions:
@@ -53,18 +76,94 @@ models:
       maxTokens: 16384
     requestOptions:
       extraBodyProperties:
-        folderId: "YOUR_FOLDER_ID"
+        folderId: "$YANDEX_FOLDER_ID"
 
-# Rules for the assistant
-rules:
-  - >
-    You are Xynapse Assistant, an intelligent development helper.
-    When the user asks to create a file, ALWAYS use a path relative to the root of the open project (workspace).
-    Be concise and helpful.
-  - >
-    IMPORTANT: When the user asks to create, edit, or delete files,
-    IMMEDIATELY perform the action using the available tools.
-    Do NOT ask for confirmation — call the appropriate tool right away.
+  # Alice AI LLM — модель Алисы
+  - name: "Alice AI LLM"
+    provider: "yandex_gpt"
+    model: "alice-ai-llm/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.5
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
+
+  # ── Сторонние модели на Yandex Cloud ──
+
+  # DeepSeek V3.2 — мощная open-source модель
+  - name: "DeepSeek V3.2"
+    provider: "yandex_gpt"
+    model: "deepseek-v3.2/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - chat
+      - edit
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
+
+  # Qwen3 235B — крупнейшая open-source модель
+  - name: "Qwen3 235B"
+    provider: "yandex_gpt"
+    model: "qwen3-235b-a22b/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
+
+  # gpt-oss-120b — большая open-source модель
+  - name: "gpt-oss-120b"
+    provider: "yandex_gpt"
+    model: "gpt-oss-120b/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
+
+  # gpt-oss-20b — компактная open-source модель
+  - name: "gpt-oss-20b"
+    provider: "yandex_gpt"
+    model: "gpt-oss-20b/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - autocomplete
+    defaultCompletionOptions:
+      temperature: 0.1
+      maxTokens: 4096
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
+
+  # Gemma 3 27B — модель Google на Yandex Cloud
+  - name: "Gemma 3 27B"
+    provider: "yandex_gpt"
+    model: "gemma3-27b-it/latest"
+    apiKey: "$YANDEX_API_KEY"
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: "$YANDEX_FOLDER_ID"
 
 # Context providers
 context:
@@ -79,23 +178,21 @@ context:
 # Slash commands
 slashCommands:
   - name: "edit"
-    description: "Edit selected code"
+    description: "Редактировать выделенный код"
   - name: "explain"
-    description: "Explain selected code"
+    description: "Объяснить выделенный код"
   - name: "comment"
-    description: "Add comments to code"
+    description: "Добавить комментарии к коду"
   - name: "test"
-    description: "Generate tests"
+    description: "Сгенерировать тесты"
   - name: "council"
-    description: "Council"
-  - name: "bvc"
-    description: "BVC — Budgeted Verified Council"
+    description: "Запустить мультиагентное обсуждение (Council)"
 
-# Custom prompts for context menu actions
+# Custom prompts for context menu actions (in Russian)
 experimental:
   contextMenuPrompts:
-    comment: "Add detailed comments to this code. Explain what each part does."
-    docstring: "Write a detailed docstring for this function/class. Include descriptions of parameters and return values."
-    fix: "Fix errors in this code. Explain what was fixed and why."
-    optimize: "Optimize this code for better performance. Explain what optimizations were applied."
-    fixGrammar: "Fix grammar and spelling errors in this text."
+    comment: "Добавь подробные комментарии к этому коду на русском языке. Объясни что делает каждая часть кода."
+    docstring: "Напиши подробный docstring для этой функции/класса на русском языке. Включи описание параметров и возвращаемого значения."
+    fix: "Исправь ошибки в этом коде. Объясни что было исправлено и почему."
+    optimize: "Оптимизируй этот код для лучшей производительности. Объясни какие оптимизации были применены."
+    fixGrammar: "Исправь грамматические и орфографические ошибки в этом тексте."

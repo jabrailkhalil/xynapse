@@ -91,8 +91,8 @@ call :log "Compile and Run"
 cd /d "%~dp0vscode"
 
 set "TEMPLOG=%LOGDIR%\compile_temp.log"
-echo   Компиляция (16GB)...
-call node --max-old-space-size=16384 node_modules\gulp\bin\gulp.js compile > "%TEMPLOG%" 2>&1
+echo   Компиляция (esbuild fast)...
+call node --max-old-space-size=8192 node_modules\gulp\bin\gulp.js transpile-client-esbuild > "%TEMPLOG%" 2>&1
 set EXITCODE=%errorlevel%
 
 type "%TEMPLOG%"
@@ -129,10 +129,10 @@ taskkill /FI "WINDOWTITLE eq Xynapse Watch*" /F >nul 2>&1
 
 :: Проверяем, скомпилирован ли VS Code client (out/)
 if not exist "out\vs\code\electron-main\main.js" (
-    echo   out/ не найден — полная компиляция VS Code...
-    echo   (client ~2 мин + extensions ~30 сек)
+    echo   out/ не найден — быстрая компиляция VS Code (esbuild)...
+    echo   (client ~10 сек + extensions ~30 сек)
     echo.
-    call node --max-old-space-size=16384 node_modules\gulp\bin\gulp.js compile-client
+    call node --max-old-space-size=8192 node_modules\gulp\bin\gulp.js transpile-client-esbuild
     if errorlevel 1 (
         echo.
         echo   ОШИБКА компиляции client!
@@ -141,7 +141,7 @@ if not exist "out\vs\code\electron-main\main.js" (
     )
     echo   Client скомпилирован.
     echo   Компиляция встроенных расширений...
-    call node --max-old-space-size=16384 node_modules\gulp\bin\gulp.js compile-extensions
+    call node --max-old-space-size=8192 node_modules\gulp\bin\gulp.js compile-extensions
     if errorlevel 1 (
         echo.
         echo   ОШИБКА компиляции extensions!
@@ -155,7 +155,7 @@ if not exist "out\vs\code\electron-main\main.js" (
     :: Проверяем встроенные расширения
     if not exist "extensions\git\out\extension.js" (
         echo   Встроенные расширения не собраны — компиляция...
-        call node --max-old-space-size=16384 node_modules\gulp\bin\gulp.js compile-extensions
+        call node --max-old-space-size=8192 node_modules\gulp\bin\gulp.js compile-extensions
     )
 )
 
@@ -226,7 +226,7 @@ call :log "Compile"
 cd /d "%~dp0vscode"
 
 set "TEMPLOG=%LOGDIR%\compile_temp.log"
-call node --max-old-space-size=16384 node_modules\gulp\bin\gulp.js compile > "%TEMPLOG%" 2>&1
+call node --max-old-space-size=8192 node_modules\gulp\bin\gulp.js transpile-client-esbuild > "%TEMPLOG%" 2>&1
 set EXITCODE=%errorlevel%
 
 type "%TEMPLOG%"

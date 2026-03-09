@@ -43,14 +43,15 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
 	mark('code/willGenerateNls');
 
 	if (
-		process.env['VSCODE_DEV'] ||
 		userLocale === 'pseudo' ||
 		userLocale.startsWith('en') ||
-		!commit ||
 		!userDataPath
 	) {
 		return defaultNLSConfiguration(userLocale, osLocale, nlsMetadataPath);
 	}
+
+	// In dev mode commit may be undefined; use a stable placeholder so language packs can still be cached
+	const effectiveCommit = commit || 'dev';
 
 	try {
 		const languagePacks = await getLanguagePackConfigurations(userDataPath);
@@ -77,7 +78,7 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
 
 		const languagePackId = `${languagePack.hash}.${resolvedLanguage}`;
 		const globalLanguagePackCachePath = join(userDataPath, 'clp', languagePackId);
-		const commitLanguagePackCachePath = join(globalLanguagePackCachePath, commit);
+		const commitLanguagePackCachePath = join(globalLanguagePackCachePath, effectiveCommit);
 		const languagePackMessagesFile = join(commitLanguagePackCachePath, 'nls.messages.json');
 		const translationsConfigFile = join(globalLanguagePackCachePath, 'tcf.json');
 		const languagePackCorruptMarkerFile = join(globalLanguagePackCachePath, 'corrupted.info');
