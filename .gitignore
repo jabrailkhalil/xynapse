@@ -22,6 +22,8 @@ build/
 *.vsix
 *.js.map
 *.tsbuildinfo
+*.zip
+VSCode-win32-x64/
 
 # ===========================================
 # Source directories (not part of distribution)

@@ -43,6 +43,11 @@ export async function encryptConfig(plaintext: string, password: string): Promis
 }
 
 export async function decryptConfig(data: Uint8Array, password: string): Promise<string> {
+	const minSize = BUNDLE_MAGIC.length + SALT_LENGTH + IV_LENGTH + 16; // 16 = min GCM tag
+	if (data.byteLength < minSize) {
+		throw new Error('Invalid backup file (too small)');
+	}
+
 	// Validate magic
 	for (let i = 0; i < BUNDLE_MAGIC.length; i++) {
 		if (data[i] !== BUNDLE_MAGIC[i]) {

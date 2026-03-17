@@ -9,10 +9,6 @@ import { INotificationService, Severity } from '../../../../platform/notificatio
 import { IJSONEditingService } from '../../configuration/common/jsonEditing.js';
 import { IActiveLanguagePackService, ILocaleService } from '../common/locale.js';
 import { ILanguagePackItem, ILanguagePackService } from '../../../../platform/languagePacks/common/languagePacks.js';
-import { IPaneCompositePartService } from '../../panecomposite/browser/panecomposite.js';
-import { IViewPaneContainer, ViewContainerLocation } from '../../../common/views.js';
-import { IExtensionManagementService } from '../../../../platform/extensionManagement/common/extensionManagement.js';
-import { IProgressService, ProgressLocation } from '../../../../platform/progress/common/progress.js';
 import { localize } from '../../../../nls.js';
 import { toAction } from '../../../../base/common/actions.js';
 import { ITextFileService } from '../../textfile/common/textfiles.js';
@@ -23,16 +19,6 @@ import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 
-// duplicate of IExtensionsViewPaneContainer in contrib
-interface IExtensionsViewPaneContainer extends IViewPaneContainer {
-	readonly searchValue: string | undefined;
-	search(text: string): void;
-	refresh(): Promise<void>;
-}
-
-// duplicate of VIEWLET_ID in contrib/extensions
-const EXTENSIONS_VIEWLET_ID = 'workbench.view.extensions';
-
 class NativeLocaleService implements ILocaleService {
 	_serviceBrand: undefined;
 
@@ -40,10 +26,6 @@ class NativeLocaleService implements ILocaleService {
 		@IJSONEditingService private readonly jsonEditingService: IJSONEditingService,
 		@IEnvironmentService private readonly environmentService: IEnvironmentService,
 		@INotificationService private readonly notificationService: INotificationService,
-		@ILanguagePackService private readonly languagePackService: ILanguagePackService,
-		@IPaneCompositePartService private readonly paneCompositePartService: IPaneCompositePartService,
-		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
-		@IProgressService private readonly progressService: IProgressService,
 		@ITextFileService private readonly textFileService: ITextFileService,
 		@IEditorService private readonly editorService: IEditorService,
 		@IDialogService private readonly dialogService: IDialogService,

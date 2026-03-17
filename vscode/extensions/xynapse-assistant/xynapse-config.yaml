@@ -1,30 +1,61 @@
-# Xynapse Assistant Configuration
-# Place this file in ~/.xynapse/config.yaml
-#
-# API Keys Setup:
-# 1. Create secrets.local.json in the extension folder with:
-#    {
-#      "apiKey": "your-yandex-api-key",
-#      "folderId": "your-folder-id"
-#    }
-# 2. Or set environment variables:
-#    - YANDEX_API_KEY
-#    - YANDEX_FOLDER_ID
-# 3. Or paste keys directly below (not recommended for shared configs)
-
-name: "Xynapse Config"
-version: "1.0.0"
-schema: "v1"
-
-# Models configuration
+name: Xynapse Config
+version: 1.0.0
+schema: v1
+responseLanguage: ru
 models:
-  # ── YandexGPT Foundation Models ──
+  # ===== YandexGPT =====
+  - name: YandexGPT Pro
+    provider: yandex_gpt
+    model: yandexgpt
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
+    roles:
+      - chat
+      - edit
+      - apply
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # YandexGPT Pro 5 — основная модель 5-го поколения
-  - name: "YandexGPT Pro 5"
-    provider: "yandex_gpt"
-    model: "yandexgpt/rc"
-    apiKey: "$YANDEX_API_KEY"
+  - name: YandexGPT Lite
+    provider: yandex_gpt
+    model: yandexgpt-lite
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
+    roles:
+      - chat
+      - autocomplete
+    defaultCompletionOptions:
+      temperature: 0.1
+      maxTokens: 2048
+    requestOptions:
+      extraBodyProperties:
+        folderId: YOUR_YANDEX_FOLDER_ID
+
+  - name: YandexGPT 32K
+    provider: yandex_gpt
+    model: yandexgpt-32k
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
+    roles:
+      - chat
+      - summarize
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 16384
+    requestOptions:
+      extraBodyProperties:
+        folderId: YOUR_YANDEX_FOLDER_ID
+
+  # ===== YandexGPT 5-е поколение =====
+  - name: YandexGPT Pro 5
+    provider: yandex_gpt
+    model: yandexgpt/rc
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
       - edit
@@ -33,13 +64,13 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # YandexGPT Pro 5.1 — улучшенная версия Pro 5
-  - name: "YandexGPT Pro 5.1"
-    provider: "yandex_gpt"
-    model: "yandexgpt/latest"
-    apiKey: "$YANDEX_API_KEY"
+  - name: YandexGPT Pro 5.1
+    provider: yandex_gpt
+    model: yandexgpt/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
       - edit
@@ -48,13 +79,13 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # YandexGPT Lite 5 — лёгкая быстрая модель для автодополнения
-  - name: "YandexGPT Lite 5"
-    provider: "yandex_gpt"
-    model: "yandexgpt-lite/rc"
-    apiKey: "$YANDEX_API_KEY"
+  - name: YandexGPT Lite 5
+    provider: yandex_gpt
+    model: yandexgpt-lite/rc
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - autocomplete
     defaultCompletionOptions:
@@ -62,27 +93,13 @@ models:
       maxTokens: 2048
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # YandexGPT 32K — модель с расширенным контекстом
-  - name: "YandexGPT 32K"
-    provider: "yandex_gpt"
-    model: "yandexgpt-32k/rc"
-    apiKey: "$YANDEX_API_KEY"
-    roles:
-      - summarize
-    defaultCompletionOptions:
-      temperature: 0.3
-      maxTokens: 16384
-    requestOptions:
-      extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
-
-  # Alice AI LLM — модель Алисы
-  - name: "Alice AI LLM"
-    provider: "yandex_gpt"
-    model: "alice-ai-llm/latest"
-    apiKey: "$YANDEX_API_KEY"
+  - name: Alice AI LLM
+    provider: yandex_gpt
+    model: alice-ai-llm/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
     defaultCompletionOptions:
@@ -90,15 +107,14 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # ── Сторонние модели на Yandex Cloud ──
-
-  # DeepSeek V3.2 — мощная open-source модель
-  - name: "DeepSeek V3.2"
-    provider: "yandex_gpt"
-    model: "deepseek-v3.2/latest"
-    apiKey: "$YANDEX_API_KEY"
+  # ===== Сторонние модели на Yandex Cloud =====
+  - name: DeepSeek V3.2
+    provider: yandex_gpt
+    model: deepseek-v32/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
       - edit
@@ -107,13 +123,13 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # Qwen3 235B — крупнейшая open-source модель
-  - name: "Qwen3 235B"
-    provider: "yandex_gpt"
-    model: "qwen3-235b-a22b/latest"
-    apiKey: "$YANDEX_API_KEY"
+  - name: Qwen3 235B
+    provider: yandex_gpt
+    model: qwen3-235b-a22b/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
     defaultCompletionOptions:
@@ -121,13 +137,13 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # gpt-oss-120b — большая open-source модель
-  - name: "gpt-oss-120b"
-    provider: "yandex_gpt"
-    model: "gpt-oss-120b/latest"
-    apiKey: "$YANDEX_API_KEY"
+  - name: gpt-oss-120b
+    provider: yandex_gpt
+    model: gpt-oss-120b/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
     defaultCompletionOptions:
@@ -135,13 +151,13 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # gpt-oss-20b — компактная open-source модель
-  - name: "gpt-oss-20b"
-    provider: "yandex_gpt"
-    model: "gpt-oss-20b/latest"
-    apiKey: "$YANDEX_API_KEY"
+  - name: gpt-oss-20b
+    provider: yandex_gpt
+    model: gpt-oss-20b/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - autocomplete
     defaultCompletionOptions:
@@ -149,13 +165,13 @@ models:
       maxTokens: 4096
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-  # Gemma 3 27B — модель Google на Yandex Cloud
-  - name: "Gemma 3 27B"
-    provider: "yandex_gpt"
-    model: "gemma3-27b-it/latest"
-    apiKey: "$YANDEX_API_KEY"
+  - name: Gemma 3 27B
+    provider: yandex_gpt
+    model: gemma3-27b-it/latest
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
     roles:
       - chat
     defaultCompletionOptions:
@@ -163,36 +179,198 @@ models:
       maxTokens: 8192
     requestOptions:
       extraBodyProperties:
-        folderId: "$YANDEX_FOLDER_ID"
+        folderId: YOUR_YANDEX_FOLDER_ID
 
-# Context providers
+  # ===== GigaChat =====
+  - name: GigaChat
+    provider: gigachat
+    model: GigaChat
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat-2
+    provider: gigachat
+    model: GigaChat-2
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat Plus
+    provider: gigachat
+    model: GigaChat-Plus
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat Pro
+    provider: gigachat
+    model: GigaChat-Pro
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+      - edit
+      - apply
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat-2 Pro
+    provider: gigachat
+    model: GigaChat-2-Pro
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat Max
+    provider: gigachat
+    model: GigaChat-Max
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+      - summarize
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 16384
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat-2 Max
+    provider: gigachat
+    model: GigaChat-2-Max
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 16384
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  # ===== GigaChat Preview =====
+  - name: GigaChat Preview
+    provider: gigachat
+    model: GigaChat-preview
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat Pro Preview
+    provider: gigachat
+    model: GigaChat-Pro-preview
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+  - name: GigaChat Max Preview
+    provider: gigachat
+    model: GigaChat-Max-preview
+    apiKey: YOUR_GIGACHAT_API_KEY
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 16384
+    requestOptions:
+      extraBodyProperties:
+        scope: GIGACHAT_API_PERS
+
+rules:
+  - >-
+    Ты — Xynapse Assistant, умный помощник для разработки.
+
+    Когда пользователь просит создать файл, ВСЕГДА используй путь относительно
+    корня открытого проекта (workspace).
+
+    Например: 'calculator.py', 'src/utils.py', 'tests/test_main.py'.
+
+    НЕ используй абсолютные пути (вроде C:\...) если пользователь не указал их
+    явно.
+
+    Когда создаёшь файл, убедись что путь начинается от корня проекта.
+
+    Если у пользователя нет открытой папки в IDE, предупреди его: 'Откройте
+    папку проекта через File → Open Folder, иначе я не смогу создать файлы.'
+  - >-
+    Отвечай на русском языке. Будь лаконичным и полезным.
+
+    При создании файлов используй инструмент create_new_file.
+
+    При редактировании существующих файлов используй инструмент
+    edit_existing_file.
+  - |-
+    ВАЖНО: Когда пользователь просит создать, отредактировать или удалить файлы,
+    НЕМЕДЛЕННО выполняй действие с помощью доступных инструментов.
+    НЕ спрашивай подтверждения — сразу вызывай нужный инструмент.
 context:
-  - provider: "code"
-  - provider: "docs"
-  - provider: "diff"
-  - provider: "terminal"
-  - provider: "problems"
-  - provider: "folder"
-  - provider: "codebase"
-
-# Slash commands
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
 slashCommands:
-  - name: "edit"
-    description: "Редактировать выделенный код"
-  - name: "explain"
-    description: "Объяснить выделенный код"
-  - name: "comment"
-    description: "Добавить комментарии к коду"
-  - name: "test"
-    description: "Сгенерировать тесты"
-  - name: "council"
-    description: "Запустить мультиагентное обсуждение (Council)"
-
-# Custom prompts for context menu actions (in Russian)
+  - name: edit
+    description: Редактировать выделенный код
+  - name: explain
+    description: Объяснить выделенный код
+  - name: comment
+    description: Добавить комментарии к коду
+  - name: test
+    description: Сгенерировать тесты
+  - name: council
+    description: Council
+  - name: bvc
+    description: BVC — Budgeted Verified Council
 experimental:
   contextMenuPrompts:
-    comment: "Добавь подробные комментарии к этому коду на русском языке. Объясни что делает каждая часть кода."
-    docstring: "Напиши подробный docstring для этой функции/класса на русском языке. Включи описание параметров и возвращаемого значения."
-    fix: "Исправь ошибки в этом коде. Объясни что было исправлено и почему."
-    optimize: "Оптимизируй этот код для лучшей производительности. Объясни какие оптимизации были применены."
-    fixGrammar: "Исправь грамматические и орфографические ошибки в этом тексте."
+    comment: Добавь подробные комментарии к этому коду на русском языке. Объясни что
+      делает каждая часть кода.
+    docstring: Напиши подробный docstring для этой функции/класса на русском языке.
+      Включи описание параметров и возвращаемого значения.
+    fix: Исправь ошибки в этом коде. Объясни что было исправлено и почему.
+    optimize: Оптимизируй этот код для лучшей производительности. Объясни какие
+      оптимизации были применены.
+    fixGrammar: Исправь грамматические и орфографические ошибки в этом тексте.

@@ -1,948 +1,895 @@
 {
-  "name": "xynapse-assistant",
-  "icon": "media/icon.png",
-  "author": "Xynapse",
-  "version": "1.0.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/xynapse/xynapse-assistant"
-  },
-  "extensionKind": [
-    "ui",
-    "workspace"
-  ],
-  "bugs": {
-    "url": "https://github.com/xynapse/xynapse-assistant/issues"
-  },
-  "homepage": "https://xynapse.dev",
-  "license": "Apache-2.0",
-  "displayName": "%extension.displayName%",
-  "pricing": "Free",
-  "description": "%extension.description%",
-  "publisher": "xynapse",
-  "engines": {
-    "vscode": "^1.70.0",
-    "node": ">=20.19.0"
-  },
-  "engine-strict": true,
-  "galleryBanner": {
-    "color": "#1E1E1E",
-    "theme": "dark"
-  },
-  "categories": [
-    "AI",
-    "Chat",
-    "Programming Languages",
-    "Education",
-    "Machine Learning",
-    "Snippets"
-  ],
-  "keywords": [
-    "xynapse",
-    "yandexgpt",
-    "gigachat",
-    "ai",
-    "assistant",
-    "chat",
-    "code"
-  ],
-  "activationEvents": [
-    "onUri",
-    "onStartupFinished",
-    "onView:xynapseGUIView"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "authentication": [
-      {
-        "id": "xynapse",
-        "label": "Xynapse"
-      },
-      {
-        "id": "xynapse-staging",
-        "label": "Xynapse (Staging)"
-      }
-    ],
-    "languages": [
-      {
-        "filenames": [
-          "config.json",
-          ".xynapserc.json"
-        ],
-        "id": "jsonc"
-      },
-      {
-        "id": "promptLanguage",
-        "extensions": [
-          ".prompt"
-        ],
-        "aliases": [
-          "Prompt Language"
-        ],
-        "configuration": "./prompt-file-language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "promptLanguage",
-        "scopeName": "source.prompt",
-        "path": "./media/prompt.tmLanguage.json"
-      }
-    ],
-    "configuration": {
-      "title": "%config.title%",
-      "properties": {
-        "xynapse.telemetryEnabled": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%config.telemetryEnabled%",
-          "markdownDeprecationMessage": "%config.telemetryDeprecation%",
-          "deprecationMessage": "%config.telemetryDeprecationPlain%"
-        },
-        "xynapse.showInlineTip": {
-          "type": "boolean",
-          "default": true,
-          "description": "%config.showInlineTip%"
-        },
-        "xynapse.disableQuickFix": {
-          "type": "boolean",
-          "default": false,
-          "description": "%config.disableQuickFix%"
-        },
-        "xynapse.enableQuickActions": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%config.enableQuickActions%"
-        },
-        "xynapse.enableTabAutocomplete": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%config.enableTabAutocomplete%"
-        },
-        "xynapse.enableNextEdit": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%config.enableNextEdit%"
-        },
-        "xynapse.pauseTabAutocompleteOnBattery": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%config.pauseTabAutocompleteOnBattery%"
-        },
-        "xynapse.pauseCodebaseIndexOnStart": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%config.pauseCodebaseIndexOnStart%"
-        },
-        "xynapse.enableConsole": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%config.enableConsole%"
-        },
-        "xynapse.remoteConfigServerUrl": {
-          "type": "string",
-          "default": null,
-          "markdownDescription": "%config.remoteConfigServerUrl%"
-        },
-        "xynapse.userToken": {
-          "type": "string",
-          "default": null,
-          "markdownDescription": "%config.userToken%"
-        },
-        "xynapse.remoteConfigSyncPeriod": {
-          "type": "number",
-          "default": 60,
-          "description": "%config.remoteConfigSyncPeriod%"
-        },
-        "xynapse.ideLanguage": {
-          "type": "string",
-          "default": "en",
-          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "tr", "uk"],
-          "enumDescriptions": [
-            "Russian",
-            "English",
-            "Spanish",
-            "French",
-            "German",
-            "Chinese",
-            "Japanese",
-            "Korean",
-            "Portuguese",
-            "Turkish",
-            "Ukrainian"
-          ],
-          "description": "%config.ideLanguage%"
-        },
-        "xynapse.assistantLanguage": {
-          "type": "string",
-          "default": "en",
-          "enum": ["ru", "en", "es", "fr", "de", "zh", "ja", "ko", "pt", "tr", "uk"],
-          "enumDescriptions": [
-            "Russian",
-            "English",
-            "Spanish",
-            "French",
-            "German",
-            "Chinese",
-            "Japanese",
-            "Korean",
-            "Portuguese",
-            "Turkish",
-            "Ukrainian"
-          ],
-          "description": "%config.assistantLanguage%"
-        },
-        "xynapse.yandexGptApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "%config.yandexGptApiKey%",
-          "order": 20
-        },
-        "xynapse.yandexGptFolderId": {
-          "type": "string",
-          "default": "",
-          "description": "%config.yandexGptFolderId%",
-          "order": 21
-        },
-        "xynapse.gigaChatApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "%config.gigaChatApiKey%",
-          "order": 22
-        },
-        "xynapse.gigaChatScope": {
-          "type": "string",
-          "default": "GIGACHAT_API_PERS",
-          "enum": ["GIGACHAT_API_PERS", "GIGACHAT_API_B2B", "GIGACHAT_API_CORP"],
-          "enumDescriptions": [
-            "%config.gigaChatScopePers%",
-            "%config.gigaChatScopeB2B%",
-            "%config.gigaChatScopeCorp%"
-          ],
-          "description": "%config.gigaChatScope%",
-          "order": 23
-        },
-        "xynapse.autoAcceptEdits": {
-          "type": "boolean",
-          "default": false,
-          "description": "%config.autoAcceptEdits%",
-          "order": 30
-        }
-      }
-    },
-    "commands": [
-      {
-        "command": "xynapse.applyCodeFromChat",
-        "category": "Xynapse",
-        "title": "%command.applyCodeFromChat%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.acceptDiff",
-        "category": "Xynapse",
-        "title": "%command.acceptDiff%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.rejectDiff",
-        "category": "Xynapse",
-        "title": "%command.rejectDiff%",
-        "group": "Xynapse",
-        "icon": "$(stop)"
-      },
-      {
-        "command": "xynapse.acceptVerticalDiffBlock",
-        "category": "Xynapse",
-        "title": "%command.acceptVerticalDiffBlock%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.rejectVerticalDiffBlock",
-        "category": "Xynapse",
-        "title": "%command.rejectVerticalDiffBlock%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.focusEdit",
-        "category": "Xynapse",
-        "title": "%command.focusEdit%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.focusInput",
-        "category": "Xynapse",
-        "title": "%command.focusInput%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.focusInputWithoutClear",
-        "category": "Xynapse",
-        "title": "%command.focusInputWithoutClear%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.debugTerminal",
-        "category": "Xynapse",
-        "title": "%command.debugTerminal%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.exitEditMode",
-        "category": "Xynapse",
-        "title": "%command.exitEditMode%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.openConfigPage",
-        "category": "Xynapse",
-        "title": "%command.openConfigPage%",
-        "icon": "$(gear)",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.toggleTabAutocompleteEnabled",
-        "category": "Xynapse",
-        "title": "%command.toggleTabAutocompleteEnabled%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.forceAutocomplete",
-        "title": "%command.forceAutocomplete%",
-        "category": "Xynapse"
-      },
-      {
-        "command": "xynapse.selectFilesAsContext",
-        "category": "Xynapse",
-        "title": "%command.selectFilesAsContext%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.newSession",
-        "category": "Xynapse",
-        "title": "%command.newSession%",
-        "icon": "$(add)",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.shareSession",
-        "category": "Xynapse",
-        "title": "%command.shareSession%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.viewHistory",
-        "category": "Xynapse",
-        "title": "%command.viewHistory%",
-        "icon": "$(history)",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.viewLogs",
-        "category": "Xynapse",
-        "title": "%command.viewLogs%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.clearConsole",
-        "category": "Xynapse",
-        "title": "%command.clearConsole%",
-        "icon": "$(clear-all)",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.navigateTo",
-        "category": "Xynapse",
-        "title": "%command.navigateTo%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.writeCommentsForCode",
-        "category": "Xynapse",
-        "title": "%command.writeCommentsForCode%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.writeDocstringForCode",
-        "category": "Xynapse",
-        "title": "%command.writeDocstringForCode%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.fixCode",
-        "category": "Xynapse",
-        "title": "%command.fixCode%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.optimizeCode",
-        "category": "Xynapse",
-        "title": "%command.optimizeCode%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.fixGrammar",
-        "category": "Xynapse",
-        "title": "%command.fixGrammar%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.codebaseForceReIndex",
-        "category": "Xynapse",
-        "title": "%command.codebaseForceReIndex%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.rebuildCodebaseIndex",
-        "category": "Xynapse",
-        "title": "%command.rebuildCodebaseIndex%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.docsIndex",
-        "category": "Xynapse",
-        "title": "%command.docsIndex%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.docsReIndex",
-        "category": "Xynapse",
-        "title": "%command.docsReIndex%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.enterEnterpriseLicenseKey",
-        "category": "Xynapse",
-        "title": "%command.enterEnterpriseLicenseKey%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.toggleNextEditEnabled",
-        "title": "%command.toggleNextEdit%",
-        "category": "Xynapse"
-      },
-      {
-        "command": "xynapse.nextEditWindow.hideNextEditSuggestion",
-        "category": "Xynapse",
-        "title": "%command.hideNextEditSuggestion%"
-      },
-      {
-        "command": "xynapse.nextEditWindow.acceptNextEditSuggestion",
-        "category": "Xynapse",
-        "title": "%command.acceptNextEditSuggestion%"
-      },
-      {
-        "command": "xynapse.forceNextEdit",
-        "category": "Xynapse",
-        "title": "%command.forceNextEdit%"
-      },
-      {
-        "command": "xynapse.acceptJump",
-        "category": "Xynapse",
-        "title": "%command.acceptJump%"
-      },
-      {
-        "command": "xynapse.rejectJump",
-        "category": "Xynapse",
-        "title": "%command.rejectJump%"
-      },
-      {
-        "command": "xynapse.generateRule",
-        "category": "Xynapse",
-        "title": "%command.generateRule%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.openInNewWindow",
-        "category": "Xynapse",
-        "title": "%command.openInNewWindow%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.ideLanguage",
-        "category": "Xynapse",
-        "title": "%command.ideLanguage%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.assistantLanguage",
-        "category": "Xynapse",
-        "title": "%command.assistantLanguage%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.profile.setup",
-        "category": "Xynapse",
-        "title": "%command.profileSetup%",
-        "group": "Xynapse"
-      },
-      {
-        "command": "xynapse.openConfigFile",
-        "category": "Xynapse",
-        "title": "%command.openConfigFile%",
-        "group": "Xynapse"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "xynapse.focusInput",
-        "mac": "cmd+l",
-        "key": "ctrl+l"
-      },
-      {
-        "command": "xynapse.focusInputWithoutClear",
-        "mac": "cmd+shift+l",
-        "key": "ctrl+shift+l"
-      },
-      {
-        "command": "xynapse.acceptDiff",
-        "mac": "shift+cmd+enter",
-        "key": "shift+ctrl+enter",
-        "when": "xynapse.diffVisible"
-      },
-      {
-        "command": "xynapse.rejectDiff",
-        "mac": "shift+cmd+backspace",
-        "key": "shift+ctrl+backspace",
-        "when": "xynapse.diffVisible"
-      },
-      {
-        "command": "xynapse.rejectDiff",
-        "mac": "cmd+z",
-        "key": "ctrl+z",
-        "when": "xynapse.diffVisible"
-      },
-      {
-        "command": "xynapse.quickEditHistoryUp",
-        "mac": "up",
-        "key": "up",
-        "when": "false && xynapse.quickEditHistoryFocused"
-      },
-      {
-        "command": "xynapse.quickEditHistoryDown",
-        "mac": "down",
-        "key": "down",
-        "when": "false && xynapse.quickEditHistoryFocused"
-      },
-      {
-        "command": "xynapse.acceptVerticalDiffBlock",
-        "mac": "alt+cmd+y",
-        "key": "alt+ctrl+y"
-      },
-      {
-        "command": "xynapse.rejectVerticalDiffBlock",
-        "mac": "alt+cmd+n",
-        "key": "alt+ctrl+n"
-      },
-      {
-        "command": "xynapse.focusEdit",
-        "title": "Edit code with natural language",
-        "mac": "cmd+i",
-        "key": "ctrl+i"
-      },
-      {
-        "command": "xynapse.exitEditMode",
-        "mac": "escape",
-        "key": "escape",
-        "when": "xynapse.inEditMode && editorFocus"
-      },
-      {
-        "command": "xynapse.debugTerminal",
-        "mac": "cmd+shift+r",
-        "key": "ctrl+shift+r"
-      },
-      {
-        "command": "xynapse.openInNewWindow",
-        "mac": "cmd+k cmd+m",
-        "key": "ctrl+k ctrl+m",
-        "when": "!terminalFocus"
-      },
-      {
-        "command": "xynapse.toggleTabAutocompleteEnabled",
-        "mac": "cmd+k cmd+a",
-        "key": "ctrl+k ctrl+a",
-        "when": "!terminalFocus"
-      },
-      {
-        "command": "xynapse.forceAutocomplete",
-        "key": "ctrl+alt+space",
-        "mac": "cmd+alt+space",
-        "when": "editorTextFocus && !editorHasSelection && !editorReadOnly && !inSnippetMode"
-      },
-      {
-        "command": "xynapse.applyCodeFromChat",
-        "mac": "alt+a",
-        "key": "alt+a"
-      },
-      {
-        "command": "xynapse.toggleNextEditEnabled",
-        "key": "ctrl+k ctrl+n",
-        "mac": "cmd+k cmd+n",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "xynapse.nextEditWindow.hideNextEditSuggestion",
-        "key": "escape",
-        "when": "editorTextFocus && nextEditWindowActive && !xynapse.jumpDecorationVisible"
-      },
-      {
-        "command": "xynapse.nextEditWindow.acceptNextEditSuggestion",
-        "key": "tab",
-        "when": "editorTextFocus && nextEditWindowActive && !xynapse.jumpDecorationVisible"
-      },
-      {
-        "command": "xynapse.acceptJump",
-        "key": "tab",
-        "when": "editorTextFocus && xynapse.jumpDecorationVisible"
-      },
-      {
-        "command": "xynapse.rejectJump",
-        "key": "escape",
-        "when": "editorTextFocus && xynapse.jumpDecorationVisible"
-      },
-      {
-        "command": "xynapse.focusInput",
-        "mac": "ctrl+cmd+i",
-        "key": "ctrl+alt+i"
-      },
-      {
-        "command": "xynapse.focusInput",
-        "mac": "cmd+shift+i",
-        "key": "ctrl+shift+i"
-      }
-    ],
-    "submenus": [
-      {
-        "id": "xynapse.xynapseSubMenu",
-        "label": "%submenu.xynapse%"
-      }
-    ],
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "xynapse.focusInput"
-        },
-        {
-          "command": "xynapse.focusInputWithoutClear"
-        },
-        {
-          "command": "xynapse.debugTerminal"
-        },
-        {
-          "command": "xynapse.newSession"
-        },
-        {
-          "command": "xynapse.enterEnterpriseLicenseKey"
-        },
-        {
-          "command": "xynapse.generateRule"
-        },
-        {
-          "command": "xynapse.openInNewWindow"
-        }
-      ],
-      "editor/context": [
-        {
-          "submenu": "xynapse.xynapseSubMenu",
-          "group": "0_axynapse"
-        }
-      ],
-      "editor/title/run": [
-        {
-          "command": "xynapse.rejectDiff",
-          "group": "Xynapse",
-          "when": "xynapse.streamingDiff"
-        }
-      ],
-      "xynapse.xynapseSubMenu": [
-        {
-          "command": "xynapse.focusInputWithoutClear",
-          "group": "Xynapse"
-        },
-        {
-          "command": "xynapse.focusEdit",
-          "group": "Xynapse",
-          "when": "!editorReadonly"
-        }
-      ],
-      "explorer/context": [
-        {
-          "command": "xynapse.selectFilesAsContext",
-          "group": "1_debug@1"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "xynapse.newSession",
-          "group": "navigation@1",
-          "when": "view == xynapse.xynapseGUIView"
-        },
-        {
-          "command": "xynapse.viewHistory",
-          "group": "navigation@2",
-          "when": "view == xynapse.xynapseGUIView"
-        },
-        {
-          "command": "xynapse.openConfigPage",
-          "group": "navigation@4",
-          "when": "view == xynapse.xynapseGUIView"
-        },
-        {
-          "command": "xynapse.clearConsole",
-          "group": "navigation@1",
-          "when": "view == xynapse.xynapseConsoleView"
-        }
-      ],
-      "editor/title": [
-        {
-          "command": "xynapse.newSession",
-          "group": "navigation@1",
-          "when": "activeWebviewPanelId == xynapse.xynapseGUIView"
-        },
-        {
-          "command": "xynapse.viewHistory",
-          "group": "navigation@2",
-          "when": "activeWebviewPanelId == xynapse.xynapseGUIView"
-        }
-      ],
-      "terminal/context": [
-        {
-          "command": "xynapse.debugTerminal",
-          "group": "navigation@top"
-        }
-      ]
-    },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "xynapse",
-          "title": "%viewContainer.xynapse%",
-          "icon": "media/sidebar-icon.png"
-        }
-      ],
-      "panel": [
-        {
-          "id": "xynapseConsole",
-          "title": "%viewContainer.console%",
-          "icon": "$(window)"
-        }
-      ]
-    },
-    "views": {
-      "xynapse": [
-        {
-          "type": "webview",
-          "id": "xynapse.xynapseGUIView",
-          "name": "%view.xynapse%",
-          "icon": "media/sidebar-icon.png",
-          "visibility": "visible"
-        }
-      ],
-      "xynapseConsole": [
-        {
-          "type": "webview",
-          "id": "xynapse.xynapseConsoleView",
-          "name": "%view.console%",
-          "icon": "$(window)",
-          "visibility": "visible",
-          "when": "config.xynapse.enableConsole"
-        }
-      ]
-    },
-    "walkthroughs": [
-      {
-        "id": "xynapse.welcome",
-        "title": "%walkthrough.title%",
-        "description": "%walkthrough.description%",
-        "steps": [
-          {
-            "id": "xynapse.welcome.overview",
-            "title": "%walkthrough.welcome.title%",
-            "description": "%walkthrough.welcome.description%",
-            "media": {
-              "markdown": "media/walkthrough/welcome.md"
-            },
-            "completionEvents": [
-              "onCommand:xynapse.focusInput"
-            ]
-          },
-          {
-            "id": "xynapse.welcome.profile",
-            "title": "%walkthrough.profile.title%",
-            "description": "%walkthrough.profile.description%",
-            "media": {
-              "markdown": "media/walkthrough/setup-profile.md"
-            },
-            "completionEvents": [
-              "onCommand:xynapse.profile.setup"
-            ]
-          },
-          {
-            "id": "xynapse.welcome.models",
-            "title": "%walkthrough.models.title%",
-            "description": "%walkthrough.models.description%",
-            "media": {
-              "markdown": "media/walkthrough/configure-models.md"
-            },
-            "completionEvents": [
-              "onCommand:xynapse.openConfigFile"
-            ]
-          },
-          {
-            "id": "xynapse.welcome.shortcuts",
-            "title": "%walkthrough.shortcuts.title%",
-            "description": "%walkthrough.shortcuts.description%",
-            "media": {
-              "markdown": "media/walkthrough/shortcuts.md"
-            },
-            "completionEvents": [
-              "onCommand:xynapse.focusInput"
-            ]
-          }
-        ]
-      }
-    ],
-    "jsonValidation": [
-      {
-        "fileMatch": "**/.xynapse*/config.json",
-        "url": "./config_schema.json"
-      },
-      {
-        "fileMatch": ".xynapserc.json",
-        "url": "./xynapse_rc_schema.json"
-      },
-      {
-        "fileMatch": "**/config.yaml",
-        "url": "./config-yaml-schema.json"
-      }
-    ]
-  },
-  "scripts": {
-    "esbuild-base": "node scripts/esbuild.js",
-    "vscode:prepublish": "npm run esbuild-base -- --minify",
-    "esbuild": "npm run esbuild-base -- --sourcemap",
-    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-    "esbuild-notify": "npm run esbuild-base -- --sourcemap --notify",
-    "esbuild:visualize": "esbuild-visualizer --metadata ./build/meta.json --filename ./build/stats.html --open",
-    "tsc": "tsc -p ./",
-    "tsc:check": "tsc -p ./ --noEmit",
-    "tsc-watch": "tsc -watch -p ./",
-    "rebuild": "electron-rebuild -v 19.1.8 node-pty",
-    "lint": "eslint src --ext ts",
-    "lint:fix": "eslint . --ext ts --fix",
-    "test": "vitest run",
-    "vitest": "vitest run",
-    "write-build-timestamp": "node scripts/write-build-timestamp.js",
-    "prepackage": "node scripts/prepackage.js",
-    "package": "node scripts/package.js",
-    "package-all": "node scripts/package-all.js",
-    "package:pre-release": "node scripts/package.js --pre-release",
-    "build:rust": "cargo-cp-artifact -ac sync sync.node -- cargo build --manifest-path ../../sync/Cargo.toml --message-format=json-render-diagnostics",
-    "build-debug:rust": "npm run build:rust --",
-    "build-release:rust": "npm run build:rust -- --release",
-    "e2e:compile": "tsc -p ./tsconfig.e2e.json",
-    "e2e:build": "npm --prefix ../../gui run build && npm run package",
-    "e2e:create-storage": "mkdir -p ./e2e/storage",
-    "e2e:get-chromedriver": "extest get-chromedriver --storage ./e2e/storage --code_version 1.95.0",
-    "e2e:get-vscode": "extest get-vscode --storage ./e2e/storage --code_version 1.95.0",
-    "e2e:sign-vscode": "codesign --entitlements entitlements.plist --deep --force -s - './e2e/storage/Visual Studio Code.app'",
-    "e2e:copy-vsix": "chmod +x ./e2e/get-latest-vsix.sh && bash ./e2e/get-latest-vsix.sh",
-    "e2e:install-vsix": "extest install-vsix -f ./e2e/vsix/xynapse-assistant.vsix --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
-    "e2e:install-extensions": "extest install-from-marketplace ms-vscode-remote.remote-ssh --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage && extest install-from-marketplace ms-vscode-remote.remote-containers --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage && extest install-from-marketplace ms-vscode-remote.remote-wsl --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
-    "e2e:test": "NODE_ENV=e2e extest run-tests ${TEST_FILE:-'./e2e/_output/tests/*.test.js'} --code_settings settings.json --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
-    "e2e:clean": "rm -rf ./e2e/_output ./e2e/storage",
-    "e2e:all": "npm run e2e:build && npm run e2e:compile && npm run e2e:create-storage && npm run e2e:get-chromedriver && npm run e2e:get-vscode && npm run e2e:sign-vscode && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
-    "e2e:all-non-mac": "npm run e2e:build && npm run e2e:compile && npm run e2e:create-storage && npm run e2e:get-chromedriver && npm run e2e:get-vscode && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
-    "e2e:recompile-extension": "npm run package && npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
-    "e2e:rebuild-gui": "rm -rf gui && cp -r ../../gui/dist gui && npm run package && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
-    "e2e:quick": "npm run e2e:compile && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
-    "e2e:ci:download": "npm run e2e:create-storage && npm run e2e:get-chromedriver && npm run e2e:get-vscode",
-    "e2e:ci:run": "npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test",
-    "e2e:ci:run-yaml": "npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse-yaml npm run e2e:test"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "1.6.4",
-    "@nestjs/common": "^11.0.16",
-    "@openapitools/openapi-generator-cli": "^2.23.1",
-    "@types/chai": "^5.0.1",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/follow-redirects": "^1.14.4",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "16.x",
-    "@types/node-fetch": "^2.6.12",
-    "@types/react-dom": "^18.2.4",
-    "@types/request": "^2.48.8",
-    "@types/uuid": "^10.0.0",
-    "@types/vscode": "1.70",
-    "@types/ws": "^8.5.4",
-    "@typescript-eslint/eslint-plugin": "^5.45.0",
-    "@vscode/vsce": "^2.22.0",
-    "cargo-cp-artifact": "^0.1",
-    "chai": "^4.5.0",
-    "esbuild": "0.17.19",
-    "esbuild-visualizer": "^0.6.0",
-    "eslint": "^8.28.0",
-    "json-schema-to-typescript": "^12.0.0",
-    "ovsx": "^0.8.3",
-    "rimraf": "^5.0.5",
-    "typescript": "^5.6.3",
-    "vite": "^4.5.14",
-    "vscode-extension-tester": "^8.14.1"
-  },
-  "dependencies": {
-    "@xynapse/config-types": "file:../../packages/config-types",
-    "@xynapse/fetch": "file:../../packages/fetch",
-    "@electron/rebuild": "^3.2.10",
-    "@reduxjs/toolkit": "^1.9.3",
-    "@vscode/ripgrep": "^1.15.9",
-    "axios": "^1.13.1",
-    "core": "file:../../core",
-    "cors": "^2.8.5",
-    "dbinfoz": "^0.14.0",
-    "diff": "^7.0.0",
-    "downshift": "^7.6.0",
-    "express": "^4.18.2",
-    "fkill": "^8.1.0",
-    "follow-redirects": "^1.15.4",
-    "handlebars": "^4.7.8",
-    "highlight.js": "^11.7.0",
-    "highlightable": "^1.3.0-beta.0",
-    "http-proxy": "^1.18.1",
-    "http-proxy-agent": "^7.0.0",
-    "http-proxy-middleware": "^2.0.9",
-    "https-proxy-agent": "^7.0.2",
-    "ignore": "^5.3.0",
-    "jsdom": "^24.0.0",
-    "lru-cache": "^11.0.2",
-    "minisearch": "^7.0.0",
-    "mocha": "^11.7.5",
-    "monaco-editor": "^0.45.0",
-    "monaco-vscode-textmate-theme-converter": "^0.1.7",
-    "ncp": "^2.0.0",
-    "node-fetch": "^3.3.2",
-    "node-machine-id": "^1.1.12",
-    "posthog-node": "^3.6.3",
-    "react-markdown": "^8.0.7",
-    "react-redux": "^8.0.5",
-    "read-last-lines": "^1.8.0",
-    "request": "^2.88.2",
-    "socket.io-client": "^4.7.2",
-    "strip-ansi": "^7.1.0",
-    "svg-builder": "^2.0.0",
-    "systeminformation": "^5.27.11",
-    "tailwindcss": "^3.3.2",
-    "undici": "^6.21.3",
-    "uuid": "^9.0.1",
-    "uuidv4": "^6.2.13",
-    "vectordb": "0.4.20",
-    "vitest": "^3.1.4",
-    "vscode-languageclient": "^8.0.2",
-    "ws": "^8.13.0",
-    "yarn": "^1.22.21"
-  },
-  "overrides": {
-    "vitest": {
-      "@types/node": "^16.18.119"
-    }
-  }
+	"name": "xynapse-assistant",
+	"icon": "media/icon.png",
+	"author": "Xynapse",
+	"version": "1.0.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/xynapse/xynapse-assistant"
+	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
+	"bugs": {
+		"url": "https://github.com/xynapse/xynapse-assistant/issues"
+	},
+	"homepage": "https://xynapse.dev",
+	"license": "Apache-2.0",
+	"displayName": "%extension.displayName%",
+	"pricing": "Free",
+	"description": "%extension.description%",
+	"publisher": "xynapse",
+	"engines": {
+		"vscode": "^1.70.0",
+		"node": ">=20.19.0"
+	},
+	"engine-strict": true,
+	"galleryBanner": {
+		"color": "#1E1E1E",
+		"theme": "dark"
+	},
+	"categories": [
+		"AI",
+		"Chat",
+		"Programming Languages",
+		"Education",
+		"Machine Learning",
+		"Snippets"
+	],
+	"keywords": [
+		"xynapse",
+		"yandexgpt",
+		"gigachat",
+		"ai",
+		"assistant",
+		"chat",
+		"code"
+	],
+	"activationEvents": [
+		"onUri",
+		"onStartupFinished",
+		"onView:xynapseGUIView"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"authentication": [
+			{
+				"id": "xynapse",
+				"label": "Xynapse"
+			},
+			{
+				"id": "xynapse-staging",
+				"label": "Xynapse (Staging)"
+			}
+		],
+		"languages": [
+			{
+				"filenames": [
+					"config.json",
+					".xynapserc.json"
+				],
+				"id": "jsonc"
+			},
+			{
+				"id": "promptLanguage",
+				"extensions": [
+					".prompt"
+				],
+				"aliases": [
+					"Prompt Language"
+				],
+				"configuration": "./prompt-file-language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "promptLanguage",
+				"scopeName": "source.prompt",
+				"path": "./media/prompt.tmLanguage.json"
+			}
+		],
+		"configuration": {
+			"title": "%config.title%",
+			"properties": {
+				"xynapse.telemetryEnabled": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "%config.telemetryEnabled%",
+					"markdownDeprecationMessage": "%config.telemetryDeprecation%",
+					"deprecationMessage": "%config.telemetryDeprecationPlain%"
+				},
+				"xynapse.showInlineTip": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.showInlineTip%"
+				},
+				"xynapse.disableQuickFix": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.disableQuickFix%"
+				},
+				"xynapse.enableQuickActions": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%config.enableQuickActions%"
+				},
+				"xynapse.enableTabAutocomplete": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "%config.enableTabAutocomplete%"
+				},
+				"xynapse.enableNextEdit": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "%config.enableNextEdit%"
+				},
+				"xynapse.pauseTabAutocompleteOnBattery": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%config.pauseTabAutocompleteOnBattery%"
+				},
+				"xynapse.pauseCodebaseIndexOnStart": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%config.pauseCodebaseIndexOnStart%"
+				},
+				"xynapse.enableConsole": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%config.enableConsole%"
+				},
+				"xynapse.remoteConfigServerUrl": {
+					"type": "string",
+					"default": null,
+					"markdownDescription": "%config.remoteConfigServerUrl%"
+				},
+				"xynapse.userToken": {
+					"type": "string",
+					"default": null,
+					"markdownDescription": "%config.userToken%"
+				},
+				"xynapse.remoteConfigSyncPeriod": {
+					"type": "number",
+					"default": 60,
+					"description": "%config.remoteConfigSyncPeriod%"
+				},
+				"xynapse.ideLanguage": {
+					"type": "string",
+					"default": "en",
+					"enum": [
+						"ru",
+						"en",
+						"es",
+						"fr",
+						"de",
+						"zh",
+						"ja",
+						"ko",
+						"pt",
+						"tr",
+						"uk"
+					],
+					"enumDescriptions": [
+						"Russian",
+						"English",
+						"Spanish",
+						"French",
+						"German",
+						"Chinese",
+						"Japanese",
+						"Korean",
+						"Portuguese",
+						"Turkish",
+						"Ukrainian"
+					],
+					"description": "%config.ideLanguage%"
+				},
+				"xynapse.assistantLanguage": {
+					"type": "string",
+					"default": "en",
+					"enum": [
+						"ru",
+						"en",
+						"es",
+						"fr",
+						"de",
+						"zh",
+						"ja",
+						"ko",
+						"pt",
+						"tr",
+						"uk"
+					],
+					"enumDescriptions": [
+						"Russian",
+						"English",
+						"Spanish",
+						"French",
+						"German",
+						"Chinese",
+						"Japanese",
+						"Korean",
+						"Portuguese",
+						"Turkish",
+						"Ukrainian"
+					],
+					"description": "%config.assistantLanguage%"
+				},
+				"xynapse.yandexGptApiKey": {
+					"type": "string",
+					"default": "",
+					"description": "%config.yandexGptApiKey%",
+					"order": 20
+				},
+				"xynapse.yandexGptFolderId": {
+					"type": "string",
+					"default": "",
+					"description": "%config.yandexGptFolderId%",
+					"order": 21
+				},
+				"xynapse.gigaChatApiKey": {
+					"type": "string",
+					"default": "",
+					"description": "%config.gigaChatApiKey%",
+					"order": 22
+				},
+				"xynapse.gigaChatScope": {
+					"type": "string",
+					"default": "GIGACHAT_API_PERS",
+					"enum": [
+						"GIGACHAT_API_PERS",
+						"GIGACHAT_API_B2B",
+						"GIGACHAT_API_CORP"
+					],
+					"enumDescriptions": [
+						"%config.gigaChatScopePers%",
+						"%config.gigaChatScopeB2B%",
+						"%config.gigaChatScopeCorp%"
+					],
+					"description": "%config.gigaChatScope%",
+					"order": 23
+				},
+				"xynapse.autoAcceptEdits": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.autoAcceptEdits%",
+					"order": 30
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "xynapse.applyCodeFromChat",
+				"category": "Xynapse",
+				"title": "%command.applyCodeFromChat%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.acceptDiff",
+				"category": "Xynapse",
+				"title": "%command.acceptDiff%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.rejectDiff",
+				"category": "Xynapse",
+				"title": "%command.rejectDiff%",
+				"group": "Xynapse",
+				"icon": "$(stop)"
+			},
+			{
+				"command": "xynapse.acceptVerticalDiffBlock",
+				"category": "Xynapse",
+				"title": "%command.acceptVerticalDiffBlock%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.rejectVerticalDiffBlock",
+				"category": "Xynapse",
+				"title": "%command.rejectVerticalDiffBlock%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.focusEdit",
+				"category": "Xynapse",
+				"title": "%command.focusEdit%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.focusInput",
+				"category": "Xynapse",
+				"title": "%command.focusInput%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.focusInputWithoutClear",
+				"category": "Xynapse",
+				"title": "%command.focusInputWithoutClear%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.debugTerminal",
+				"category": "Xynapse",
+				"title": "%command.debugTerminal%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.exitEditMode",
+				"category": "Xynapse",
+				"title": "%command.exitEditMode%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.openConfigPage",
+				"category": "Xynapse",
+				"title": "%command.openConfigPage%",
+				"icon": "$(gear)",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.toggleTabAutocompleteEnabled",
+				"category": "Xynapse",
+				"title": "%command.toggleTabAutocompleteEnabled%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.forceAutocomplete",
+				"title": "%command.forceAutocomplete%",
+				"category": "Xynapse"
+			},
+			{
+				"command": "xynapse.selectFilesAsContext",
+				"category": "Xynapse",
+				"title": "%command.selectFilesAsContext%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.newSession",
+				"category": "Xynapse",
+				"title": "%command.newSession%",
+				"icon": "$(add)",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.shareSession",
+				"category": "Xynapse",
+				"title": "%command.shareSession%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.viewHistory",
+				"category": "Xynapse",
+				"title": "%command.viewHistory%",
+				"icon": "$(history)",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.viewLogs",
+				"category": "Xynapse",
+				"title": "%command.viewLogs%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.clearConsole",
+				"category": "Xynapse",
+				"title": "%command.clearConsole%",
+				"icon": "$(clear-all)",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.navigateTo",
+				"category": "Xynapse",
+				"title": "%command.navigateTo%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.writeCommentsForCode",
+				"category": "Xynapse",
+				"title": "%command.writeCommentsForCode%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.writeDocstringForCode",
+				"category": "Xynapse",
+				"title": "%command.writeDocstringForCode%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.fixCode",
+				"category": "Xynapse",
+				"title": "%command.fixCode%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.optimizeCode",
+				"category": "Xynapse",
+				"title": "%command.optimizeCode%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.fixGrammar",
+				"category": "Xynapse",
+				"title": "%command.fixGrammar%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.codebaseForceReIndex",
+				"category": "Xynapse",
+				"title": "%command.codebaseForceReIndex%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.rebuildCodebaseIndex",
+				"category": "Xynapse",
+				"title": "%command.rebuildCodebaseIndex%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.docsIndex",
+				"category": "Xynapse",
+				"title": "%command.docsIndex%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.docsReIndex",
+				"category": "Xynapse",
+				"title": "%command.docsReIndex%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.enterEnterpriseLicenseKey",
+				"category": "Xynapse",
+				"title": "%command.enterEnterpriseLicenseKey%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.toggleNextEditEnabled",
+				"title": "%command.toggleNextEdit%",
+				"category": "Xynapse"
+			},
+			{
+				"command": "xynapse.nextEditWindow.hideNextEditSuggestion",
+				"category": "Xynapse",
+				"title": "%command.hideNextEditSuggestion%"
+			},
+			{
+				"command": "xynapse.nextEditWindow.acceptNextEditSuggestion",
+				"category": "Xynapse",
+				"title": "%command.acceptNextEditSuggestion%"
+			},
+			{
+				"command": "xynapse.forceNextEdit",
+				"category": "Xynapse",
+				"title": "%command.forceNextEdit%"
+			},
+			{
+				"command": "xynapse.acceptJump",
+				"category": "Xynapse",
+				"title": "%command.acceptJump%"
+			},
+			{
+				"command": "xynapse.rejectJump",
+				"category": "Xynapse",
+				"title": "%command.rejectJump%"
+			},
+			{
+				"command": "xynapse.generateRule",
+				"category": "Xynapse",
+				"title": "%command.generateRule%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.openInNewWindow",
+				"category": "Xynapse",
+				"title": "%command.openInNewWindow%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.ideLanguage",
+				"category": "Xynapse",
+				"title": "%command.ideLanguage%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.assistantLanguage",
+				"category": "Xynapse",
+				"title": "%command.assistantLanguage%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.profile.setup",
+				"category": "Xynapse",
+				"title": "%command.profileSetup%",
+				"group": "Xynapse"
+			},
+			{
+				"command": "xynapse.openConfigFile",
+				"category": "Xynapse",
+				"title": "%command.openConfigFile%",
+				"group": "Xynapse"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "xynapse.focusInput",
+				"mac": "cmd+l",
+				"key": "ctrl+l"
+			},
+			{
+				"command": "xynapse.focusInputWithoutClear",
+				"mac": "cmd+shift+l",
+				"key": "ctrl+shift+l"
+			},
+			{
+				"command": "xynapse.acceptDiff",
+				"mac": "shift+cmd+enter",
+				"key": "shift+ctrl+enter",
+				"when": "xynapse.diffVisible"
+			},
+			{
+				"command": "xynapse.rejectDiff",
+				"mac": "shift+cmd+backspace",
+				"key": "shift+ctrl+backspace",
+				"when": "xynapse.diffVisible"
+			},
+			{
+				"command": "xynapse.rejectDiff",
+				"mac": "cmd+z",
+				"key": "ctrl+z",
+				"when": "xynapse.diffVisible"
+			},
+			{
+				"command": "xynapse.quickEditHistoryUp",
+				"mac": "up",
+				"key": "up",
+				"when": "false && xynapse.quickEditHistoryFocused"
+			},
+			{
+				"command": "xynapse.quickEditHistoryDown",
+				"mac": "down",
+				"key": "down",
+				"when": "false && xynapse.quickEditHistoryFocused"
+			},
+			{
+				"command": "xynapse.acceptVerticalDiffBlock",
+				"mac": "alt+cmd+y",
+				"key": "alt+ctrl+y"
+			},
+			{
+				"command": "xynapse.rejectVerticalDiffBlock",
+				"mac": "alt+cmd+n",
+				"key": "alt+ctrl+n"
+			},
+			{
+				"command": "xynapse.focusEdit",
+				"title": "Edit code with natural language",
+				"mac": "cmd+i",
+				"key": "ctrl+i"
+			},
+			{
+				"command": "xynapse.exitEditMode",
+				"mac": "escape",
+				"key": "escape",
+				"when": "xynapse.inEditMode && editorFocus"
+			},
+			{
+				"command": "xynapse.debugTerminal",
+				"mac": "cmd+shift+r",
+				"key": "ctrl+shift+r"
+			},
+			{
+				"command": "xynapse.openInNewWindow",
+				"mac": "cmd+k cmd+m",
+				"key": "ctrl+k ctrl+m",
+				"when": "!terminalFocus"
+			},
+			{
+				"command": "xynapse.toggleTabAutocompleteEnabled",
+				"mac": "cmd+k cmd+a",
+				"key": "ctrl+k ctrl+a",
+				"when": "!terminalFocus"
+			},
+			{
+				"command": "xynapse.forceAutocomplete",
+				"key": "ctrl+alt+space",
+				"mac": "cmd+alt+space",
+				"when": "editorTextFocus && !editorHasSelection && !editorReadOnly && !inSnippetMode"
+			},
+			{
+				"command": "xynapse.applyCodeFromChat",
+				"mac": "alt+a",
+				"key": "alt+a"
+			},
+			{
+				"command": "xynapse.toggleNextEditEnabled",
+				"key": "ctrl+k ctrl+n",
+				"mac": "cmd+k cmd+n",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "xynapse.nextEditWindow.hideNextEditSuggestion",
+				"key": "escape",
+				"when": "editorTextFocus && nextEditWindowActive && !xynapse.jumpDecorationVisible"
+			},
+			{
+				"command": "xynapse.nextEditWindow.acceptNextEditSuggestion",
+				"key": "tab",
+				"when": "editorTextFocus && nextEditWindowActive && !xynapse.jumpDecorationVisible"
+			},
+			{
+				"command": "xynapse.acceptJump",
+				"key": "tab",
+				"when": "editorTextFocus && xynapse.jumpDecorationVisible"
+			},
+			{
+				"command": "xynapse.rejectJump",
+				"key": "escape",
+				"when": "editorTextFocus && xynapse.jumpDecorationVisible"
+			},
+			{
+				"command": "xynapse.focusInput",
+				"mac": "ctrl+cmd+i",
+				"key": "ctrl+alt+i"
+			},
+			{
+				"command": "xynapse.focusInput",
+				"mac": "cmd+shift+i",
+				"key": "ctrl+shift+i"
+			}
+		],
+		"submenus": [
+			{
+				"id": "xynapse.xynapseSubMenu",
+				"label": "%submenu.xynapse%"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "xynapse.focusInput"
+				},
+				{
+					"command": "xynapse.focusInputWithoutClear"
+				},
+				{
+					"command": "xynapse.debugTerminal"
+				},
+				{
+					"command": "xynapse.newSession"
+				},
+				{
+					"command": "xynapse.enterEnterpriseLicenseKey"
+				},
+				{
+					"command": "xynapse.generateRule"
+				},
+				{
+					"command": "xynapse.openInNewWindow"
+				}
+			],
+			"editor/context": [
+				{
+					"submenu": "xynapse.xynapseSubMenu",
+					"group": "0_axynapse"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "xynapse.rejectDiff",
+					"group": "Xynapse",
+					"when": "xynapse.streamingDiff"
+				}
+			],
+			"xynapse.xynapseSubMenu": [
+				{
+					"command": "xynapse.focusInputWithoutClear",
+					"group": "Xynapse"
+				},
+				{
+					"command": "xynapse.focusEdit",
+					"group": "Xynapse",
+					"when": "!editorReadonly"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "xynapse.selectFilesAsContext",
+					"group": "1_debug@1"
+				}
+			],
+			"view/title": [
+				{
+					"command": "xynapse.newSession",
+					"group": "navigation@1",
+					"when": "view == xynapse.xynapseGUIView"
+				},
+				{
+					"command": "xynapse.viewHistory",
+					"group": "navigation@2",
+					"when": "view == xynapse.xynapseGUIView"
+				},
+				{
+					"command": "xynapse.openConfigPage",
+					"group": "navigation@4",
+					"when": "view == xynapse.xynapseGUIView"
+				},
+				{
+					"command": "xynapse.clearConsole",
+					"group": "navigation@1",
+					"when": "view == xynapse.xynapseConsoleView"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "xynapse.newSession",
+					"group": "navigation@1",
+					"when": "activeWebviewPanelId == xynapse.xynapseGUIView"
+				},
+				{
+					"command": "xynapse.viewHistory",
+					"group": "navigation@2",
+					"when": "activeWebviewPanelId == xynapse.xynapseGUIView"
+				}
+			],
+			"terminal/context": [
+				{
+					"command": "xynapse.debugTerminal",
+					"group": "navigation@top"
+				}
+			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "xynapse",
+					"title": "%viewContainer.xynapse%",
+					"icon": "media/sidebar-icon.png"
+				}
+			],
+			"panel": [
+				{
+					"id": "xynapseConsole",
+					"title": "%viewContainer.console%",
+					"icon": "$(window)"
+				}
+			]
+		},
+		"views": {
+			"xynapse": [
+				{
+					"type": "webview",
+					"id": "xynapse.xynapseGUIView",
+					"name": "%view.xynapse%",
+					"icon": "media/sidebar-icon.png",
+					"visibility": "visible"
+				}
+			],
+			"xynapseConsole": [
+				{
+					"type": "webview",
+					"id": "xynapse.xynapseConsoleView",
+					"name": "%view.console%",
+					"icon": "$(window)",
+					"visibility": "visible",
+					"when": "config.xynapse.enableConsole"
+				}
+			]
+		},
+		"walkthroughs": [
+			{
+				"id": "xynapse.welcome",
+				"title": "%walkthrough.title%",
+				"description": "%walkthrough.description%",
+				"steps": [
+					{
+						"id": "xynapse.welcome.overview",
+						"title": "%walkthrough.welcome.title%",
+						"description": "%walkthrough.welcome.description%",
+						"media": {
+							"markdown": "media/walkthrough/welcome.md"
+						},
+						"completionEvents": [
+							"onCommand:xynapse.focusInput"
+						]
+					},
+					{
+						"id": "xynapse.welcome.profile",
+						"title": "%walkthrough.profile.title%",
+						"description": "%walkthrough.profile.description%",
+						"media": {
+							"markdown": "media/walkthrough/setup-profile.md"
+						},
+						"completionEvents": [
+							"onCommand:xynapse.profile.setup"
+						]
+					},
+					{
+						"id": "xynapse.welcome.models",
+						"title": "%walkthrough.models.title%",
+						"description": "%walkthrough.models.description%",
+						"media": {
+							"markdown": "media/walkthrough/configure-models.md"
+						},
+						"completionEvents": [
+							"onCommand:xynapse.openConfigFile"
+						]
+					},
+					{
+						"id": "xynapse.welcome.shortcuts",
+						"title": "%walkthrough.shortcuts.title%",
+						"description": "%walkthrough.shortcuts.description%",
+						"media": {
+							"markdown": "media/walkthrough/shortcuts.md"
+						},
+						"completionEvents": [
+							"onCommand:xynapse.focusInput"
+						]
+					}
+				]
+			}
+		],
+		"jsonValidation": [
+			{
+				"fileMatch": "**/.xynapse*/config.json",
+				"url": "./config_schema.json"
+			},
+			{
+				"fileMatch": ".xynapserc.json",
+				"url": "./xynapse_rc_schema.json"
+			},
+			{
+				"fileMatch": "**/config.yaml",
+				"url": "./config-yaml-schema.json"
+			}
+		]
+	},
+	"scripts": {
+		"esbuild-base": "node scripts/esbuild.js",
+		"vscode:prepublish": "npm run esbuild-base -- --minify",
+		"esbuild": "npm run esbuild-base -- --sourcemap",
+		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+		"esbuild-notify": "npm run esbuild-base -- --sourcemap --notify",
+		"esbuild:visualize": "esbuild-visualizer --metadata ./build/meta.json --filename ./build/stats.html --open",
+		"tsc": "tsc -p ./",
+		"tsc:check": "tsc -p ./ --noEmit",
+		"tsc-watch": "tsc -watch -p ./",
+		"rebuild": "electron-rebuild -v 19.1.8 node-pty",
+		"lint": "eslint src --ext ts",
+		"lint:fix": "eslint . --ext ts --fix",
+		"test": "vitest run",
+		"vitest": "vitest run",
+		"write-build-timestamp": "node scripts/write-build-timestamp.js",
+		"prepackage": "node scripts/prepackage.js",
+		"package": "node scripts/package.js",
+		"package-all": "node scripts/package-all.js",
+		"package:pre-release": "node scripts/package.js --pre-release",
+		"build:rust": "cargo-cp-artifact -ac sync sync.node -- cargo build --manifest-path ../../sync/Cargo.toml --message-format=json-render-diagnostics",
+		"build-debug:rust": "npm run build:rust --",
+		"build-release:rust": "npm run build:rust -- --release",
+		"e2e:compile": "tsc -p ./tsconfig.e2e.json",
+		"e2e:build": "npm --prefix ../../gui run build && npm run package",
+		"e2e:create-storage": "mkdir -p ./e2e/storage",
+		"e2e:get-chromedriver": "extest get-chromedriver --storage ./e2e/storage --code_version 1.95.0",
+		"e2e:get-vscode": "extest get-vscode --storage ./e2e/storage --code_version 1.95.0",
+		"e2e:sign-vscode": "codesign --entitlements entitlements.plist --deep --force -s - './e2e/storage/Visual Studio Code.app'",
+		"e2e:copy-vsix": "chmod +x ./e2e/get-latest-vsix.sh && bash ./e2e/get-latest-vsix.sh",
+		"e2e:install-vsix": "extest install-vsix -f ./e2e/vsix/xynapse-assistant.vsix --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
+		"e2e:install-extensions": "extest install-from-marketplace ms-vscode-remote.remote-ssh --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage && extest install-from-marketplace ms-vscode-remote.remote-containers --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage && extest install-from-marketplace ms-vscode-remote.remote-wsl --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
+		"e2e:test": "NODE_ENV=e2e extest run-tests ${TEST_FILE:-'./e2e/_output/tests/*.test.js'} --code_settings settings.json --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
+		"e2e:clean": "rm -rf ./e2e/_output ./e2e/storage",
+		"e2e:all": "npm run e2e:build && npm run e2e:compile && npm run e2e:create-storage && npm run e2e:get-chromedriver && npm run e2e:get-vscode && npm run e2e:sign-vscode && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
+		"e2e:all-non-mac": "npm run e2e:build && npm run e2e:compile && npm run e2e:create-storage && npm run e2e:get-chromedriver && npm run e2e:get-vscode && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
+		"e2e:recompile-extension": "npm run package && npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
+		"e2e:rebuild-gui": "rm -rf gui && cp -r ../../gui/dist gui && npm run package && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
+		"e2e:quick": "npm run e2e:compile && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test && npm run e2e:clean",
+		"e2e:ci:download": "npm run e2e:create-storage && npm run e2e:get-chromedriver && npm run e2e:get-vscode",
+		"e2e:ci:run": "npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse npm run e2e:test",
+		"e2e:ci:run-yaml": "npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && XYNAPSE_GLOBAL_DIR=e2e/test-xynapse-yaml npm run e2e:test"
+	},
+	"overrides": {
+		"vitest": {
+			"@types/node": "^16.18.119"
+		}
+	}
 }

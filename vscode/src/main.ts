@@ -26,9 +26,9 @@ perf.mark('code/didStartMain');
 // Note: NODE_EXTRA_CA_CERTS is read at process startup, so this only helps child processes
 // (e.g. extension host). For the main process, code.bat sets it before Electron launches.
 if (!process.env['NODE_EXTRA_CA_CERTS']) {
-	// In dev: __dirname = vscode/src/, so go up one level to vscode/
-	// In prod: __dirname = app root where extensions/ is a sibling
-	const root = path.basename(__dirname) === 'src' ? path.dirname(__dirname) : __dirname;
+	// In dev: import.meta.dirname = vscode/src/, so go up one level to vscode/
+	// In prod: import.meta.dirname = app root where extensions/ is a sibling
+	const root = path.basename(import.meta.dirname) === 'src' ? path.dirname(import.meta.dirname) : import.meta.dirname;
 	const certPath = path.join(root, 'extensions', 'xynapse-assistant', 'russian_trusted_root_ca.cer');
 	if (fs.existsSync(certPath)) {
 		process.env['NODE_EXTRA_CA_CERTS'] = certPath;

@@ -49,6 +49,7 @@ registerAction2(class SetUpXynapseProfileAction extends Action2 {
 	async run(accessor: ServicesAccessor): Promise<void> {
 		const quickInputService = accessor.get(IQuickInputService);
 		const profileService = accessor.get(IXynapseProfileService);
+		const notificationService = accessor.get(INotificationService);
 
 		const name = await quickInputService.input({
 			prompt: localize('xynapseProfileName', 'Enter your name'),
@@ -62,7 +63,11 @@ registerAction2(class SetUpXynapseProfileAction extends Action2 {
 		});
 		if (!email) { return; }
 
-		await profileService.setProfile({ name, email });
+		try {
+			await profileService.setProfile({ name, email });
+		} catch (e) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileSetupFailed', 'Failed to set up profile: {0}', String(e)) });
+		}
 	}
 });
 
@@ -77,6 +82,7 @@ registerAction2(class EditXynapseProfileAction extends Action2 {
 	async run(accessor: ServicesAccessor): Promise<void> {
 		const quickInputService = accessor.get(IQuickInputService);
 		const profileService = accessor.get(IXynapseProfileService);
+		const notificationService = accessor.get(INotificationService);
 
 		const current = profileService.getProfile();
 
@@ -94,7 +100,11 @@ registerAction2(class EditXynapseProfileAction extends Action2 {
 		});
 		if (!email) { return; }
 
-		await profileService.setProfile({ name, email });
+		try {
+			await profileService.setProfile({ name, email });
+		} catch (e) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileEditFailed', 'Failed to update profile: {0}', String(e)) });
+		}
 	}
 });
 
@@ -108,7 +118,12 @@ registerAction2(class ClearXynapseProfileAction extends Action2 {
 	}
 	async run(accessor: ServicesAccessor): Promise<void> {
 		const profileService = accessor.get(IXynapseProfileService);
-		await profileService.clearProfile();
+		const notificationService = accessor.get(INotificationService);
+		try {
+			await profileService.clearProfile();
+		} catch (e) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileClearFailed', 'Failed to sign out: {0}', String(e)) });
+		}
 	}
 });
 
@@ -257,7 +272,7 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 		if (!sources || sources.length === 0) { return; }
 
 		const raw = await fileService.readFile(sources[0]);
-		const data = new Uint8Array(raw.value.buffer);
+		const data = raw.value.buffer.slice(0);
 
 		const password = await promptPassword(quickInputService,
 			localize('xynapseConfigImportPassword', 'Enter decryption password'));
@@ -379,7 +394,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 			const gitCommands = [
 				`cd "${syncDir.fsPath}"`,
 				'git init',
-				`git remote add origin ${repoUrl} 2>/dev/null || git remote set-url origin ${repoUrl}`,
+				`git remote set-url origin "${repoUrl}" || git remote add origin "${repoUrl}"`,
 				'git add xynapse-backup.enc',
 				'git commit -m "Xynapse config backup"',
 				'git branch -M main',
@@ -434,7 +449,7 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 				// Pull latest
 				const gitCommands = [
 					`cd "${syncDir.fsPath}"`,
-					`git remote set-url origin ${repoUrl}`,
+					`git remote set-url origin "${repoUrl}"`,
 					'git fetch origin main',
 					'git reset --hard origin/main',
 				].join(' && ');
@@ -442,9 +457,8 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 				await commandService.executeCommand('workbench.action.terminal.new');
 				await commandService.executeCommand('workbench.action.terminal.sendSequence', { text: gitCommands + '\n' });
 			} else {
-				// Fresh clone
-				await fileService.createFolder(syncDir);
-				const gitCommands = `git clone ${repoUrl} "${syncDir.fsPath}" --depth 1`;
+				// Fresh clone — git clone creates the directory itself
+				const gitCommands = `git clone "${repoUrl}" "${syncDir.fsPath}" --depth 1`;
 
 				await commandService.executeCommand('workbench.action.terminal.new');
 				await commandService.executeCommand('workbench.action.terminal.sendSequence', { text: gitCommands + '\n' });
@@ -493,7 +507,7 @@ registerAction2(class ImportFromGitSyncAction extends Action2 {
 		}
 
 		const raw = await fileService.readFile(encFile);
-		const data = new Uint8Array(raw.value.buffer);
+		const data = raw.value.buffer.slice(0);
 
 		const password = await promptPassword(quickInputService,
 			localize('xynapseConfigImportPassword', 'Enter decryption password'));
