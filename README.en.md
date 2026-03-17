@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./Pics/Xynapse.png" alt="Xynapse IDE" width="360"/>
+<img src="./Pics/logo.png" alt="Xynapse IDE" width="360"/>
 
 # Xynapse IDE
 
