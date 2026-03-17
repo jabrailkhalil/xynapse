@@ -5,7 +5,7 @@
 
 import { Emitter } from '../../../../base/common/event.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
-import { joinPath } from '../../../../base/common/resources.js';
+import { joinPath, dirname } from '../../../../base/common/resources.js';
 import { URI } from '../../../../base/common/uri.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { INativeEnvironmentService } from '../../../../platform/environment/common/environment.js';
@@ -24,6 +24,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 
 	private cachedProfile: IXynapseProfile | undefined;
 	private readonly profileResource: URI;
+	private readonly _loaded: Promise<void>;
 
 	constructor(
 		@IFileService private readonly fileService: IFileService,
@@ -33,7 +34,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 	) {
 		super();
 		this.profileResource = joinPath(environmentService.userHome, productService.dataFolderName, 'profile.json');
-		this.loadProfile();
+		this._loaded = this.loadProfile();
 	}
 
 	private async loadProfile(): Promise<void> {
@@ -41,9 +42,13 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 			const exists = await this.fileService.exists(this.profileResource);
 			if (exists) {
 				const content = await this.fileService.readFile(this.profileResource);
-				const data = JSON.parse(content.value.toString());
-				if (data && typeof data.name === 'string' && typeof data.email === 'string') {
-					this.cachedProfile = { name: data.name, email: data.email };
+				try {
+					const data = JSON.parse(content.value.toString());
+					if (data && typeof data.name === 'string' && typeof data.email === 'string') {
+						this.cachedProfile = { name: data.name, email: data.email };
+					}
+				} catch {
+					this.logService.error('[Xynapse] profile.json contains invalid JSON');
 				}
 			}
 		} catch (e) {
@@ -56,7 +61,13 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 	}
 
 	async setProfile(profile: IXynapseProfile): Promise<void> {
+		await this._loaded;
 		try {
+			const parentDir = dirname(this.profileResource);
+			const parentExists = await this.fileService.exists(parentDir);
+			if (!parentExists) {
+				await this.fileService.createFolder(parentDir);
+			}
 			const content = JSON.stringify({ name: profile.name, email: profile.email }, null, '\t');
 			await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(content));
 			this.cachedProfile = { ...profile };
@@ -68,6 +79,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 	}
 
 	async clearProfile(): Promise<void> {
+		await this._loaded;
 		try {
 			const exists = await this.fileService.exists(this.profileResource);
 			if (exists) {

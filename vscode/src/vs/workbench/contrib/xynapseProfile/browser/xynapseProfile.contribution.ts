@@ -51,20 +51,26 @@ registerAction2(class SetUpXynapseProfileAction extends Action2 {
 		const profileService = accessor.get(IXynapseProfileService);
 		const notificationService = accessor.get(INotificationService);
 
-		const name = await quickInputService.input({
+		const rawName = await quickInputService.input({
 			prompt: localize('xynapseProfileName', 'Enter your name'),
 			placeHolder: localize('xynapseProfileNamePlaceholder', 'Name'),
 		});
+		const name = rawName?.trim();
 		if (!name) { return; }
 
-		const email = await quickInputService.input({
+		const rawEmail = await quickInputService.input({
 			prompt: localize('xynapseProfileEmail', 'Enter your email'),
 			placeHolder: localize('xynapseProfileEmailPlaceholder', 'Email'),
 		});
-		if (!email) { return; }
+		const email = rawEmail?.trim();
+		if (!email || !email.includes('@')) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileInvalidEmail', 'Please enter a valid email address.') });
+			return;
+		}
 
 		try {
 			await profileService.setProfile({ name, email });
+			notificationService.notify({ severity: Severity.Info, message: localize('xynapseProfileSetupDone', 'Profile saved: {0}', name) });
 		} catch (e) {
 			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileSetupFailed', 'Failed to set up profile: {0}', String(e)) });
 		}
@@ -86,22 +92,28 @@ registerAction2(class EditXynapseProfileAction extends Action2 {
 
 		const current = profileService.getProfile();
 
-		const name = await quickInputService.input({
+		const rawName = await quickInputService.input({
 			prompt: localize('xynapseProfileName', 'Enter your name'),
 			placeHolder: localize('xynapseProfileNamePlaceholder', 'Name'),
 			value: current?.name,
 		});
+		const name = rawName?.trim();
 		if (!name) { return; }
 
-		const email = await quickInputService.input({
+		const rawEmail = await quickInputService.input({
 			prompt: localize('xynapseProfileEmail', 'Enter your email'),
 			placeHolder: localize('xynapseProfileEmailPlaceholder', 'Email'),
 			value: current?.email,
 		});
-		if (!email) { return; }
+		const email = rawEmail?.trim();
+		if (!email || !email.includes('@')) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileInvalidEmail', 'Please enter a valid email address.') });
+			return;
+		}
 
 		try {
 			await profileService.setProfile({ name, email });
+			notificationService.notify({ severity: Severity.Info, message: localize('xynapseProfileEditDone', 'Profile updated: {0}', name) });
 		} catch (e) {
 			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileEditFailed', 'Failed to update profile: {0}', String(e)) });
 		}
@@ -121,6 +133,7 @@ registerAction2(class ClearXynapseProfileAction extends Action2 {
 		const notificationService = accessor.get(INotificationService);
 		try {
 			await profileService.clearProfile();
+			notificationService.notify({ severity: Severity.Info, message: localize('xynapseProfileClearDone', 'Signed out of Xynapse profile.') });
 		} catch (e) {
 			notificationService.notify({ severity: Severity.Error, message: localize('xynapseProfileClearFailed', 'Failed to sign out: {0}', String(e)) });
 		}
@@ -172,8 +185,10 @@ async function restoreBundle(
 
 	for (const [name, content] of Object.entries(bundle)) {
 		if (!EXPORTABLE_FILES.includes(name)) { continue; }
-		await fileService.writeFile(joinPath(dataDir, name), VSBuffer.fromString(content));
-		count++;
+		try {
+			await fileService.writeFile(joinPath(dataDir, name), VSBuffer.fromString(content));
+			count++;
+		} catch { /* skip failed writes */ }
 	}
 
 	// Reload profile if it was in the bundle
@@ -372,6 +387,10 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 			placeHolder: 'https://github.com/user/my-xynapse-config',
 		});
 		if (!repoUrl) { return; }
+		if (!/^(https?:\/\/|git@)[\w.\-\/:@]+$/.test(repoUrl)) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseConfigGitInvalidUrl', 'Invalid git URL. Use https:// or git@ format.') });
+			return;
+		}
 
 		// Encrypt
 		const payload = JSON.stringify({ version: 1, timestamp: new Date().toISOString(), files: bundle });
@@ -437,6 +456,10 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 			placeHolder: 'https://github.com/user/my-xynapse-config',
 		});
 		if (!repoUrl) { return; }
+		if (!/^(https?:\/\/|git@)[\w.\-\/:@]+$/.test(repoUrl)) {
+			notificationService.notify({ severity: Severity.Error, message: localize('xynapseConfigGitInvalidUrl', 'Invalid git URL. Use https:// or git@ format.') });
+			return;
+		}
 
 		const dataDir = xynapseDataDir(accessor);
 		const syncDir = joinPath(dataDir, 'git-sync');

@@ -27,6 +27,9 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
 }
 
 export async function encryptConfig(plaintext: string, password: string): Promise<Uint8Array> {
+	if (!password || password.length < 8) {
+		throw new Error('Password must be at least 8 characters');
+	}
 	const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
 	const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
 	const key = await deriveKey(password, salt);
@@ -43,6 +46,9 @@ export async function encryptConfig(plaintext: string, password: string): Promis
 }
 
 export async function decryptConfig(data: Uint8Array, password: string): Promise<string> {
+	if (!password) {
+		throw new Error('Password cannot be empty');
+	}
 	const minSize = BUNDLE_MAGIC.length + SALT_LENGTH + IV_LENGTH + 16; // 16 = min GCM tag
 	if (data.byteLength < minSize) {
 		throw new Error('Invalid backup file (too small)');
