@@ -1,0 +1,5 @@
+# Large binary files — track with Git LFS if available
+vscode/extensions/xynapse-assistant/out/extension.js filter=lfs diff=lfs merge=lfs -text
+vscode/extensions/xynapse-assistant/models/**/*.onnx filter=lfs diff=lfs merge=lfs -text
+vscode/extensions/xynapse-assistant/bin/**/*.dll filter=lfs diff=lfs merge=lfs -text
+vscode/extensions/xynapse-assistant/gui/assets/index.js.map filter=lfs diff=lfs merge=lfs -text

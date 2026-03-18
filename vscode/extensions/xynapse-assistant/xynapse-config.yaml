@@ -28,6 +28,8 @@ models:
     roles:
       - chat
       - autocomplete
+      - embed
+      - rerank
     defaultCompletionOptions:
       temperature: 0.1
       maxTokens: 2048
