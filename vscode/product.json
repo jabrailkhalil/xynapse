@@ -34,7 +34,7 @@
 	"enableTelemetry": false,
 	"nodejsRepository": "https://nodejs.org",
 	"urlProtocol": "xynapse",
-	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
+	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.cdn.xynapse.dev/stable/{{commit}}/out/vs/workbench/contrib/webview/browser/pre/",
 	"builtInExtensions": [],
 	"configurationDefaults": {
 		"window.openFilesInNewWindow": "off",
@@ -103,7 +103,7 @@
 		"explorer.confirmDragAndDrop": false,
 		"explorer.compactFolders": false,
 		"workbench.iconTheme": "material-icon-theme",
-		"workbench.startupEditor": "newUntitledFile",
+		"workbench.startupEditor": "welcomePage",
 		"debug.toolBarLocation": "hidden",
 		"debug.focusWindowOnBreak": false,
 		"debug.showInlineBreakpointCandidates": false,
