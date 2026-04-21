@@ -74,7 +74,7 @@ export abstract class AbstractUpdateService implements IUpdateService {
 			return;
 		}
 
-		if (!this.productService.updateUrl || !this.productService.commit) {
+		if (!this.hasUpdateConfiguration()) {
 			this.setState(State.Disabled(DisablementReason.MissingConfiguration));
 			this.logService.info('update#ctor - updates are disabled as there is no update URL');
 			return;
@@ -234,6 +234,10 @@ export abstract class AbstractUpdateService implements IUpdateService {
 
 	protected async postInitialize(): Promise<void> {
 		// noop
+	}
+
+	protected hasUpdateConfiguration(): boolean {
+		return Boolean(this.productService.updateUrl && this.productService.commit);
 	}
 
 	protected abstract buildUpdateFeedUrl(quality: string): string | undefined;

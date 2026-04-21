@@ -14,6 +14,10 @@
 	"serverApplicationName": "xynapse-server",
 	"serverDataFolderName": ".xynapse-server",
 	"tunnelApplicationName": "xynapse-tunnel",
+	"githubUpdate": {
+		"owner": "jabrailkhalil",
+		"repo": "xynapse"
+	},
 	"win32DirName": "Xynapse",
 	"win32NameVersion": "Xynapse IDE",
 	"win32RegValueName": "Xynapse",

@@ -23,10 +23,11 @@ import { ILifecycleMainService, IRelaunchHandler, IRelaunchOptions } from '../..
 import { ILogService } from '../../log/common/log.js';
 import { INativeHostMainService } from '../../native/electron-main/nativeHostMainService.js';
 import { IProductService } from '../../product/common/productService.js';
-import { asJson, IRequestService } from '../../request/common/request.js';
+import { asJson, IRequestService, isSuccess } from '../../request/common/request.js';
 import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { AvailableForDownload, DisablementReason, IUpdate, State, StateType, UpdateType } from '../common/update.js';
 import { AbstractUpdateService, createUpdateURL, UpdateErrorClassification } from './abstractUpdateService.js';
+import { getGitHubReleaseVersion, getGitHubUpdateUrl, hasGitHubUpdateConfig, IGitHubRelease, isGitHubReleaseNewer, selectGitHubReleaseAsset } from './githubUpdate.js';
 
 async function pollUntil(fn: () => boolean, millis = 1000): Promise<void> {
 	while (!fn()) {
@@ -152,7 +153,16 @@ export class Win32UpdateService extends AbstractUpdateService implements IRelaun
 		}
 	}
 
+	protected override hasUpdateConfiguration(): boolean {
+		return hasGitHubUpdateConfig(this.productService) || super.hasUpdateConfiguration();
+	}
+
 	protected buildUpdateFeedUrl(quality: string): string | undefined {
+		const githubUpdateUrl = getGitHubUpdateUrl(this.productService);
+		if (githubUpdateUrl) {
+			return githubUpdateUrl;
+		}
+
 		let platform = `win32-${process.arch}`;
 
 		if (getUpdateType() === UpdateType.Archive) {
@@ -166,6 +176,11 @@ export class Win32UpdateService extends AbstractUpdateService implements IRelaun
 
 	protected doCheckForUpdates(explicit: boolean): void {
 		if (!this.url) {
+			return;
+		}
+
+		if (hasGitHubUpdateConfig(this.productService)) {
+			this.doCheckForUpdatesFromGitHub(explicit);
 			return;
 		}
 
@@ -188,36 +203,7 @@ export class Win32UpdateService extends AbstractUpdateService implements IRelaun
 				}
 
 				this.setState(State.Downloading);
-
-				return this.cleanup(update.version).then(() => {
-					return this.getUpdatePackagePath(update.version).then(updatePackagePath => {
-						return pfs.Promises.exists(updatePackagePath).then(exists => {
-							if (exists) {
-								return Promise.resolve(updatePackagePath);
-							}
-
-							const downloadPath = `${updatePackagePath}.tmp`;
-
-							return this.requestService.request({ url: update.url }, CancellationToken.None)
-								.then(context => this.fileService.writeFile(URI.file(downloadPath), context.stream))
-								.then(update.sha256hash ? () => checksum(downloadPath, update.sha256hash) : () => undefined)
-								.then(() => pfs.Promises.rename(downloadPath, updatePackagePath, false /* no retry */))
-								.then(() => updatePackagePath);
-						});
-					}).then(packagePath => {
-						this.availableUpdate = { packagePath };
-						this.setState(State.Downloaded(update));
-
-						const fastUpdatesEnabled = this.configurationService.getValue('update.enableWindowsBackgroundUpdates');
-						if (fastUpdatesEnabled) {
-							if (this.productService.target === 'user') {
-								this.doApplyUpdate();
-							}
-						} else {
-							this.setState(State.Ready(update));
-						}
-					});
-				});
+				return this.stageDownloadedUpdate(update);
 			})
 			.then(undefined, err => {
 				this.telemetryService.publicLog2<{ messageHash: string }, UpdateErrorClassification>('update:error', { messageHash: String(hash(String(err))) });
@@ -234,6 +220,133 @@ export class Win32UpdateService extends AbstractUpdateService implements IRelaun
 			this.nativeHostMainService.openExternal(undefined, state.update.url);
 		}
 		this.setState(State.Idle(getUpdateType()));
+	}
+
+	override async isLatestVersion(): Promise<boolean | undefined> {
+		if (!hasGitHubUpdateConfig(this.productService)) {
+			return super.isLatestVersion();
+		}
+
+		try {
+			const release = await this.fetchLatestGitHubRelease();
+			return !isGitHubReleaseNewer(this.productService.version, release);
+		} catch (error) {
+			this.logService.error('update#isLatestVersion(): failed to check GitHub releases');
+			this.logService.error(error);
+			return undefined;
+		}
+	}
+
+	private doCheckForUpdatesFromGitHub(explicit: boolean): void {
+		const updateType = getUpdateType();
+		this.setState(State.CheckingForUpdates(explicit));
+
+		this.fetchLatestGitHubRelease()
+			.then(release => {
+				const releaseVersion = getGitHubReleaseVersion(release);
+				if (!releaseVersion) {
+					const message = explicit ? `Latest GitHub release '${release.tag_name}' does not contain a semantic version.` : undefined;
+					this.setState(State.Idle(updateType, message));
+					return Promise.resolve(undefined);
+				}
+
+				if (!isGitHubReleaseNewer(this.productService.version, release)) {
+					this.setState(State.Idle(updateType));
+					return Promise.resolve(undefined);
+				}
+
+				const asset = selectGitHubReleaseAsset(this.productService, release, updateType);
+				if (!asset) {
+					throw new Error(`Latest GitHub release '${release.tag_name}' does not contain a compatible Windows ${updateType === UpdateType.Archive ? 'archive' : 'setup'} asset.`);
+				}
+
+				const update: IUpdate = {
+					version: releaseVersion,
+					productVersion: releaseVersion,
+					url: asset.browser_download_url
+				};
+
+				if (updateType === UpdateType.Archive) {
+					this.setState(State.AvailableForDownload(update));
+					return Promise.resolve(undefined);
+				}
+
+				this.setState(State.Downloading);
+				return this.stageDownloadedUpdate(update);
+			})
+			.then(undefined, err => {
+				this.telemetryService.publicLog2<{ messageHash: string }, UpdateErrorClassification>('update:error', { messageHash: String(hash(String(err))) });
+				this.logService.error(err);
+
+				const message: string | undefined = explicit ? (err.message || err) : undefined;
+				this.setState(State.Idle(updateType, message));
+			});
+	}
+
+	private async fetchLatestGitHubRelease(): Promise<IGitHubRelease> {
+		if (!this.url || !hasGitHubUpdateConfig(this.productService)) {
+			throw new Error('GitHub updates are not configured.');
+		}
+
+		const context = await this.requestService.request({
+			url: this.url,
+			headers: {
+				'Accept': 'application/vnd.github+json',
+				'User-Agent': `${this.productService.nameShort} ${this.productService.version}`
+			}
+		}, CancellationToken.None);
+
+		if (context.res.statusCode === 404) {
+			throw new Error(`No published GitHub releases found for ${this.productService.githubUpdate.owner}/${this.productService.githubUpdate.repo}.`);
+		}
+
+		if (!isSuccess(context)) {
+			throw new Error(`GitHub returned ${context.res.statusCode} while checking for updates.`);
+		}
+
+		const release = await asJson<IGitHubRelease>(context);
+		if (!release) {
+			throw new Error('GitHub returned an empty release response.');
+		}
+
+		return release;
+	}
+
+	private async stageDownloadedUpdate(update: IUpdate): Promise<void> {
+		const packagePath = await this.downloadUpdatePackage(update);
+		this.availableUpdate = { packagePath };
+		this.setState(State.Downloaded(update));
+
+		const fastUpdatesEnabled = this.configurationService.getValue('update.enableWindowsBackgroundUpdates');
+		if (fastUpdatesEnabled) {
+			if (this.productService.target === 'user') {
+				this.doApplyUpdate();
+			}
+		} else {
+			this.setState(State.Ready(update));
+		}
+	}
+
+	private async downloadUpdatePackage(update: IUpdate): Promise<string> {
+		if (!update.url) {
+			throw new Error('Update is missing a download URL.');
+		}
+
+		await this.cleanup(update.version);
+		const updatePackagePath = await this.getUpdatePackagePath(update.version);
+		if (await pfs.Promises.exists(updatePackagePath)) {
+			return updatePackagePath;
+		}
+
+		const downloadPath = `${updatePackagePath}.tmp`;
+		const context = await this.requestService.request({ url: update.url }, CancellationToken.None);
+		await this.fileService.writeFile(URI.file(downloadPath), context.stream);
+		if (update.sha256hash) {
+			await checksum(downloadPath, update.sha256hash);
+		}
+		await pfs.Promises.rename(downloadPath, updatePackagePath, false /* no retry */);
+
+		return updatePackagePath;
 	}
 
 	private async getUpdatePackagePath(version: string): Promise<string> {

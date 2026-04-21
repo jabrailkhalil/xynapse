@@ -136,6 +136,27 @@ Xynapse uses local accounts — no cloud login required. To transfer configurati
 
 ---
 
+## Updates via GitHub Releases
+
+Xynapse supports manual in-app updates on Windows through GitHub Releases.
+
+### How it works
+
+1. The user clicks `Help -> Check for Updates`.
+2. Xynapse requests `releases/latest` for the repository configured in `vscode/product.json`.
+3. The release tag or title is parsed as a semantic version and compared with the currently running application version.
+4. The updater selects the correct Windows asset for the current install type: setup installs use a `.exe` installer for `user` or `system`, while archive installs use `.zip`, `.7z`, `.tar.gz`, or `.tgz`.
+5. For setup installs, Xynapse downloads the installer to a temporary update cache and reuses the existing Windows apply/restart flow.
+6. For archive installs, Xynapse exposes the release asset as a downloadable update link.
+
+### Release requirements
+
+- Publish a GitHub Release with a semantic version tag such as `v1.108.1`.
+- Attach Windows assets for the builds you want to distribute.
+- The updater can use explicit asset names from product configuration, but it also falls back to matching by install type, architecture, and naming hints such as `user`, `system`, `setup`, `portable`, or `archive`.
+
+---
+
 ## Xynapse Council
 
 <div align="center">

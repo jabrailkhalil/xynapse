@@ -88,6 +88,12 @@ export interface IProductConfiguration {
 
 	readonly downloadUrl?: string;
 	readonly updateUrl?: string;
+	readonly githubUpdate?: {
+		readonly owner: string;
+		readonly repo: string;
+		readonly assetName?: string;
+		readonly assetNames?: IStringDictionary<string>;
+	};
 	readonly webUrl?: string;
 	readonly webEndpointUrlTemplate?: string;
 	readonly webviewContentExternalBaseUrlTemplate?: string;
