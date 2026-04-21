@@ -195,17 +195,17 @@ With 4 agents at hard difficulty: **13 LLM calls** with full discussion tracing.
 In the thesis, Council is formalized as **Budgeted Verified Council (BVC)**: for a codebase $S_0$ and user task $x$, the system must produce a final patch $\Delta_{\text{final}}$ such that
 
 $$
-\textsc{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
+\operatorname{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
 $$
 
 where $B$ is the budget of generative LLM calls and $b$ is the number already spent.
 
-The formal model introduces a role set $\mathcal{R}$ and a fixed planning-axis space
-$\mathcal{T}_0=\{\texttt{root\_cause\_location}, \texttt{fix\_strategy}, \texttt{dependencies\_to\_update}, \texttt{test\_coverage}\}$.
+The formal model introduces a role set $\mathcal{R}$ and a fixed planning-axis set $T_0$:
+`{root_cause_location, fix_strategy, dependencies_to_update, test_coverage}`.
 Each role $r \in \mathcal{R}$ returns a structured decision
 
 $$
-a_r:\mathcal{T}_0 \to \{\text{strings}\}\cup\{\texttt{NA}\}\cup\{\bot\},
+a_r:T_0 \to \{\text{strings}\}\cup\{\text{NA}\}\cup\{\bot\},
 $$
 
 where `NA` means an explicitly inapplicable axis and $\bot$ means no valid value was produced for that axis.
@@ -224,16 +224,16 @@ $$
 
 $$
 d_{\text{cov}}(t)=1-\frac{m_t}{R}, \qquad
-D_{\text{vote}}=\frac{1}{|\mathcal{T}_{\ge 2}|}\sum_{t \in \mathcal{T}_{\ge 2}} d_{\text{vote}}(t), \qquad
-D_{\text{cov}}=\frac{1}{|\mathcal{T}_0|}\sum_{t \in \mathcal{T}_0} d_{\text{cov}}(t),
+D_{\text{vote}}=\frac{1}{|T_{\ge 2}|}\sum_{t \in T_{\ge 2}} d_{\text{vote}}(t), \qquad
+D_{\text{cov}}=\frac{1}{|T_0|}\sum_{t \in T_0} d_{\text{cov}}(t),
 $$
 
-where $\mathcal{T}_{\ge 2}=\{t \in \mathcal{T}_0 : m_t \ge 2\}$ is the set of axes with at least two meaningful votes. $D_{\text{vote}}$ measures substantive disagreement between agents, while $D_{\text{cov}}$ measures degradation caused by missing or unparseable structured outputs.
+where $T_{\ge 2}=\{t \in T_0 : m_t \ge 2\}$ is the set of axes with at least two meaningful votes. $D_{\text{vote}}$ measures substantive disagreement between agents, while $D_{\text{cov}}$ measures degradation caused by missing or unparseable structured outputs.
 
 The critique phase continues only while all of the following remain true:
 
 $$
-\mathcal{T}_{\ge 2}\neq\varnothing,\quad
+T_{\ge 2}\neq\varnothing,\quad
 D_{\text{cov}}\le\tau_{\text{cov}},\quad
 D_{\text{vote}}>\tau_{\text{vote}},\quad
 k<K_{\max},\quad

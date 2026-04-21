@@ -195,17 +195,17 @@ Xynapse Council — это система мультиагентного пла�
 В дипломе Council формализован как **Budgeted Verified Council (BVC)**: для кодовой базы $S_0$ и пользовательской задачи $x$ требуется построить итоговый патч $\Delta_{\text{final}}$ такой, что
 
 $$
-\textsc{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
+\operatorname{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
 $$
 
 где $B$ — бюджет генеративных LLM-вызовов, а $b$ — уже потраченные вызовы.
 
-Базовая формализация вводит множество ролей $\mathcal{R}$ и фиксированные оси планирования
-$\mathcal{T}_0=\{\texttt{root\_cause\_location}, \texttt{fix\_strategy}, \texttt{dependencies\_to\_update}, \texttt{test\_coverage}\}$.
+Базовая формализация вводит множество ролей $\mathcal{R}$ и фиксированное множество осей планирования $T_0$:
+`{root_cause_location, fix_strategy, dependencies_to_update, test_coverage}`.
 Каждая роль $r \in \mathcal{R}$ возвращает структурированное решение
 
 $$
-a_r:\mathcal{T}_0 \to \{\text{строки}\}\cup\{\texttt{NA}\}\cup\{\bot\},
+a_r:T_0 \to \{\text{строки}\}\cup\{\text{NA}\}\cup\{\bot\},
 $$
 
 где `NA` означает осознанную неприменимость, а $\bot$ — отсутствие валидного ответа по оси.
@@ -224,16 +224,16 @@ $$
 
 $$
 d_{\text{cov}}(t)=1-\frac{m_t}{R}, \qquad
-D_{\text{vote}}=\frac{1}{|\mathcal{T}_{\ge 2}|}\sum_{t \in \mathcal{T}_{\ge 2}} d_{\text{vote}}(t), \qquad
-D_{\text{cov}}=\frac{1}{|\mathcal{T}_0|}\sum_{t \in \mathcal{T}_0} d_{\text{cov}}(t),
+D_{\text{vote}}=\frac{1}{|T_{\ge 2}|}\sum_{t \in T_{\ge 2}} d_{\text{vote}}(t), \qquad
+D_{\text{cov}}=\frac{1}{|T_0|}\sum_{t \in T_0} d_{\text{cov}}(t),
 $$
 
-где $\mathcal{T}_{\ge 2}=\{t \in \mathcal{T}_0 : m_t \ge 2\}$ — оси, по которым есть минимум два содержательных голоса. Значение $D_{\text{vote}}$ измеряет степень содержательного конфликта между агентами, а $D_{\text{cov}}$ показывает, насколько обсуждение деградировало из-за неполных или нераспарсенных ответов.
+где $T_{\ge 2}=\{t \in T_0 : m_t \ge 2\}$ — оси, по которым есть минимум два содержательных голоса. Значение $D_{\text{vote}}$ измеряет степень содержательного конфликта между агентами, а $D_{\text{cov}}$ показывает, насколько обсуждение деградировало из-за неполных или нераспарсенных ответов.
 
 Фаза критики продолжается только пока одновременно выполняются все условия:
 
 $$
-\mathcal{T}_{\ge 2}\neq\varnothing,\quad
+T_{\ge 2}\neq\varnothing,\quad
 D_{\text{cov}}\le\tau_{\text{cov}},\quad
 D_{\text{vote}}>\tau_{\text{vote}},\quad
 k<K_{\max},\quad
