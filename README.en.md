@@ -9,6 +9,8 @@
 A complete development environment with deeply integrated artificial intelligence —
 not a plugin, not an add-on, but a unified system where AI is built into every layer of the editor.
 
+**Project website:** [xynapse.online](https://xynapse.online)
+
 </div>
 
 ---
@@ -142,6 +144,8 @@ Xynapse uses local accounts — no cloud login required. To transfer configurati
 
 Xynapse Council is a multi-agent planning system where a task isn't just solved by one model, but discussed by a team of specialized AI experts. The result is a weighted plan with explicitly resolved conflicts.
 
+Formalization source: [thesis chapter 2](./диплом/bachelor-thesis-template-master/parts/chapter2.tex) and [full BVC appendix](./диплом/bachelor-thesis-template-master/parts/appendix-bvc.tex).
+
 ### Algorithm: 3-Phase Discussion
 
 **Phase 1: Independent Analysis**
@@ -185,6 +189,66 @@ The planner receives the full discussion history and synthesizes the final plan,
 | Hard | N agents | 2 rounds | 3N + 1 |
 
 With 4 agents at hard difficulty: **13 LLM calls** with full discussion tracing.
+
+### BVC Mathematical Model
+
+In the thesis, Council is formalized as **Budgeted Verified Council (BVC)**: for a codebase $S_0$ and user task $x$, the system must produce a final patch $\Delta_{\text{final}}$ such that
+
+$$
+\textsc{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
+$$
+
+where $B$ is the budget of generative LLM calls and $b$ is the number already spent.
+
+The formal model introduces a role set $\mathcal{R}$ and a fixed planning-axis space
+$\mathcal{T}_0=\{\texttt{root\_cause\_location}, \texttt{fix\_strategy}, \texttt{dependencies\_to\_update}, \texttt{test\_coverage}\}$.
+Each role $r \in \mathcal{R}$ returns a structured decision
+
+$$
+a_r:\mathcal{T}_0 \to \{\text{strings}\}\cup\{\texttt{NA}\}\cup\{\bot\},
+$$
+
+where `NA` means an explicitly inapplicable axis and $\bot$ means no valid value was produced for that axis.
+
+For each axis $t$, the model computes the valid-role set $\mathcal{R}_t=\{r \in \mathcal{R}: a_r(t)\neq \bot\}$ and its size $m_t=|\mathcal{R}_t|$. After canonicalization, two independent disagreement metrics are used:
+
+$$
+d_{\text{vote}}(t)=
+\begin{cases}
+\frac{1-\max_{\ell}\hat{p}_{t,\ell}}{1-\frac{1}{m_t}}, & m_t \ge 2, \\
+0, & m_t \le 1,
+\end{cases}
+\qquad
+\hat{p}_{t,\ell}=\frac{1}{m_t}\sum_{r \in \mathcal{R}_t}\mathbf{1}[\tilde a_r(t)=\ell],
+$$
+
+$$
+d_{\text{cov}}(t)=1-\frac{m_t}{R}, \qquad
+D_{\text{vote}}=\frac{1}{|\mathcal{T}_{\ge 2}|}\sum_{t \in \mathcal{T}_{\ge 2}} d_{\text{vote}}(t), \qquad
+D_{\text{cov}}=\frac{1}{|\mathcal{T}_0|}\sum_{t \in \mathcal{T}_0} d_{\text{cov}}(t),
+$$
+
+where $\mathcal{T}_{\ge 2}=\{t \in \mathcal{T}_0 : m_t \ge 2\}$ is the set of axes with at least two meaningful votes. $D_{\text{vote}}$ measures substantive disagreement between agents, while $D_{\text{cov}}$ measures degradation caused by missing or unparseable structured outputs.
+
+The critique phase continues only while all of the following remain true:
+
+$$
+\mathcal{T}_{\ge 2}\neq\varnothing,\quad
+D_{\text{cov}}\le\tau_{\text{cov}},\quad
+D_{\text{vote}}>\tau_{\text{vote}},\quad
+k<K_{\max},\quad
+b+|\mathcal{R}|+B_{\text{res}}\le B.
+$$
+
+That is the core “budgeted verified” idea: discussion stops not only when consensus is reached, but also when coverage degrades or when continuing would violate the safe budget reserve. In the current Xynapse implementation, the practical values are $K_{\max}=2$, $B_{\text{res}}=2$, $\tau_{\text{vote}}=0.3$, $\tau_{\text{crit}}=0.7$, and $\tau_{\text{cov}}=0.7$.
+
+From the call-budget perspective, the upper bound is
+
+$$
+N_{\text{LLM}}^{\max}\le \min\bigl(B,\; R(1+K_{\max})+1+P_{\max}\bigr),
+$$
+
+where $P_{\max}$ is the limit for verified repair attempts after plan synthesis. For the planning stage itself, the Council call count is $N_{\text{LLM}}=R+K\cdot R+1$, which is why the current budgets for $R=4$ are `easy = 5`, `medium = 9`, and `hard = 13`.
 
 ### Project Context
 
