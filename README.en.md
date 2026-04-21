@@ -195,7 +195,7 @@ With 4 agents at hard difficulty: **13 LLM calls** with full discussion tracing.
 In the thesis, Council is formalized as **Budgeted Verified Council (BVC)**: for a codebase $S_0$ and user task $x$, the system must produce a final patch $\Delta_{\text{final}}$ such that
 
 $$
-\operatorname{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
+\mathrm{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
 $$
 
 where $B$ is the budget of generative LLM calls and $b$ is the number already spent.
@@ -212,15 +212,15 @@ where `NA` means an explicitly inapplicable axis and $\bot$ means no valid value
 
 For each axis $t$, the model computes the valid-role set $\mathcal{R}_t=\{r \in \mathcal{R}: a_r(t)\neq \bot\}$ and its size $m_t=|\mathcal{R}_t|$. After canonicalization, two independent disagreement metrics are used:
 
+For $m_t \ge 2$:
+
 $$
-d_{\text{vote}}(t)=
-\begin{cases}
-\frac{1-\max_{\ell}\hat{p}_{t,\ell}}{1-\frac{1}{m_t}}, & m_t \ge 2, \\
-0, & m_t \le 1,
-\end{cases}
+d_{\text{vote}}(t)=\frac{1-\max_{\ell}\hat{p}_{t,\ell}}{1-\frac{1}{m_t}},
 \qquad
-\hat{p}_{t,\ell}=\frac{1}{m_t}\sum_{r \in \mathcal{R}_t}\mathbf{1}[\tilde a_r(t)=\ell],
+\hat{p}_{t,\ell}=\frac{1}{m_t}\sum_{r \in \mathcal{R}_t}\mathbf{1}[\tilde a_r(t)=\ell].
 $$
+
+For $m_t \le 1$, define $d_{\text{vote}}(t)=0$.
 
 $$
 d_{\text{cov}}(t)=1-\frac{m_t}{R}, \qquad

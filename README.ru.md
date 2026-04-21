@@ -195,7 +195,7 @@ Xynapse Council — это система мультиагентного пла�
 В дипломе Council формализован как **Budgeted Verified Council (BVC)**: для кодовой базы $S_0$ и пользовательской задачи $x$ требуется построить итоговый патч $\Delta_{\text{final}}$ такой, что
 
 $$
-\operatorname{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
+\mathrm{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
 $$
 
 где $B$ — бюджет генеративных LLM-вызовов, а $b$ — уже потраченные вызовы.
@@ -212,15 +212,15 @@ $$
 
 Для каждой оси $t$ считаются множество валидных ролей $\mathcal{R}_t=\{r \in \mathcal{R}: a_r(t)\neq \bot\}$ и его мощность $m_t=|\mathcal{R}_t|$. После канонизации ответов вычисляются две независимые метрики:
 
+При $m_t \ge 2$:
+
 $$
-d_{\text{vote}}(t)=
-\begin{cases}
-\frac{1-\max_{\ell}\hat{p}_{t,\ell}}{1-\frac{1}{m_t}}, & m_t \ge 2, \\
-0, & m_t \le 1,
-\end{cases}
+d_{\text{vote}}(t)=\frac{1-\max_{\ell}\hat{p}_{t,\ell}}{1-\frac{1}{m_t}},
 \qquad
-\hat{p}_{t,\ell}=\frac{1}{m_t}\sum_{r \in \mathcal{R}_t}\mathbf{1}[\tilde a_r(t)=\ell],
+\hat{p}_{t,\ell}=\frac{1}{m_t}\sum_{r \in \mathcal{R}_t}\mathbf{1}[\tilde a_r(t)=\ell].
 $$
+
+При $m_t \le 1$ полагаем $d_{\text{vote}}(t)=0$.
 
 $$
 d_{\text{cov}}(t)=1-\frac{m_t}{R}, \qquad
