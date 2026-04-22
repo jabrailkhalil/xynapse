@@ -211,19 +211,16 @@ async function restoreBundle(
 	const bundleKeys = collectConfigKeysFromBundle(bundle);
 	const accountKeys = coerceStringRecord(accountPayload?.keys);
 	const mergedKeys = mergeKeyMaps(bundleKeys, accountKeys);
-
-	if (!identity) {
-		return count;
-	}
+	const resolvedIdentity = identity ?? getProfileIdentity(profileService.getProfile()) ?? defaultImportedIdentity();
 
 	try {
-		await profileService.setProfile(identity, { keys: mergedKeys });
+		await profileService.setProfile(resolvedIdentity, { keys: mergedKeys });
 		return count;
 	} catch {
 		// Fallback to file-level recovery if profile service initialization fails.
 		await fileService.writeFile(
 			joinPath(dataDir, XYNAPSE_PROFILE_FILE),
-			VSBuffer.fromString(JSON.stringify({ ...identity, isConfigured: false }, null, '\t')),
+			VSBuffer.fromString(JSON.stringify({ ...resolvedIdentity, isConfigured: false }, null, '\t')),
 		);
 		await fileService.del(joinPath(dataDir, XYNAPSE_ACCOUNT_FILE)).catch(() => undefined);
 		await clearRestoredKeyFiles(fileService, dataDir);
@@ -268,6 +265,13 @@ function getProfileIdentity(value: { name?: unknown; email?: unknown } | undefin
 	}
 
 	return undefined;
+}
+
+function defaultImportedIdentity(): { name: string; email: string } {
+	return {
+		name: localize('xynapseImportedLocalProfileName', 'Local (Imported)'),
+		email: 'imported@local.xynapse',
+	};
 }
 
 function collectConfigKeysFromBundle(bundle: Record<string, string>): Record<string, string> {
