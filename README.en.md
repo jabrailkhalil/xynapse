@@ -130,9 +130,13 @@ Line completion system — inline code completion runs in parallel with the assi
 
 Xynapse uses local accounts — no cloud login required. To transfer configuration between PCs:
 
-- **Export** (`Ctrl+Shift+P` → "Xynapse: Export Encrypted Config Backup") — bundles `config.yaml`, `config.json`, `profile.json` into a single `.enc` file, encrypted with AES-256-GCM + PBKDF2
-- **Import** (`Ctrl+Shift+P` → "Xynapse: Import Encrypted Config Backup") — decrypts and restores configuration
-- **Git sync** — the `.enc` file can be stored in any git repo for cross-machine synchronization
+- **Export** (`Ctrl+Shift+P` → "Xynapse: Export Encrypted Config Backup") — bundles all profile sync files (`config.yaml`, `config.json`, `config.ts`, `out/config.js`, `.env`, `.xynapserc.json`, `sharedConfig.json`, `profile.json`, `account.json`) into a single `.enc` file, encrypted with AES-256-GCM + PBKDF2
+- **Import** (`Ctrl+Shift+P` → "Xynapse: Import Encrypted Config Backup") — decrypts and restores those files; models become available again after restart
+- **Git sync** — the `.enc` file can be stored in any git repository for cross-machine synchronization
+
+- `isConfigured` is derived from real key material, not stale JSON flags.
+- Strict account mode: without account key material, key files are not applied and the profile is treated as local/unconfigured.
+- Legacy auto-migration: if `account.json` is missing but existing key files are detected in `.xynapse`, Xynapse auto-creates the account and notifies the user.
 
 ---
 

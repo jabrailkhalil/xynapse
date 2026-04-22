@@ -38,11 +38,13 @@ Detailed documentation:
 - `account.json` stores the sync payload:
   - `name`
   - `email`
-  - `isConfigured`
+  - `isConfigured` (derived from real key material)
   - `createdAt`
-  - `keys` (full raw content of `config.yaml` and `config.json`)
-- `account.json` is the source for sync state. Without it, the profile is treated as local/unconfigured.
-- On first start (if `profile.json` is missing), Xynapse creates a local profile and shows a notification about setup for encrypted sync.
+  - `keys` (full raw content of key files from your local `.xynapse` folder, including `config.yaml`, `config.json`, `config.ts`, `out/config.js`, `.env`, `.xynapserc.json`, and `sharedConfig.json`)
+- `isConfigured` is computed from actual keys, not from cached flags in JSON files.
+- Strict mode: if account key material is absent, key files are not applied and profile is local/unconfigured.
+- Legacy auto-migration: if `account.json` is missing but old key files exist in `.xynapse`, Xynapse creates an account automatically and notifies the user.
+- On first start (if profile/account is missing and no keys are found), Xynapse creates a local profile and shows a notification about setup for encrypted sync.
 - `Export/Import config backup` always includes both `profile.json` and `account.json` and keeps local/remote sync reproducible across machines.
 - Git sync is still supported through exported `.enc` files; local import/export also works via `Ctrl+Shift+P` actions.
 
@@ -58,13 +60,12 @@ What it does:
 
 - uses built `VSCode-win32-x64` output,
 - creates `portable-build\xynapse-portable`,
-- adds a `run-xynapse-portable.bat` launcher,
 - stores user data under `portable-build\xynapse-portable\data`.
 
 How to test:
 
 ```powershell
-.\portable-build\xynapse-portable\run-xynapse-portable.bat
+.\portable-build\xynapse-portable\Xynapse.exe
 ```
 
 If you want to use a custom source/output path, pass them as arguments:

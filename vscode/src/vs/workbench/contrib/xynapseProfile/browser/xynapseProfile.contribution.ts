@@ -26,7 +26,27 @@ function xynapseDataDir(accessor: ServicesAccessor): ReturnType<typeof getXynaps
 	return getXynapseDataDir(nativeEnv, product.dataFolderName);
 }
 
-const EXPORTABLE_FILES = ['config.yaml', 'config.json', XYNAPSE_PROFILE_FILE, XYNAPSE_ACCOUNT_FILE];
+const EXPORTABLE_FILES = [
+	'config.yaml',
+	'config.json',
+	'.xynapserc.json',
+	'sharedConfig.json',
+	'.env',
+	'config.ts',
+	'out/config.js',
+	XYNAPSE_PROFILE_FILE,
+	XYNAPSE_ACCOUNT_FILE,
+] as const;
+
+const KEY_FILE_NAMES = [
+	'config.yaml',
+	'config.json',
+	'.env',
+	'.xynapserc.json',
+	'sharedConfig.json',
+	'config.ts',
+	'out/config.js',
+] as const;
 
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 //  Profile Management
@@ -178,35 +198,35 @@ async function restoreBundle(
 	let count = 0;
 
 	for (const [name, content] of Object.entries(bundle)) {
-		if (!EXPORTABLE_FILES.includes(name)) { continue; }
+		if (!(EXPORTABLE_FILES as readonly string[]).includes(name)) { continue; }
 		try {
 			await fileService.writeFile(joinPath(dataDir, name), VSBuffer.fromString(content));
 			count++;
 		} catch { /* skip failed writes */ }
 	}
 
-	// Reload profile if it was in the bundle
-	if (bundle[XYNAPSE_ACCOUNT_FILE]) {
-		try {
-			const a = JSON.parse(bundle[XYNAPSE_ACCOUNT_FILE]);
-			if (
-				a &&
-				typeof a.name === 'string' &&
-				typeof a.email === 'string'
-			) {
-				const keys = coerceStringRecord((a as { keys?: unknown }).keys);
-				await profileService.setProfile({ name: a.name, email: a.email }, { keys });
-			}
-		} catch { /* skip */ }
-	} else if (bundle[XYNAPSE_PROFILE_FILE]) {
-		try {
-			const p = JSON.parse(bundle[XYNAPSE_PROFILE_FILE]);
-			if (p?.name && p?.email) {
-				await fileService.writeFile(joinPath(dataDir, XYNAPSE_PROFILE_FILE), VSBuffer.fromString(JSON.stringify({ ...p, isConfigured: false }, null, '\t')));
-				await fileService.del(joinPath(dataDir, XYNAPSE_ACCOUNT_FILE)).catch(() => undefined);
-				count++;
-			}
-		} catch { /* skip */ }
+	const accountPayload = parseJson<{ name?: unknown; email?: unknown; keys?: unknown }>(bundle[XYNAPSE_ACCOUNT_FILE]);
+	const profilePayload = parseJson<{ name?: unknown; email?: unknown }>(bundle[XYNAPSE_PROFILE_FILE]);
+	const identity = getProfileIdentity(accountPayload) ?? getProfileIdentity(profilePayload);
+	const bundleKeys = collectConfigKeysFromBundle(bundle);
+	const accountKeys = coerceStringRecord(accountPayload?.keys);
+	const mergedKeys = mergeKeyMaps(bundleKeys, accountKeys);
+
+	if (!identity) {
+		return count;
+	}
+
+	try {
+		await profileService.setProfile(identity, { keys: mergedKeys });
+		return count;
+	} catch {
+		// Fallback to file-level recovery if profile service initialization fails.
+		await fileService.writeFile(
+			joinPath(dataDir, XYNAPSE_PROFILE_FILE),
+			VSBuffer.fromString(JSON.stringify({ ...identity, isConfigured: false }, null, '\t')),
+		);
+		await fileService.del(joinPath(dataDir, XYNAPSE_ACCOUNT_FILE)).catch(() => undefined);
+		await clearRestoredKeyFiles(fileService, dataDir);
 	}
 
 	return count;
@@ -223,6 +243,55 @@ function coerceStringRecord(value: unknown): Record<string, string> {
 		}
 	}
 	return result;
+}
+
+function parseJson<T>(value: string | undefined): T | undefined {
+	if (!value) {
+		return undefined;
+	}
+
+	try {
+		const parsed = JSON.parse(value) as unknown;
+		return parsed as T;
+	} catch {
+		return undefined;
+	}
+}
+
+function hasValidProfileShape(value: { name?: unknown; email?: unknown; isConfigured?: unknown }): value is { name: string; email: string; isConfigured?: boolean } {
+	return typeof value.name === 'string' && typeof value.email === 'string';
+}
+
+function getProfileIdentity(value: { name?: unknown; email?: unknown } | undefined): { name: string; email: string } | undefined {
+	if (value && hasValidProfileShape(value)) {
+		return { name: value.name, email: value.email };
+	}
+
+	return undefined;
+}
+
+function collectConfigKeysFromBundle(bundle: Record<string, string>): Record<string, string> {
+	const keys: Record<string, string> = {};
+	for (const fileName of KEY_FILE_NAMES) {
+		if (typeof bundle[fileName] === 'string') {
+			keys[fileName] = bundle[fileName]!;
+		}
+	}
+
+	return keys;
+}
+
+function mergeKeyMaps(
+	base: Record<string, string>,
+	extra: Record<string, string>,
+): Record<string, string> {
+	return { ...base, ...extra };
+}
+
+async function clearRestoredKeyFiles(fileService: IFileService, dataDir: ReturnType<typeof getXynapseDataDir>): Promise<void> {
+	for (const fileName of KEY_FILE_NAMES) {
+		await fileService.del(joinPath(dataDir, fileName)).catch(() => undefined);
+	}
 }
 
 // в”Ђв”Ђв”Ђ Export Encrypted Config в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ

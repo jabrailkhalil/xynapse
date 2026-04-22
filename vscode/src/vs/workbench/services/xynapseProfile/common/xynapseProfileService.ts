@@ -32,6 +32,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 	private readonly _loaded: Promise<void>;
 	private readonly defaultProfileName: string;
 	private readonly defaultProfileEmail: string;
+	private static readonly KEY_FILES = ['config.yaml', 'config.json', '.env', '.xynapserc.json', 'sharedConfig.json', 'config.ts', 'out/config.js'] as const;
 
 	constructor(
 		@IFileService private readonly fileService: IFileService,
@@ -60,17 +61,26 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		await this._loaded;
 		try {
 			await this.ensureDataFolder();
-			const payload: IXynapseProfile = { ...profile, isConfigured: true };
-			const account: IXynapseAccount = {
-				name: payload.name,
-				email: payload.email,
-				isConfigured: true,
-				createdAt: new Date().toISOString(),
-				keys: options.keys || await this.collectKeys(),
-			};
-
+			const keys = this.pickKeyFiles(options.keys ?? await this.collectKeys());
+			const hasKeyMaterial = this.hasKeyMaterial(keys);
+			const payload: IXynapseProfile = { ...profile, isConfigured: hasKeyMaterial };
 			await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(payload, null, '\t')));
-			await this.fileService.writeFile(this.accountResource, VSBuffer.fromString(JSON.stringify(account, null, '\t')));
+
+			if (hasKeyMaterial) {
+				const account: IXynapseAccount = {
+					name: payload.name,
+					email: payload.email,
+					isConfigured: true,
+					createdAt: new Date().toISOString(),
+					keys,
+				};
+				await this.fileService.writeFile(this.accountResource, VSBuffer.fromString(JSON.stringify(account, null, '\t')));
+				await this.materializeKeyFilesFromKeys(keys);
+			} else {
+				await this.deleteFileIfExists(this.accountResource);
+				await this.clearKeyFiles();
+			}
+
 			this.cachedProfile = payload;
 			this._onDidChangeProfile.fire(this.cachedProfile);
 		} catch (e) {
@@ -83,14 +93,9 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		await this._loaded;
 		try {
 			await this.ensureDataFolder();
-			const profileExists = await this.fileService.exists(this.profileResource);
-			if (profileExists) {
-				await this.fileService.del(this.profileResource);
-			}
-			const accountExists = await this.fileService.exists(this.accountResource);
-			if (accountExists) {
-				await this.fileService.del(this.accountResource);
-			}
+			await this.deleteFileIfExists(this.profileResource);
+			await this.deleteFileIfExists(this.accountResource);
+			await this.clearKeyFiles();
 
 			const local = this.createFallbackProfile();
 			await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(local, null, '\t')));
@@ -115,18 +120,74 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 			await this.ensureDataFolder();
 
 			const account = await this.loadAccount();
-			if (account) {
-				this.cachedProfile = {
+			if (account && this.hasKeyMaterial(account.keys)) {
+				const normalizedKeys = this.pickKeyFiles(account.keys);
+				const normalizedProfile: IXynapseProfile = {
 					name: account.name,
 					email: account.email,
-					isConfigured: account.isConfigured,
+					isConfigured: true,
 				};
+				const normalizedAccount: IXynapseAccount = {
+					name: account.name,
+					email: account.email,
+					isConfigured: true,
+					createdAt: account.createdAt,
+					keys: normalizedKeys,
+				};
+
+				await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(normalizedProfile, null, '\t')));
+				await this.fileService.writeFile(this.accountResource, VSBuffer.fromString(JSON.stringify(normalizedAccount, null, '\t')));
+				await this.materializeKeyFilesFromKeys(normalizedKeys);
+				this.cachedProfile = normalizedProfile;
+				return;
+			}
+
+			if (account) {
+				await this.deleteFileIfExists(this.accountResource);
+				await this.clearKeyFiles();
+			}
+
+			const localKeys = this.pickKeyFiles(await this.collectKeys());
+			if (this.hasKeyMaterial(localKeys)) {
+				const existingProfile = await this.loadProfileFile();
+				const migratedProfile: IXynapseProfile = {
+					name: existingProfile?.name ?? this.defaultProfileName,
+					email: existingProfile?.email ?? this.defaultProfileEmail,
+					isConfigured: true,
+				};
+				const migratedAccount: IXynapseAccount = {
+					name: migratedProfile.name,
+					email: migratedProfile.email,
+					isConfigured: true,
+					createdAt: new Date().toISOString(),
+					keys: localKeys,
+				};
+
+				await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(migratedProfile, null, '\t')));
+				await this.fileService.writeFile(this.accountResource, VSBuffer.fromString(JSON.stringify(migratedAccount, null, '\t')));
+				await this.materializeKeyFilesFromKeys(localKeys);
+				this.cachedProfile = migratedProfile;
+				this.notificationService.info(
+					`Existing local key files were migrated to a Xynapse account (${migratedProfile.name}).`,
+				);
 				return;
 			}
 
 			const profile = await this.loadProfileFile();
 			if (profile) {
-				this.cachedProfile = { ...profile, isConfigured: false };
+				const localProfile = {
+					name: profile.name,
+					email: profile.email,
+					isConfigured: false,
+				} satisfies IXynapseProfile;
+				await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(localProfile, null, '\t')));
+				await this.deleteFileIfExists(this.accountResource);
+				await this.clearKeyFiles();
+				this.cachedProfile = {
+					name: localProfile.name,
+					email: localProfile.email,
+					isConfigured: false,
+				};
 				return;
 			}
 
@@ -141,7 +202,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		}
 	}
 
-	private async loadProfileFile(): Promise<Omit<IXynapseProfile, 'isConfigured'> | undefined> {
+	private async loadProfileFile(): Promise<IXynapseProfile | undefined> {
 		const exists = await this.fileService.exists(this.profileResource);
 		if (!exists) {
 			return undefined;
@@ -150,8 +211,16 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		const content = await this.fileService.readFile(this.profileResource);
 		try {
 			const data = JSON.parse(content.value.toString());
-			if (data && typeof data.name === 'string' && typeof data.email === 'string') {
-				return { name: data.name, email: data.email };
+			if (
+				data &&
+				typeof data.name === 'string' &&
+				typeof data.email === 'string'
+			) {
+				return {
+					name: data.name,
+					email: data.email,
+					isConfigured: data.isConfigured === true,
+				};
 			}
 		} catch {
 			this.logService.error('[Xynapse] profile.json contains invalid JSON');
@@ -192,9 +261,15 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 			return {};
 		}
 
+		const keys = this.pickKeyFiles(value as Record<string, unknown>);
+		return keys;
+	}
+
+	private pickKeyFiles(value: Record<string, unknown>): Record<string, string> {
+		const allowed = new Set<string>(XynapseProfileService.KEY_FILES);
 		const keys: Record<string, string> = {};
 		for (const [name, fileValue] of Object.entries(value)) {
-			if (typeof fileValue === 'string') {
+			if (typeof fileValue === 'string' && allowed.has(name)) {
 				keys[name] = fileValue;
 			}
 		}
@@ -212,7 +287,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 	private async collectKeys(): Promise<Record<string, string>> {
 		const keys: Record<string, string> = {};
 
-		for (const fileName of ['config.yaml', 'config.json'] as const) {
+		for (const fileName of XynapseProfileService.KEY_FILES) {
 			const keyFile = joinPath(this.profileFolder, fileName);
 			try {
 				if (await this.fileService.exists(keyFile)) {
@@ -225,6 +300,43 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		}
 
 		return keys;
+	}
+
+	private hasKeyMaterial(keys: Record<string, string>): boolean {
+		return Object.keys(keys).length > 0;
+	}
+
+	private async materializeKeyFilesFromKeys(keys: Record<string, string>): Promise<void> {
+		try {
+			await this.ensureDataFolder();
+			await this.clearKeyFiles();
+			for (const fileName of XynapseProfileService.KEY_FILES) {
+				const fileContent = keys[fileName];
+				if (typeof fileContent !== 'string') {
+					continue;
+				}
+				const keyResource = joinPath(this.profileFolder, fileName);
+				const keyParent = dirname(keyResource);
+				if (!(await this.fileService.exists(keyParent))) {
+					await this.fileService.createFolder(keyParent);
+				}
+				await this.fileService.writeFile(keyResource, VSBuffer.fromString(fileContent));
+			}
+		} catch (e) {
+			this.logService.error('[Xynapse] Failed to materialize key files from account keys:', e);
+		}
+	}
+
+	private async clearKeyFiles(): Promise<void> {
+		for (const fileName of XynapseProfileService.KEY_FILES) {
+			await this.deleteFileIfExists(joinPath(this.profileFolder, fileName));
+		}
+	}
+
+	private async deleteFileIfExists(resource: URI): Promise<void> {
+		if (await this.fileService.exists(resource)) {
+			await this.fileService.del(resource);
+		}
 	}
 }
 

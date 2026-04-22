@@ -130,9 +130,13 @@ Xynapse поддерживает **16 языков** интерфейса и а�
 
 Xynapse использует локальные аккаунты — без облачной авторизации. Для переноса конфигурации между ПК:
 
-- **Экспорт** (`Ctrl+Shift+P` → "Xynapse: Export Encrypted Config Backup") — собирает `config.yaml`, `config.json`, `profile.json` в один `.enc` файл, зашифрованный AES-256-GCM + PBKDF2
-- **Импорт** (`Ctrl+Shift+P` → "Xynapse: Import Encrypted Config Backup") — расшифровывает и восстанавливает конфигурацию
+- **Экспорт** (`Ctrl+Shift+P` → "Xynapse: Export Encrypted Config Backup") — собирает весь переносимый набор профиля (`config.yaml`, `config.json`, `config.ts`, `out/config.js`, `.env`, `.xynapserc.json`, `sharedConfig.json`, `profile.json`, `account.json`) в один `.enc` файл, зашифрованный AES-256-GCM + PBKDF2
+- **Импорт** (`Ctrl+Shift+P` → "Xynapse: Import Encrypted Config Backup") — расшифровывает и восстанавливает эти файлы; после перезапуска модели снова доступны
 - **Git-синхронизация** — `.enc` файл можно хранить в любом git-репозитории для синхронизации между машинами
+
+- `isConfigured` вычисляется по фактическому key-material, а не по устаревшим флагам в JSON.
+- Строгий режим аккаунта: без key-material из аккаунта ключевые файлы не применяются, профиль считается локальным/не настроенным.
+- Legacy auto-migrate: если `account.json` отсутствует, но в `.xynapse` найдены старые ключевые файлы, Xynapse автоматически создаёт аккаунт и показывает уведомление.
 
 ---
 
