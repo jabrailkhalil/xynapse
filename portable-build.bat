@@ -32,6 +32,15 @@ if errorlevel 8 (
 	exit /b 1
 )
 
+rem Ensure native addons are present in the portable app package
+set "SOURCE_NODE_MODULES=%~dp0vscode\node_modules"
+if exist "%SOURCE_NODE_MODULES%" (
+	echo Syncing native addons from source node_modules...
+	node --eval "const fs=require('fs');const path=require('path');const sourceModules=process.argv[1];const targetModules=process.argv[2];const nativeFiles=[];const walk=(dir)=>{for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()) walk(p); else if(e.isFile()&&p.endsWith('.node')) nativeFiles.push(p);}};if(!fs.existsSync(sourceModules)||!fs.existsSync(targetModules)){process.exit(0);}walk(sourceModules);for(const source of nativeFiles){const rel=path.relative(sourceModules,source);const parts=rel.split(path.sep);if(parts[0] !== '@vscode' || parts.length < 2){continue;}if(parts[1].startsWith('.') && parts[1].includes('-')){const lastDash=parts[1].lastIndexOf('-');if(lastDash > 1){parts[1]=parts[1].slice(1,lastDash);}}const target=path.join(targetModules,...parts);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(source,target);}process.exit(0);" "%SOURCE_NODE_MODULES%" "%OUTPUT_DIR%\resources\app\node_modules"
+) else (
+	echo [WARN] Missing source node_modules at "%SOURCE_NODE_MODULES%". Skipping native addon sync.
+)
+
 rem Stable launch script for portable user profile
 (
 	echo @echo off
