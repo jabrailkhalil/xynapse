@@ -138,18 +138,20 @@ export class StartupPageRunnerContribution extends Disposable implements IWorkbe
 				if (startupEditorSetting.value === 'readme') {
 					await this.openReadme();
 				} else if (startupEditorSetting.value === 'welcomePage' || startupEditorSetting.value === 'welcomePageInEmptyWorkbench') {
-					await this.openGettingStarted(true);
 					// Xynapse: Open theme picker on first launch
 					const hasSeenThemePicker = this.storageService.get('xynapse.hasSeenThemePicker', StorageScope.PROFILE);
 					if (!hasSeenThemePicker) {
 						this.storageService.store('xynapse.hasSeenThemePicker', 'true', StorageScope.PROFILE, StorageTarget.USER);
 						this.commandService.executeCommand('workbench.action.selectTheme');
 					}
-					// Xynapse: Open walkthrough on first launch
+
+					// Xynapse: On first launch, open only the setup walkthrough to avoid duplicate Welcome tabs.
 					const hasSeenWalkthrough = this.storageService.get('xynapse.hasSeenWalkthrough', StorageScope.PROFILE);
 					if (!hasSeenWalkthrough) {
 						this.storageService.store('xynapse.hasSeenWalkthrough', 'true', StorageScope.PROFILE, StorageTarget.USER);
-						this.commandService.executeCommand('workbench.action.openWalkthrough', { category: 'xynapse.xynapse-assistant#xynapse.welcome', step: 'xynapse.xynapse-assistant#xynapse.welcome.overview' }, true);
+						this.commandService.executeCommand('workbench.action.openWalkthrough', { category: 'xynapse.xynapse-assistant#xynapse.welcome', step: 'xynapse.xynapse-assistant#xynapse.welcome.overview' }, { toSide: false, inactive: false });
+					} else {
+						await this.openGettingStarted(true);
 					}
 				} else if (startupEditorSetting.value === 'terminal') {
 					this.commandService.executeCommand(TerminalCommandId.CreateTerminalEditor);
