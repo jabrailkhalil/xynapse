@@ -362,7 +362,7 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 
 		// Xynapse Profile — the only account entry
 		const xynapseProfile = this.xynapseProfileService.getProfile();
-		if (xynapseProfile) {
+		if (xynapseProfile?.isConfigured) {
 			const profileSubMenuActions: IAction[] = [
 				toAction({
 					id: 'xynapse.profile.edit',

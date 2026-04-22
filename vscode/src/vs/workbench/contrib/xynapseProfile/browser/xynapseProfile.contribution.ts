@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------------------------------------
+﻿/*---------------------------------------------------------------------------------------------
  *  Copyright (c) Xynapse. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
@@ -15,30 +15,24 @@ import { joinPath } from '../../../../base/common/resources.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
 import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.js';
-import { URI } from '../../../../base/common/uri.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { encryptConfig, decryptConfig } from '../common/xynapseConfigCrypto.js';
-import { env as processEnv } from '../../../../base/common/process.js';
+import { getXynapseDataDir, XYNAPSE_ACCOUNT_FILE, XYNAPSE_PROFILE_FILE } from '../../../services/xynapseProfile/common/xynapseProfilePaths.js';
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-function xynapseDataDir(accessor: ServicesAccessor): URI {
-	// Portable mode: store config inside portable data directory
-	const portablePath = processEnv['VSCODE_PORTABLE'];
-	if (portablePath) {
-		return joinPath(URI.file(portablePath), '.xynapse');
-	}
+// в”Ђв”Ђв”Ђ helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+function xynapseDataDir(accessor: ServicesAccessor): ReturnType<typeof getXynapseDataDir> {
 	const nativeEnv = accessor.get(INativeEnvironmentService);
 	const product = accessor.get(IProductService);
-	return joinPath(nativeEnv.userHome, product.dataFolderName);
+	return getXynapseDataDir(nativeEnv, product.dataFolderName);
 }
 
-const EXPORTABLE_FILES = ['config.yaml', 'config.json', 'profile.json'];
+const EXPORTABLE_FILES = ['config.yaml', 'config.json', XYNAPSE_PROFILE_FILE, XYNAPSE_ACCOUNT_FILE];
 
-// ═══════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 //  Profile Management
-// ═══════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
-// ─── Set Up Xynapse Profile ─────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Set Up Xynapse Profile в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class SetUpXynapseProfileAction extends Action2 {
 	constructor() {
 		super({
@@ -77,7 +71,7 @@ registerAction2(class SetUpXynapseProfileAction extends Action2 {
 	}
 });
 
-// ─── Edit Xynapse Profile ───────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Edit Xynapse Profile в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class EditXynapseProfileAction extends Action2 {
 	constructor() {
 		super({
@@ -120,7 +114,7 @@ registerAction2(class EditXynapseProfileAction extends Action2 {
 	}
 });
 
-// ─── Clear Xynapse Profile (Sign Out) ──────────────────────────────────────
+// в”Ђв”Ђв”Ђ Clear Xynapse Profile (Sign Out) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class ClearXynapseProfileAction extends Action2 {
 	constructor() {
 		super({
@@ -140,13 +134,13 @@ registerAction2(class ClearXynapseProfileAction extends Action2 {
 	}
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  Encrypted Config Backup — Export / Import / Git Push / Git Pull
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+//  Encrypted Config Backup вЂ” Export / Import / Git Push / Git Pull
 //  All accounts are LOCAL. A single encrypted .enc file stores
-//  config.yaml, config.json, and profile.json (with API keys).
+//  config.yaml, config.json, profile.json, and account.json (with keys bundle).
 //  The user authenticates via built-in GitHub login (github-authentication
 //  extension) to push/pull the encrypted backup to/from their git repo.
-// ═══════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 async function collectBundle(accessor: ServicesAccessor): Promise<Record<string, string> | undefined> {
 	const fileService = accessor.get(IFileService);
@@ -192,11 +186,25 @@ async function restoreBundle(
 	}
 
 	// Reload profile if it was in the bundle
-	if (bundle['profile.json']) {
+	if (bundle[XYNAPSE_ACCOUNT_FILE]) {
 		try {
-			const p = JSON.parse(bundle['profile.json']);
-			if (p.name && p.email) {
-				await profileService.setProfile({ name: p.name, email: p.email });
+			const a = JSON.parse(bundle[XYNAPSE_ACCOUNT_FILE]);
+			if (
+				a &&
+				typeof a.name === 'string' &&
+				typeof a.email === 'string'
+			) {
+				const keys = coerceStringRecord((a as { keys?: unknown }).keys);
+				await profileService.setProfile({ name: a.name, email: a.email }, { keys });
+			}
+		} catch { /* skip */ }
+	} else if (bundle[XYNAPSE_PROFILE_FILE]) {
+		try {
+			const p = JSON.parse(bundle[XYNAPSE_PROFILE_FILE]);
+			if (p?.name && p?.email) {
+				await fileService.writeFile(joinPath(dataDir, XYNAPSE_PROFILE_FILE), VSBuffer.fromString(JSON.stringify({ ...p, isConfigured: false }, null, '\t')));
+				await fileService.del(joinPath(dataDir, XYNAPSE_ACCOUNT_FILE)).catch(() => undefined);
+				count++;
 			}
 		} catch { /* skip */ }
 	}
@@ -204,7 +212,20 @@ async function restoreBundle(
 	return count;
 }
 
-// ─── Export Encrypted Config ────────────────────────────────────────────────
+function coerceStringRecord(value: unknown): Record<string, string> {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return {};
+	}
+	const result: Record<string, string> = {};
+	for (const [name, fileValue] of Object.entries(value)) {
+		if (typeof fileValue === 'string') {
+			result[name] = fileValue;
+		}
+	}
+	return result;
+}
+
+// в”Ђв”Ђв”Ђ Export Encrypted Config в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class ExportXynapseConfigAction extends Action2 {
 	constructor() {
 		super({
@@ -264,7 +285,7 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 	}
 });
 
-// ─── Import Encrypted Config ────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Import Encrypted Config в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class ImportXynapseConfigAction extends Action2 {
 	constructor() {
 		super({
@@ -342,7 +363,7 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 	}
 });
 
-// ─── Push Encrypted Config to Git ───────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Push Encrypted Config to Git в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 	constructor() {
 		super({
@@ -406,7 +427,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 			await fileService.createFolder(syncDir);
 			await fileService.writeFile(encFile, VSBuffer.wrap(encrypted));
 
-			// Use the terminal to run git commands — the user has git auth via github-authentication
+			// Use the terminal to run git commands вЂ” the user has git auth via github-authentication
 			const commandService = accessor.get(ICommandService);
 
 			// Open terminal and run git commands
@@ -436,7 +457,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 	}
 });
 
-// ─── Pull Encrypted Config from Git ─────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Pull Encrypted Config from Git в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 	constructor() {
 		super({
@@ -480,7 +501,7 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 				await commandService.executeCommand('workbench.action.terminal.new');
 				await commandService.executeCommand('workbench.action.terminal.sendSequence', { text: gitCommands + '\n' });
 			} else {
-				// Fresh clone — git clone creates the directory itself
+				// Fresh clone вЂ” git clone creates the directory itself
 				const gitCommands = `git clone "${repoUrl}" "${syncDir.fsPath}" --depth 1`;
 
 				await commandService.executeCommand('workbench.action.terminal.new');
@@ -503,7 +524,7 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 	}
 });
 
-// ─── Import from Git Sync folder (decrypt after pull) ──────────────────────
+// в”Ђв”Ђв”Ђ Import from Git Sync folder (decrypt after pull) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 registerAction2(class ImportFromGitSyncAction extends Action2 {
 	constructor() {
 		super({

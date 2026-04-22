@@ -9,6 +9,20 @@ import { createDecorator } from '../../../../platform/instantiation/common/insta
 export interface IXynapseProfile {
 	name: string;
 	email: string;
+	isConfigured: boolean;
+}
+
+export interface IXynapseProfileInput {
+	name: string;
+	email: string;
+}
+
+export interface IXynapseAccount {
+	name: string;
+	email: string;
+	isConfigured: boolean;
+	keys: Record<string, string>;
+	createdAt: string;
 }
 
 export const IXynapseProfileService = createDecorator<IXynapseProfileService>('xynapseProfileService');
@@ -20,6 +34,6 @@ export interface IXynapseProfileService {
 	readonly onDidChangeProfile: Event<IXynapseProfile | undefined>;
 
 	getProfile(): IXynapseProfile | undefined;
-	setProfile(profile: IXynapseProfile): Promise<void>;
+	setProfile(profile: IXynapseProfileInput, options?: { keys?: Record<string, string> }): Promise<void>;
 	clearProfile(): Promise<void>;
 }

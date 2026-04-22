@@ -45,6 +45,7 @@ echo   12 npm install
 echo   13 Первый запуск (сброс)
 echo   14 Открыть лог
 echo   15 Запуск VANILLA (без настроек)
+echo   16 Build portable package
 echo.
 echo   0  Выход
 echo.
@@ -65,6 +66,7 @@ if "%choice%"=="12" goto npm_install
 if "%choice%"=="13" goto first_run
 if "%choice%"=="14" goto open_log
 if "%choice%"=="15" goto vanilla_run
+if "%choice%"=="16" goto build_portable
 if "%choice%"=="0" goto exit_script
 
 echo   Неверный выбор
@@ -269,6 +271,13 @@ npm run gulp vscode-win32-x64
 
 echo.
 echo   Готово: vscode\.build\win32-x64\
+pause
+goto menu
+
+:build_portable
+cls
+echo   Build portable package
+call "%~dp0portable-build.bat"
 pause
 goto menu
 
