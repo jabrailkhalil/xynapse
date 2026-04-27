@@ -1,6 +1,6 @@
 # Xynapse IDE - Project Context
 
-Updated: 2026-04-22
+Updated: 2026-04-27
 Branch: `codex/xynapse-portable-profile`
 
 ## 1) Project scope
@@ -34,6 +34,21 @@ Public site:
   - `plugins/continue-main/extensions/vscode/src/XynapseGUIWebviewViewProvider.ts`
 - Command flow (focus/open/new window):
   - `plugins/continue-main/extensions/vscode/src/commands.ts`
+
+### Council and BVC
+- `/council` is free-form multi-agent planning:
+  - default roles: PM, Architect, Developer, Reviewer
+  - fixed critique rounds by difficulty: easy 0, medium 1, hard 2
+  - output files: `council-plan.md`, `council-discussion.md`
+- `/bvc` is the formal diploma algorithm:
+  - default roles: Architect, Developer, Reviewer, Tester
+  - fixed axes: `root_cause_location`, `fix_strategy`, `dependencies_to_update`, `test_coverage`
+  - metrics: `D_vote`, `D_cov`, `T_ge2`
+  - output files: `bvc-plan.md`, `bvc-discussion.md`
+- Registration path:
+  - `plugins/continue-main/core/commands/slash/built-in-legacy/council.ts`
+  - `plugins/continue-main/core/commands/slash/built-in-legacy/index.ts`
+  - YAML declares both commands in `vscode/extensions/xynapse-assistant/xynapse-config.yaml`
 
 ### Startup and walkthrough
 - Startup page logic:
@@ -85,11 +100,70 @@ Public site:
   - `plugins/continue-main/extensions/vscode/out/extension.js`
   - `vscode/extensions/xynapse-assistant/out/extension.js`
   - `vscode/out/...` via `transpile-client-esbuild`
+- Council/BVC are now tracked as separate intended modes:
+  - Council free-form planning
+  - BVC formal budgeted verified algorithm
+- Assistant first-run account UX now offers two explicit paths before manual key entry:
+  - Import encrypted `.enc` Xynapse profile/account backup.
+  - Connect API keys manually provider by provider.
+- The account-choice UI source text is English; non-English UI is applied by runtime translation:
+  - `Port your Xynapse account`
+  - `Import encrypted profile`
+  - `Connect API keys manually`
+- Webview import button sends `xynapse/importProfile`, handled by the VS Code extension through existing `xynapse.config.import`.
+- Fresh encrypted profile export for manual testing was generated:
+  - `C:\Users\Home-PC\Desktop\xynapse-profile-export\xynapse-account-portable-20260425T111005Z.enc`
+  - Password is stored locally in the sibling `.password.txt` file; do not print it in chat/logs.
+- Import password handling is tolerant:
+  - the `.enc` format is `XYNCFG1` + PBKDF2-SHA256 + AES-256-GCM
+  - import tries the raw password input, trimmed input, and the last non-empty line
+  - this intentionally supports users pasting the whole generated `.password.txt` helper file instead of only the final password line
+  - verified valid payload includes `version=1`, `profile.json`, `account.json`, `config.yaml`, `.xynapserc.json`, and `config.ts`
+- Profile path fix:
+  - `getXynapseDataDir()` now honors `XYNAPSE_GLOBAL_DIR` before `VSCODE_PORTABLE`/user home
+  - this keeps profile import/export aligned with the assistant config path in clean/test launches
+- Current main machine profile was materialized from the encrypted export into `C:\Users\Home-PC\.xynapse`:
+  - backup: `C:\Users\Home-PC\Desktop\xynapse-profile-export\profile-materialize-backups\.xynapse-before-materialize-20260425T145604Z`
+  - verified `profile.json`, `account.json`, and `config.yaml` exist
+  - verified `config.yaml` has 22 model entries without printing secret values
+- Checksum format note:
+  - runtime `product.json` checksums must be unpadded base64
+  - current/portable/source checksum verification passes after normalizing entries
+- Duplicate `xynapse-assistant/rules.md` warning is mitigated in config load:
+  - rules are deduplicated by `rule.name` in `plugins/continue-main/core/config/profile/doLoadConfig.ts`
+  - this handles source/runtime/portable extension copies being visible inside the `IDE` workspace.
+- Bottom status-bar language item is now `Xynapse Language`, not full IDE display language:
+  - `xynapse.ideLanguage` and `xynapse.assistantLanguage` are compatibility aliases for the same selector.
+  - Source of truth is `.xynapse/config.yaml` `responseLanguage`.
+  - It no longer reads/writes active user-data `User/argv.json`; that was the wrong file for this fork.
+  - Real Workbench display language is a separate VS Code NLS/language-pack layer using `%USERPROFILE%\.xynapse\argv.json` or `%VSCODE_PORTABLE%\argv.json`.
+  - Full Workbench translation must not be promised unless bundled language packs/NLS artifacts exist.
+  - Window reload applies the Xynapse panel/response language.
+- Assistant onboarding localization:
+  - The import-account/manual-key cards now have GUI-side RU/JA translations.
+  - The webview DOM translator now normalizes whitespace before exact dictionary lookup, so multiline text nodes are less fragile.
+- Current runtime was launched for testing from `VSCode-win32-x64\Xynapse.exe` with isolated no-account dirs:
+  - Latest normal launch after profile/checksum fix: `C:\Users\Home-PC\Desktop\IDE\VSCode-win32-x64\Xynapse.exe`
+  - Latest import-fix isolated run: `C:\Users\Home-PC\Desktop\IDE\.tmp-xynapse-import-fixed-20260425-173759\`
+  - Previous language/theme run: `C:\Users\Home-PC\Desktop\IDE\.tmp-xynapse-clean-lang-theme-20260425-164236\`
+- Theme fallback fix:
+  - clean first-run settings may still contain VS Code's internal `__vs-dark`
+  - workbench initialization now normalizes `__vs-dark` to `Default Dark+`
+  - current and portable `product.json` checksums were updated and verified after the runtime bundle patch.
+- Profile import runtime fix:
+  - Do not use VS Code `ServicesAccessor` after any `await` inside `Action2.run()`.
+  - `xynapse.config.import/export/push/pull/importFromGitSync` now capture required services and `dataDir` synchronously, then pass plain services/data into async helpers.
+  - Current runtime, portable runtime, and `vscode/out-vscode` workbench bundles were patched from the transpiled source module.
+  - Latest clean no-key manual import run: `C:\Users\Home-PC\Desktop\IDE\.tmp-xynapse-port-test-20260425-193650\`.
+  - This run starts responsive, has no `profile.json/account.json`, no likely secrets in default key files, and no `corrupt/sqlite3/Illegal state` log hits before import.
 
 ### In progress / unstable
 - Validate assistant persistence in secondary sidebar after repeated restarts.
 - Validate no duplicate onboarding tabs after clean first-run state reset.
 - First-run UX consistency: exactly one onboarding flow.
+- Validate the new import-account choice visually in the running runtime and verify that choosing the `.enc` file restores models after restart.
+- Manually click the bottom globe item and verify `RU/JA/EN` reload changes the Xynapse assistant panel language.
+- If full Workbench language switching is required, implement/bundle proper VS Code language packs instead of patching webview strings.
 
 ### Pending
 - Finalize profile migration UX so user can move account/keys between machines with minimal manual steps.

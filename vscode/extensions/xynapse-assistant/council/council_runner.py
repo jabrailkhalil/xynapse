@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Council runner — AutoGen SelectorGroupChat for multi-agent project planning.
+"""Council runner - AutoGen SelectorGroupChat for free-form project planning.
 
 Usage:
-    python council_runner.py --task "описание проекта" --api-key "sk-..." [--models '{"PM":"..."}'] [--max-messages 20]
+    python council_runner.py --task "описание проекта" --api-key "sk-..." \
+        [--models '{"PM":"..."}'] [--max-messages 20]
 
-Output: NDJSON lines to stdout with format:
+Output: NDJSON lines to stdout:
     {"agent": "PM", "content": "...", "phase": "discussion"}
     {"agent": "system", "content": "...", "phase": "complete"}
 """
@@ -33,17 +34,19 @@ SELECTOR_PROMPT = """Ты модератор мульти-агентной ди�
 6. Не давай одному агенту говорить два раза подряд.
 7. Когда дискуссия сходится, дай слово PM для финализации плана.
 
-На основе истории сообщений, выбери кто должен говорить следующим.
+На основе истории сообщений выбери, кто должен говорить следующим.
 Ответь ТОЛЬКО именем агента: PM, Architect, Developer или Reviewer."""
 
 
 def emit(agent: str, content: str, phase: str = "discussion") -> None:
     """Print a single NDJSON line to stdout."""
-    line = json.dumps(
-        {"agent": agent, "content": content, "phase": phase},
-        ensure_ascii=False,
+    print(
+        json.dumps(
+            {"agent": agent, "content": content, "phase": phase},
+            ensure_ascii=False,
+        ),
+        flush=True,
     )
-    print(line, flush=True)
 
 
 async def run_council(
@@ -52,17 +55,14 @@ async def run_council(
     models: "dict[str, str] | None" = None,
     max_messages: int = 20,
 ) -> None:
-    """Run the council discussion and stream results as NDJSON."""
+    """Run the free-form Council discussion and stream results as NDJSON."""
     try:
         agents = create_agents(api_key, models)
-    except Exception as e:
-        emit("system", f"Ошибка создания агентов: {e}", "error")
+    except Exception as exc:
+        emit("system", f"Ошибка создания агентов: {exc}", "error")
         return
 
-    # Selector model — lightweight model for choosing next speaker
     selector_model = create_openrouter_client(api_key, "openai/gpt-4o-mini")
-
-    # Termination conditions
     termination = MaxMessageTermination(max_messages) | TextMentionTermination(
         "PLAN_APPROVED"
     )
@@ -79,23 +79,19 @@ async def run_council(
     try:
         stream = team.run_stream(task=f"Задача от пользователя: {task}")
         async for message in stream:
-            # TaskResult is the final summary — skip it
             if hasattr(message, "messages"):
                 continue
-            # Regular agent messages
+
             agent_name = getattr(message, "source", "system")
             content = getattr(message, "content", str(message))
             if not content or not content.strip():
                 continue
 
-            phase = "discussion"
-            if "PLAN_APPROVED" in content:
-                phase = "plan"
-
+            phase = "plan" if "PLAN_APPROVED" in content else "discussion"
             emit(agent_name, content, phase)
 
-    except Exception as e:
-        emit("system", f"Ошибка выполнения: {e}", "error")
+    except Exception as exc:
+        emit("system", f"Ошибка выполнения: {exc}", "error")
         return
 
     emit("system", "Дискуссия завершена.", "complete")

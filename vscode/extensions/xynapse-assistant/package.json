@@ -49,7 +49,8 @@
 	"activationEvents": [
 		"onUri",
 		"onStartupFinished",
-		"onView:xynapseGUIView"
+		"onCommand:xynapse.openConfigFile",
+		"onView:xynapse.xynapseGUIView"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -565,7 +566,8 @@
 				"command": "xynapse.focusEdit",
 				"title": "Edit code with natural language",
 				"mac": "cmd+i",
-				"key": "ctrl+i"
+				"key": "ctrl+i",
+				"when": "editorTextFocus && !suggestWidgetVisible"
 			},
 			{
 				"command": "xynapse.exitEditMode",
@@ -576,7 +578,8 @@
 			{
 				"command": "xynapse.debugTerminal",
 				"mac": "cmd+shift+r",
-				"key": "ctrl+shift+r"
+				"key": "ctrl+shift+r",
+				"when": "terminalFocus"
 			},
 			{
 				"command": "xynapse.openInNewWindow",
@@ -635,7 +638,8 @@
 			{
 				"command": "xynapse.focusInput",
 				"mac": "cmd+shift+i",
-				"key": "ctrl+shift+i"
+				"key": "ctrl+shift+i",
+				"when": "!developerToolsFocus"
 			}
 		],
 		"submenus": [
@@ -740,7 +744,7 @@
 			]
 		},
 		"viewsContainers": {
-			"activitybar": [
+			"secondarySidebar": [
 				{
 					"id": "xynapse",
 					"title": "%viewContainer.xynapse%",
@@ -872,7 +876,7 @@
 		"e2e:create-storage": "mkdir -p ./e2e/storage",
 		"e2e:get-chromedriver": "extest get-chromedriver --storage ./e2e/storage --code_version 1.95.0",
 		"e2e:get-vscode": "extest get-vscode --storage ./e2e/storage --code_version 1.95.0",
-		"e2e:sign-vscode": "codesign --entitlements entitlements.plist --deep --force -s - './e2e/storage/Visual Studio Code.app'",
+		"e2e:sign-vscode": "codesign --entitlements entitlements.plist --deep --force -s - './e2e/storage/Xynapse.app'",
 		"e2e:copy-vsix": "chmod +x ./e2e/get-latest-vsix.sh && bash ./e2e/get-latest-vsix.sh",
 		"e2e:install-vsix": "extest install-vsix -f ./e2e/vsix/xynapse-assistant.vsix --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",
 		"e2e:install-extensions": "extest install-from-marketplace ms-vscode-remote.remote-ssh --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage && extest install-from-marketplace ms-vscode-remote.remote-containers --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage && extest install-from-marketplace ms-vscode-remote.remote-wsl --extensions_dir ./e2e/.test-extensions --storage ./e2e/storage",

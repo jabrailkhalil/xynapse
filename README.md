@@ -48,6 +48,15 @@ Detailed documentation:
 - `Export/Import config backup` always includes both `profile.json` and `account.json` and keeps local/remote sync reproducible across machines.
 - Git sync is still supported through exported `.enc` files; local import/export also works via `Ctrl+Shift+P` actions.
 
+## Council and BVC
+
+Xynapse has two separate multi-agent planning modes:
+
+- `/council` is a free-form Council discussion: PM, Architect, Developer, and Reviewer propose, critique, and synthesize `council-plan.md`.
+- `/bvc` is the formal Budgeted Verified Council algorithm from the diploma: fixed axes `root_cause_location`, `fix_strategy`, `dependencies_to_update`, `test_coverage`, structured votes, `D_vote`, `D_cov`, adaptive critique, budget guard, and `bvc-plan.md`.
+
+The modes are intentionally separate: Council is for practical planning UX, BVC is for mathematically traceable planning.
+
 ## Portable Build
 
 A portable package can be assembled in a dedicated folder:

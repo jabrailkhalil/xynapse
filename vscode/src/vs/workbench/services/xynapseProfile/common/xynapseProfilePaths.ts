@@ -12,6 +12,11 @@ export const XYNAPSE_PROFILE_FILE = 'profile.json';
 export const XYNAPSE_ACCOUNT_FILE = 'account.json';
 
 export function getXynapseDataDir(environmentService: INativeEnvironmentService, dataFolderName: string): URI {
+	const explicitPath = processEnv['XYNAPSE_GLOBAL_DIR'];
+	if (explicitPath) {
+		return URI.file(explicitPath);
+	}
+
 	const portablePath = processEnv['VSCODE_PORTABLE'];
 	if (portablePath) {
 		return joinPath(URI.file(portablePath), dataFolderName);

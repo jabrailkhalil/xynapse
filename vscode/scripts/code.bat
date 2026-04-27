@@ -26,16 +26,25 @@ set VSCODE_CLI=1
 set ELECTRON_ENABLE_LOGGING=1
 set ELECTRON_ENABLE_STACK_DUMPING=1
 set ELECTRON_RUN_AS_NODE=
+set "EXTENSIONS_DIR=%~dp0..\extensions"
+set "USE_DEFAULT_EXTENSIONS_DIR=1"
 
 set DISABLE_TEST_EXTENSION="--disable-extension=vscode.vscode-api-tests"
 for %%A in (%*) do (
-	if "%%~A"=="--extensionTestsPath" (
-		set DISABLE_TEST_EXTENSION=""
-	)
+if "%%~A"=="--extensionTestsPath" (
+	set DISABLE_TEST_EXTENSION=""
+)
+if "%%~A"=="--extensions-dir" (
+	set "USE_DEFAULT_EXTENSIONS_DIR="
+)
 )
 
 :: Launch Code
-%CODE% . %DISABLE_TEST_EXTENSION% %*
+if "%USE_DEFAULT_EXTENSIONS_DIR%"=="1" (
+    %CODE% . %DISABLE_TEST_EXTENSION% --extensions-dir "%EXTENSIONS_DIR%" %*
+) else (
+    %CODE% . %DISABLE_TEST_EXTENSION% %*
+)
 goto end
 
 :builtin

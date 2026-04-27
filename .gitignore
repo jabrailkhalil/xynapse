@@ -24,6 +24,9 @@ build/
 *.tsbuildinfo
 *.zip
 VSCode-win32-x64/
+portable-build/
+.tmp-xynapse*/
+.openclaw/
 
 # ===========================================
 # Source directories (not part of distribution)
@@ -44,7 +47,16 @@ plugins/
 /original_xynapse.bat
 /patch-gui-error.js
 /MODEL-SYSTEM.md
+/TEST-REPORT*.md
 /0
+/AGENTS.md
+/HEARTBEAT.md
+/IDENTITY.md
+/SOUL.md
+/TOOLS.md
+/USER.md
+/MEMORY.md
+/memory/
 
 # ===========================================
 # AI code agents — BLOCK ALL config/metadata

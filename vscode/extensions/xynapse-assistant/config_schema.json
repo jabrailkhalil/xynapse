@@ -30,7 +30,7 @@
         },
         "presencePenalty": {
           "title": "Presence Penalty",
-          "description": "The presence penalty Aof the completion.",
+          "description": "The presence penalty of the completion.",
           "type": "number"
         },
         "frequencyPenalty": {

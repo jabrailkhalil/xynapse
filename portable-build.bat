@@ -11,7 +11,6 @@ if "%OUTPUT_ROOT%"=="" set "OUTPUT_ROOT=%~dp0portable-build"
 
 set "PORTABLE_NAME=xynapse-portable"
 set "OUTPUT_DIR=%OUTPUT_ROOT%\%PORTABLE_NAME%"
-set "RUNNER=%OUTPUT_DIR%\run-xynapse-portable.bat"
 
 set "SOURCE_EXE=%SOURCE_DIR%\Xynapse.exe"
 if not exist "%SOURCE_EXE%" (
@@ -41,23 +40,12 @@ if exist "%SOURCE_NODE_MODULES%" (
 	echo [WARN] Missing source node_modules at "%SOURCE_NODE_MODULES%". Skipping native addon sync.
 )
 
-rem Stable launch script for portable user profile
-(
-	echo @echo off
-	echo setlocal
-	echo set "PORTABLE_DIR=%%~dp0"
-	echo set "VSCODE_PORTABLE=%%PORTABLE_DIR%%data"
-	echo set "VSCODE_SKIP_PRELAUNCH=1"
-	echo cd /d "%%PORTABLE_DIR%%"
-	echo start "" "Xynapse.exe"
-) > "%RUNNER%"
-
 echo.
 echo Portable package created:
 echo   %OUTPUT_DIR%
 echo.
 echo Run:
-echo   "%RUNNER%"
+echo   "%OUTPUT_DIR%\Xynapse.exe"
 echo.
 echo It will keep user data in:
 echo   %OUTPUT_DIR%\data

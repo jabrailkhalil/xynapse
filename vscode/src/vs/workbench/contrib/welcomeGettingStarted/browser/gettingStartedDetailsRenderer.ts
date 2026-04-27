@@ -66,6 +66,9 @@ export class GettingStartedDetailsRenderer {
 						justify-content: center;
 						gap: 32px;
 					}
+					.theme-picker-actions {
+						margin-top: 4px;
+					}
 					checklist {
 						display: flex;
 						gap: 32px;
@@ -88,6 +91,22 @@ export class GettingStartedDetailsRenderer {
 						outline: 2px solid var(--vscode-focusBorder);
 						outline-offset: 4px;
 						border-radius: 4px;
+					}
+					.xynapse-standard-theme-option {
+						flex-direction: row;
+						min-height: 32px;
+						padding: 6px 14px;
+						border-radius: 4px;
+						color: var(--vscode-button-foreground);
+						background: var(--vscode-button-background);
+						box-sizing: border-box;
+					}
+					.xynapse-standard-theme-option:hover {
+						background: var(--vscode-button-hoverBackground);
+					}
+					.xynapse-standard-theme-option.checked {
+						outline: 1px solid var(--vscode-focusBorder);
+						outline-offset: 2px;
 					}
 					.theme-picker-link {
 						margin-top: 16px;

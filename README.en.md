@@ -55,7 +55,8 @@ The built-in AI assistant lives in the sidebar and works as a full-fledged co-au
 | `/explain` | Explain code |
 | `/comment` | Add comments |
 | `/test` | Generate tests |
-| `/council` | Launch multi-agent planning |
+| `/council` | Launch free-form multi-agent planning |
+| `/bvc` | Launch the formal Budgeted Verified Council algorithm |
 
 **Context Menu** — right-click any code fragment for AI actions: commenting, documentation, error fixing, optimization, grammar correction.
 
@@ -171,6 +172,11 @@ Xynapse Council is a multi-agent planning system where a task isn't just solved 
 
 Formalization source: [thesis chapter 2](./диплом/bachelor-thesis-template-master/parts/chapter2.tex) and [full BVC appendix](./диплом/bachelor-thesis-template-master/parts/appendix-bvc.tex).
 
+Xynapse exposes this as two separate modes:
+
+- `/council` is the practical free-form Council mode for planning UX: PM, Architect, Developer, and Reviewer discuss, critique, and synthesize `council-plan.md`.
+- `/bvc` is the formal BVC mode from the thesis: fixed axes, structured outputs, `D_vote`, `D_cov`, adaptive critique, early-fail checks, and `bvc-plan.md`.
+
 ### Algorithm: 3-Phase Discussion
 
 **Phase 1: Independent Analysis**
@@ -217,7 +223,7 @@ With 4 agents at hard difficulty: **13 LLM calls** with full discussion tracing.
 
 ### BVC Mathematical Model
 
-In the thesis, Council is formalized as **Budgeted Verified Council (BVC)**: for a codebase $S_0$ and user task $x$, the system must produce a final patch $\Delta_{\text{final}}$ such that
+In the thesis, **Budgeted Verified Council (BVC)** is the formal algorithm derived from the Council idea: for a codebase $S_0$ and user task $x$, the system must produce a final patch $\Delta_{\text{final}}$ such that
 
 $$
 \mathrm{Verify}(S_0 \oplus \Delta_{\text{final}})=\text{pass}, \qquad b \le B,
@@ -245,7 +251,7 @@ d_{\text{vote}}(t)=\frac{1-\max_{\ell}\hat{p}_{t,\ell}}{1-\frac{1}{m_t}},
 \hat{p}_{t,\ell}=\frac{1}{m_t}\sum_{r \in \mathcal{R}_t}\mathbf{1}[\tilde a_r(t)=\ell].
 $$
 
-For $m_t \le 1$, define $d_{\text{vote}}(t)=0$.
+For $m_t \le 1$, $d_{\text{vote}}(t)$ is not aggregated into $D_{\text{vote}}$.
 
 $$
 d_{\text{cov}}(t)=1-\frac{m_t}{R}, \qquad
@@ -253,7 +259,7 @@ D_{\text{vote}}=\frac{1}{|T_{\ge 2}|}\sum_{t \in T_{\ge 2}} d_{\text{vote}}(t), 
 D_{\text{cov}}=\frac{1}{|T_0|}\sum_{t \in T_0} d_{\text{cov}}(t),
 $$
 
-where $T_{\ge 2}=\{t \in T_0 : m_t \ge 2\}$ is the set of axes with at least two meaningful votes. $D_{\text{vote}}$ measures substantive disagreement between agents, while $D_{\text{cov}}$ measures degradation caused by missing or unparseable structured outputs.
+where $T_{\ge 2}=\{t \in T_0 : m_t \ge 2\}$ is the set of axes with at least two meaningful votes. If $T_{\ge 2}$ is empty, $D_{\text{vote}}$ is undefined and the algorithm fails early. Otherwise, $D_{\text{vote}}$ measures substantive disagreement between agents, while $D_{\text{cov}}$ measures degradation caused by missing or unparseable structured outputs.
 
 The critique phase continues only while all of the following remain true:
 

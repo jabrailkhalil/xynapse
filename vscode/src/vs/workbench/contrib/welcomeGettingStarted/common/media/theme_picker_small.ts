@@ -10,7 +10,7 @@ import { ThemeSettingDefaults } from '../../../../services/themes/common/workben
 export default () => `
 <checklist>
 	<div class="theme-picker-row">
-		<checkbox when-checked="setTheme:${ThemeSettingDefaults.COLOR_THEME_DARK}" checked-on="config.workbench.colorTheme == '${ThemeSettingDefaults.COLOR_THEME_DARK}'">
+		<checkbox when-checked="setTheme:Default Dark Modern" checked-on="config.workbench.colorTheme == 'Default Dark Modern'">
 			<img width="150" src="./dark.png"/>
 			${escape(localize('dark', "Xynapse"))}
 		</checkbox>
@@ -27,6 +27,11 @@ export default () => `
 		<checkbox when-checked="setTheme:${ThemeSettingDefaults.COLOR_THEME_HC_LIGHT}" checked-on="config.workbench.colorTheme == '${ThemeSettingDefaults.COLOR_THEME_HC_LIGHT}'">
 			<img width="150" src="./light-hc.png"/>
 			${escape(localize('HighContrastLight', "Light High Contrast"))}
+		</checkbox>
+	</div>
+	<div class="theme-picker-row theme-picker-actions">
+		<checkbox class="xynapse-standard-theme-option" when-checked="setTheme:Default Dark+" checked-on="config.workbench.colorTheme == 'Default Dark+'">
+			${escape(localize('standardDarkTheme', "Standard Dark"))}
 		</checkbox>
 	</div>
 </checklist>

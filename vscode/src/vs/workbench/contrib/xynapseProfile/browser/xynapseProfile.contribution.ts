@@ -20,9 +20,7 @@ import { encryptConfig, decryptConfig } from '../common/xynapseConfigCrypto.js';
 import { getXynapseDataDir, XYNAPSE_ACCOUNT_FILE, XYNAPSE_PROFILE_FILE } from '../../../services/xynapseProfile/common/xynapseProfilePaths.js';
 
 // в”Ђв”Ђв”Ђ helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-function xynapseDataDir(accessor: ServicesAccessor): ReturnType<typeof getXynapseDataDir> {
-	const nativeEnv = accessor.get(INativeEnvironmentService);
-	const product = accessor.get(IProductService);
+function xynapseDataDir(nativeEnv: INativeEnvironmentService, product: IProductService): ReturnType<typeof getXynapseDataDir> {
 	return getXynapseDataDir(nativeEnv, product.dataFolderName);
 }
 
@@ -162,9 +160,10 @@ registerAction2(class ClearXynapseProfileAction extends Action2 {
 //  extension) to push/pull the encrypted backup to/from their git repo.
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
-async function collectBundle(accessor: ServicesAccessor): Promise<Record<string, string> | undefined> {
-	const fileService = accessor.get(IFileService);
-	const dataDir = xynapseDataDir(accessor);
+async function collectBundle(
+	fileService: IFileService,
+	dataDir: ReturnType<typeof getXynapseDataDir>,
+): Promise<Record<string, string> | undefined> {
 	const bundle: Record<string, string> = {};
 
 	for (const name of EXPORTABLE_FILES) {
@@ -188,13 +187,50 @@ async function promptPassword(quickInputService: IQuickInputService, prompt: str
 	});
 }
 
+type XynapseConfigPayload = { version: number; files: Record<string, string> };
+
+async function decryptBundlePayload(data: Uint8Array, passwordInput: string): Promise<XynapseConfigPayload> {
+	let lastError: unknown;
+
+	for (const password of passwordInputCandidates(passwordInput)) {
+		try {
+			const text = await decryptConfig(data, password);
+			return JSON.parse(text) as XynapseConfigPayload;
+		} catch (e) {
+			lastError = e;
+		}
+	}
+
+	throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function passwordInputCandidates(input: string): string[] {
+	const result: string[] = [];
+	const add = (value: string | undefined) => {
+		if (value && !result.includes(value)) {
+			result.push(value);
+		}
+	};
+
+	add(input);
+	add(input.trim());
+
+	// Users often paste the whole generated .password.txt helper file.
+	// In that case the actual password is the last non-empty line.
+	const lines = input.split(/\r?\n/g).map(line => line.trim()).filter(Boolean);
+	if (lines.length > 0) {
+		add(lines[lines.length - 1]);
+	}
+
+	return result;
+}
+
 async function restoreBundle(
-	accessor: ServicesAccessor,
+	fileService: IFileService,
+	profileService: IXynapseProfileService,
+	dataDir: ReturnType<typeof getXynapseDataDir>,
 	bundle: Record<string, string>,
 ): Promise<number> {
-	const fileService = accessor.get(IFileService);
-	const profileService = accessor.get(IXynapseProfileService);
-	const dataDir = xynapseDataDir(accessor);
 	let count = 0;
 
 	for (const [name, content] of Object.entries(bundle)) {
@@ -310,8 +346,12 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 		const quickInputService = accessor.get(IQuickInputService);
 		const fileDialogService = accessor.get(IFileDialogService);
 		const notificationService = accessor.get(INotificationService);
+		const fileService = accessor.get(IFileService);
+		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const product = accessor.get(IProductService);
+		const dataDir = xynapseDataDir(nativeEnv, product);
 
-		const bundle = await collectBundle(accessor);
+		const bundle = await collectBundle(fileService, dataDir);
 		if (!bundle) {
 			notificationService.notify({
 				severity: Severity.Warning,
@@ -340,7 +380,6 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 		const payload = JSON.stringify({ version: 1, timestamp: new Date().toISOString(), files: bundle });
 		const encrypted = await encryptConfig(payload, password);
 
-		const dataDir = xynapseDataDir(accessor);
 		const dest = await fileDialogService.showSaveDialog({
 			title: localize('xynapseConfigExportTitle', 'Save Encrypted Config Backup'),
 			defaultUri: joinPath(dataDir, 'xynapse-backup.enc'),
@@ -348,7 +387,6 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 		});
 		if (!dest) { return; }
 
-		const fileService = accessor.get(IFileService);
 		await fileService.writeFile(dest, VSBuffer.wrap(encrypted));
 
 		notificationService.notify({
@@ -372,6 +410,10 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 		const fileService = accessor.get(IFileService);
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
+		const profileService = accessor.get(IXynapseProfileService);
+		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const product = accessor.get(IProductService);
+		const dataDir = xynapseDataDir(nativeEnv, product);
 
 		const sources = await fileDialogService.showOpenDialog({
 			title: localize('xynapseConfigImportTitle', 'Open Encrypted Config Backup'),
@@ -387,10 +429,9 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 			localize('xynapseConfigImportPassword', 'Enter decryption password'));
 		if (!password) { return; }
 
-		let payload: { version: number; files: Record<string, string> };
+		let payload: XynapseConfigPayload;
 		try {
-			const text = await decryptConfig(data, password);
-			payload = JSON.parse(text);
+			payload = await decryptBundlePayload(data, password);
 		} catch (e) {
 			notificationService.notify({
 				severity: Severity.Error,
@@ -417,7 +458,7 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 		);
 		if (!pick || (pick as { id: string }).id !== 'yes') { return; }
 
-		const count = await restoreBundle(accessor, payload.files);
+		const count = await restoreBundle(fileService, profileService, dataDir, payload.files);
 
 		notificationService.notify({
 			severity: Severity.Info,
@@ -448,8 +489,12 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 		const quickInputService = accessor.get(IQuickInputService);
 		const fileService = accessor.get(IFileService);
 		const notificationService = accessor.get(INotificationService);
+		const commandService = accessor.get(ICommandService);
+		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const product = accessor.get(IProductService);
+		const dataDir = xynapseDataDir(nativeEnv, product);
 
-		const bundle = await collectBundle(accessor);
+		const bundle = await collectBundle(fileService, dataDir);
 		if (!bundle) {
 			notificationService.notify({
 				severity: Severity.Warning,
@@ -491,7 +536,6 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 		const encrypted = await encryptConfig(payload, password);
 
 		// Write encrypted file to temp location inside xynapse data dir
-		const dataDir = xynapseDataDir(accessor);
 		const syncDir = joinPath(dataDir, 'git-sync');
 		const encFile = joinPath(syncDir, 'xynapse-backup.enc');
 
@@ -499,9 +543,6 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 			// Initialize git repo in sync dir, write file, commit, push
 			await fileService.createFolder(syncDir);
 			await fileService.writeFile(encFile, VSBuffer.wrap(encrypted));
-
-			// Use the terminal to run git commands вЂ” the user has git auth via github-authentication
-			const commandService = accessor.get(ICommandService);
 
 			// Open terminal and run git commands
 			const gitCommands = [
@@ -543,6 +584,9 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 		const fileService = accessor.get(IFileService);
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
+		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const product = accessor.get(IProductService);
+		const dataDir = xynapseDataDir(nativeEnv, product);
 
 		// Prompt for git repo URL
 		const repoUrl = await quickInputService.input({
@@ -555,7 +599,6 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 			return;
 		}
 
-		const dataDir = xynapseDataDir(accessor);
 		const syncDir = joinPath(dataDir, 'git-sync');
 
 		try {
@@ -610,8 +653,11 @@ registerAction2(class ImportFromGitSyncAction extends Action2 {
 		const fileService = accessor.get(IFileService);
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
+		const profileService = accessor.get(IXynapseProfileService);
+		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const product = accessor.get(IProductService);
+		const dataDir = xynapseDataDir(nativeEnv, product);
 
-		const dataDir = xynapseDataDir(accessor);
 		const encFile = joinPath(dataDir, 'git-sync', 'xynapse-backup.enc');
 
 		if (!(await fileService.exists(encFile))) {
@@ -630,10 +676,9 @@ registerAction2(class ImportFromGitSyncAction extends Action2 {
 			localize('xynapseConfigImportPassword', 'Enter decryption password'));
 		if (!password) { return; }
 
-		let payload: { version: number; files: Record<string, string> };
+		let payload: XynapseConfigPayload;
 		try {
-			const text = await decryptConfig(data, password);
-			payload = JSON.parse(text);
+			payload = await decryptBundlePayload(data, password);
 		} catch (e) {
 			notificationService.notify({
 				severity: Severity.Error,
@@ -650,7 +695,7 @@ registerAction2(class ImportFromGitSyncAction extends Action2 {
 			return;
 		}
 
-		const count = await restoreBundle(accessor, payload.files);
+		const count = await restoreBundle(fileService, profileService, dataDir, payload.files);
 
 		notificationService.notify({
 			severity: Severity.Info,

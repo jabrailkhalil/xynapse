@@ -194,19 +194,25 @@ export class WorkbenchThemeService extends Disposable implements IWorkbenchTheme
 		const extDevLocs = this.environmentService.extensionDevelopmentLocationURI;
 		const extDevLoc = extDevLocs && extDevLocs.length === 1 ? extDevLocs[0] : undefined; // in dev mode, switch to a theme provided by the extension under dev.
 
+		const normalizeXynapseColorThemeSetting = (settingsId: string | undefined): string | null => {
+			// Xynapse must not persist the internal VS Code fallback as a visible first-run theme.
+			return settingsId === '__vs-dark' ? ThemeSettingDefaults.COLOR_THEME_DARK : (settingsId ?? null);
+		};
+
 		const initializeColorTheme = async () => {
 			const devThemes = this.colorThemeRegistry.findThemeByExtensionLocation(extDevLoc);
 			if (devThemes.length) {
 				const matchedColorTheme = devThemes.find(theme => theme.type === this.currentColorTheme.type);
 				return this.setColorTheme(matchedColorTheme ? matchedColorTheme.id : devThemes[0].id, undefined);
 			}
-			let theme = this.colorThemeRegistry.findThemeBySettingsId(this.settings.colorTheme, undefined);
+			const configuredColorTheme = normalizeXynapseColorThemeSetting(this.settings.colorTheme);
+			let theme = this.colorThemeRegistry.findThemeBySettingsId(configuredColorTheme, undefined);
 			if (!theme) {
 				// If the current theme is not available, first make sure setting sync is complete
 				await this.userDataInitializationService.whenInitializationFinished();
 				// try to get the theme again, now with a fallback to the default themes
 				const fallbackTheme = this.currentColorTheme.type === ColorScheme.LIGHT ? ThemeSettingDefaults.COLOR_THEME_LIGHT : ThemeSettingDefaults.COLOR_THEME_DARK;
-				theme = this.colorThemeRegistry.findThemeBySettingsId(this.settings.colorTheme, fallbackTheme);
+				theme = this.colorThemeRegistry.findThemeBySettingsId(configuredColorTheme, fallbackTheme);
 			}
 			return this.setColorTheme(theme && theme.id, undefined);
 		};

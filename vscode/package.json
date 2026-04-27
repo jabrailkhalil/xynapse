@@ -1,13 +1,12 @@
 {
-  "name": "code-oss-dev",
+  "name": "xynapse-ide",
   "version": "1.108.0",
   "distro": "1133c0369c2db6f38f7f0e99737dc4770d393748",
   "author": {
-    "name": "Microsoft Corporation"
+    "name": "Xynapse"
   },
   "license": "MIT",
   "main": "./out/main.js",
-  "type": "module",
   "private": true,
   "scripts": {
     "test": "echo Please run any of the test scripts from the scripts folder.",
@@ -162,6 +161,7 @@
     "debounce": "^1.0.0",
     "deemon": "^1.13.6",
     "electron": "39.2.7",
+    "esbuild": "0.25.0",
     "eslint": "^9.36.0",
     "eslint-formatter-compact": "^8.40.0",
     "eslint-plugin-header": "3.1.1",
@@ -238,6 +238,7 @@
     "url": "https://github.com/microsoft/vscode/issues"
   },
   "optionalDependencies": {
+    "@esbuild/win32-x64": "^0.25.0",
     "windows-foreground-love": "0.5.0"
   }
 }

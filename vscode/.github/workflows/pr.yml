@@ -1,4 +1,4 @@
-name: Code OSS
+name: Xynapse IDE
 
 on:
   pull_request:
@@ -14,13 +14,14 @@ permissions: {}
 
 env:
   VSCODE_QUALITY: 'oss'
+  NODE_OPTIONS: '--max-old-space-size=8192'
 
 jobs:
   compile:
     name: Compile & Hygiene
     runs-on: [ self-hosted, 1ES.Pool=1es-vscode-oss-ubuntu-22.04-x64 ]
     steps:
-      - name: Checkout microsoft/vscode
+      - name: Checkout xynapse-ide
         uses: actions/checkout@v6
 
       - name: Setup Node.js

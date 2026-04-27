@@ -5,12 +5,11 @@
 
 import { escape } from '../../../../../base/common/strings.js';
 import { localize } from '../../../../../nls.js';
-import { ThemeSettingDefaults } from '../../../../services/themes/common/workbenchThemeService.js';
 
 export default () => `
 <checklist>
 	<div class="theme-picker-row">
-		<checkbox when-checked="setTheme:${ThemeSettingDefaults.COLOR_THEME_DARK}" checked-on="config.workbench.colorTheme == '${ThemeSettingDefaults.COLOR_THEME_DARK}'">
+		<checkbox when-checked="setTheme:Default Dark Modern" checked-on="config.workbench.colorTheme == 'Default Dark Modern'">
 			<img width="150" src="./noctisViola.png"/>
 			${escape(localize('xynapse', "Xynapse"))}
 		</checkbox>
@@ -49,6 +48,11 @@ export default () => `
 		<checkbox when-checked="setTheme:Winter Frost" checked-on="config.workbench.colorTheme == 'Winter Frost'">
 			<img width="150" src="./noctisHibernus.png"/>
 			${escape(localize('winterFrost', "Winter Frost"))}
+		</checkbox>
+	</div>
+	<div class="theme-picker-row theme-picker-actions">
+		<checkbox class="xynapse-standard-theme-option" when-checked="setTheme:Default Dark+" checked-on="config.workbench.colorTheme == 'Default Dark+'">
+			${escape(localize('standardDarkTheme', "Standard Dark"))}
 		</checkbox>
 	</div>
 </checklist>
