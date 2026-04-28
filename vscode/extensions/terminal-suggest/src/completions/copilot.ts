@@ -104,7 +104,7 @@ const copilotSpec: Fig.Spec = {
 			description: 'Set the AI model to use',
 			args: {
 				name: 'model',
-				suggestions: ['claude-sonnet-4.5', 'claude-sonnet-4', 'claude-haiku-4.5', 'gpt-5']
+				suggestions: ['xynapse-sonnet-4.5', 'xynapse-sonnet-4', 'xynapse-haiku-4.5', 'gpt-5']
 			}
 		},
 		{

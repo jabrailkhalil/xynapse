@@ -1,31 +1,32 @@
-# 创建您的 Xynapse 个人资料
+﻿# е€›е»єж‚Ёзљ„ Xynapse дёЄдєєиµ„ж–™
 
-您的 Xynapse 个人资料是本地帐户。无需在第三方服务器上注册。
+ж‚Ёзљ„ Xynapse дёЄдєєиµ„ж–™жЇжњ¬ењ°еёђж€·гЂ‚ж— йњЂењЁз¬¬дё‰ж–№жњЌеЉЎе™ЁдёЉжіЁе†ЊгЂ‚
 
-## 如何创建个人资料
+## е¦‚дЅ•е€›е»єдёЄдєєиµ„ж–™
 
-1. 打开命令面板：`Ctrl+Shift+P`
-2. 输入：**Xynapse: Set Up Profile**
-3. 输入您的姓名和电子邮件
+1. ж‰“ејЂе‘Ѕд»¤йќўжќїпјљ`Ctrl+Shift+P`
+2. иѕ“е…Ґпјљ**Xynapse: Set Up Profile**
+3. иѕ“е…Ґж‚Ёзљ„е§“еђЌе’Њз”µе­ђй‚®д»¶
 
-个人资料保存在 `~/.xynapse/profile.json` 中，用于 git 提交和助手日志中的身份识别。
+дёЄдєєиµ„ж–™дїќе­ењЁ `~/.xynapse/profile.json` дё­пјЊз”ЁдєЋ git жЏђдє¤е’ЊеЉ©ж‰‹ж—Ґеї—дё­зљ„иє«д»ЅиЇ†е€«гЂ‚
 
-## 加密备份
+## еЉ еЇ†е¤‡д»Ѕ
 
-您可以将所有设置和 API 密钥导出为加密文件：
+ж‚ЁеЏЇд»Ґе°†ж‰Ђжњ‰и®ѕзЅ®е’Њ API еЇ†й’ҐеЇје‡єдёєеЉ еЇ†ж–‡д»¶пјљ
 
-1. `Ctrl+Shift+P` → **Xynapse: Export Encrypted Config Backup**
-2. 输入加密密码
-3. 保存 `.enc` 文件
+1. `Ctrl+Shift+P` в†’ **Xynapse: Export Encrypted Config Backup**
+2. иѕ“е…ҐеЉ еЇ†еЇ†з Ѓ
+3. дїќе­ `.enc` ж–‡д»¶
 
-在另一台计算机上恢复：
-1. `Ctrl+Shift+P` → **Xynapse: Import Encrypted Config Backup**
-2. 选择文件并输入密码
+ењЁеЏ¦дёЂеЏ°и®Ўз®—жњєдёЉжЃўе¤Ќпјљ
+1. `Ctrl+Shift+P` в†’ **Xynapse: Import Encrypted Config Backup**
+2. йЂ‰ж‹©ж–‡д»¶е№¶иѕ“е…ҐеЇ†з Ѓ
 
-## 通过 Git 同步
+## йЂљиї‡ Git еђЊж­Ґ
 
-您可以将加密配置推送到自己的 git 仓库：
-- **推送**：`Ctrl+Shift+P` → **Xynapse: Push Encrypted Config to Git**
-- **拉取**：`Ctrl+Shift+P` → **Xynapse: Pull Encrypted Config from Git**
+ж‚ЁеЏЇд»Ґе°†еЉ еЇ†й…ЌзЅ®жЋЁйЂЃе€°и‡Єе·±зљ„ git д»“еє“пјљ
+- **жЋЁйЂЃ**пјљ`Ctrl+Shift+P` в†’ **Xynapse: Push Encrypted Config to Git**
+- **ж‹‰еЏ–**пјљ`Ctrl+Shift+P` в†’ **Xynapse: Pull Encrypted Config from Git**
 
-文件使用 AES-256-GCM 加密 — 即使在公共仓库中也是安全的。
+ж–‡д»¶дЅїз”Ё AES-256-GCM еЉ еЇ† вЂ” еЌідЅїењЁе…¬е…±д»“еє“дё­д№џжЇе®‰е…Ёзљ„гЂ‚
+

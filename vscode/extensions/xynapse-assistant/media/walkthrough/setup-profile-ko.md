@@ -1,31 +1,32 @@
-# Xynapse 프로필 만들기
+﻿# Xynapse н”„лЎњн•„ л§Њл“¤кё°
 
-Xynapse 프로필은 로컬 계정입니다. 타사 서버에 등록할 필요가 없습니다.
+Xynapse н”„лЎњн•„мќЂ лЎњм»¬ кі„м •мћ…л‹€л‹¤. нѓЂм‚¬ м„њлІ„м—ђ л“±лЎќн•  н•„мљ”к°Ђ м—†мЉµл‹€л‹¤.
 
-## 프로필 만드는 방법
+## н”„лЎњн•„ л§Њл“њлЉ” л°©лІ•
 
-1. 명령 팔레트 열기: `Ctrl+Shift+P`
-2. 입력: **Xynapse: Set Up Profile**
-3. 이름과 이메일 입력
+1. лЄ…л № нЊ”л €нЉё м—ґкё°: `Ctrl+Shift+P`
+2. мћ…л Ґ: **Xynapse: Set Up Profile**
+3. мќґл¦„кіј мќґл©”мќј мћ…л Ґ
 
-프로필은 `~/.xynapse/profile.json`에 저장되며 git 커밋과 어시스턴트 로그에서 식별에 사용됩니다.
+н”„лЎњн•„мќЂ `~/.xynapse/profile.json`м—ђ м ЂмћҐлђл©° git м»¤л°‹кіј м–ґм‹њмЉ¤н„ґнЉё лЎњк·ём—ђм„њ м‹ќлі„м—ђ м‚¬мљ©лђ©л‹€л‹¤.
 
-## 암호화 백업
+## м•”нён™” л°±м—…
 
-모든 설정과 API 키를 암호화 파일로 내보낼 수 있습니다:
+лЄЁл“  м„¤м •кіј API н‚¤лҐј м•”нён™” нЊЊмќјлЎњ л‚ґліґл‚ј м€ мћ€мЉµл‹€л‹¤:
 
-1. `Ctrl+Shift+P` → **Xynapse: Export Encrypted Config Backup**
-2. 암호화 비밀번호 입력
-3. `.enc` 파일 저장
+1. `Ctrl+Shift+P` в†’ **Xynapse: Export Encrypted Config Backup**
+2. м•”нён™” л№„л°ЂлІ€нё мћ…л Ґ
+3. `.enc` нЊЊмќј м ЂмћҐ
 
-다른 컴퓨터에서 복원:
-1. `Ctrl+Shift+P` → **Xynapse: Import Encrypted Config Backup**
-2. 파일 선택 후 비밀번호 입력
+л‹¤лҐё м»ґн“Ён„°м—ђм„њ ліµм›ђ:
+1. `Ctrl+Shift+P` в†’ **Xynapse: Import Encrypted Config Backup**
+2. нЊЊмќј м„ нѓќ н›„ л№„л°ЂлІ€нё мћ…л Ґ
 
-## Git을 통한 동기화
+## Gitмќ„ н†µн•њ лЏ™кё°н™”
 
-암호화된 구성을 git 저장소에 푸시할 수 있습니다:
-- **Push**: `Ctrl+Shift+P` → **Xynapse: Push Encrypted Config to Git**
-- **Pull**: `Ctrl+Shift+P` → **Xynapse: Pull Encrypted Config from Git**
+м•”нён™”лђњ кµ¬м„±мќ„ git м ЂмћҐм†Њм—ђ н‘ём‹њн•  м€ мћ€мЉµл‹€л‹¤:
+- **Push**: `Ctrl+Shift+P` в†’ **Xynapse: Push Encrypted Config to Git**
+- **Pull**: `Ctrl+Shift+P` в†’ **Xynapse: Pull Encrypted Config from Git**
 
-파일은 AES-256-GCM으로 암호화되어 공개 저장소에서도 안전합니다.
+нЊЊмќјмќЂ AES-256-GCMмњјлЎњ м•”нён™”лђм–ґ кіµк°њ м ЂмћҐм†Њм—ђм„њлЏ„ м•€м „н•©л‹€л‹¤.
+

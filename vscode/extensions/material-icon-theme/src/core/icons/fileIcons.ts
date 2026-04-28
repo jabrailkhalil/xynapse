@@ -3324,8 +3324,8 @@ export const fileIcons: FileIcons = {
       ],
     },
     {
-      name: 'claude',
-      fileNames: ['CLAUDE.md', 'CLAUDE.local.md'],
+      name: 'xynapse',
+      fileNames: ['XYNAPSE.md', 'XYNAPSE.local.md'],
     },
     {
       name: 'cursor',

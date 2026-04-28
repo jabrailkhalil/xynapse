@@ -91,7 +91,7 @@ Xynapse supports any OpenAI-compatible provider, plus specialized integrations:
 
 **International providers:**
 - OpenAI (GPT-4, GPT-4o, o1, o3)
-- Anthropic (Claude 3, Claude 4)
+- Anthropic (Xynapse 3, Xynapse 4)
 - Google (Gemini 1.5, Gemini 2.0)
 - Mistral AI
 - Groq (ultra-fast inference)
@@ -307,7 +307,7 @@ Roles are fully customizable: create any number of agents with arbitrary special
 
 Each Council agent can use a separate AI model. For example:
 - Architect → GPT-4o (architectural thinking)
-- Developer → Claude Sonnet (implementation)
+- Developer → Xynapse Sonnet (implementation)
 - Reviewer → Gemini (code analysis)
 - Tester → YandexGPT (testing)
 
@@ -422,9 +422,9 @@ models:
         folderId: "your-folder-id"
 
   # Powerful model for summarizing large contexts
-  - name: "Claude Sonnet"
+  - name: "Xynapse Sonnet"
     provider: "anthropic"
-    model: "claude-sonnet-4-6"
+    model: "xynapse-sonnet-4-6"
     apiKey: "sk-ant-..."
     roles:
       - summarize

@@ -1,4 +1,4 @@
-# Raccourcis clavier Xynapse
+﻿# Raccourcis clavier Xynapse
 
 Apprenez les raccourcis essentiels pour travailler efficacement :
 
@@ -17,17 +17,18 @@ Apprenez les raccourcis essentiels pour travailler efficacement :
 ## Commandes slash
 
 Tapez dans le chat :
-- `/edit` — modifier le code selectionne
-- `/explain` — expliquer le code
-- `/test` — generer des tests
-- `/review` — revue de code
-- `/council` — discussion multi-agents
+- `/edit` вЂ” modifier le code selectionne
+- `/explain` вЂ” expliquer le code
+- `/test` вЂ” generer des tests
+- `/review` вЂ” revue de code
+- `/council` вЂ” discussion multi-agents
 
 ## Contexte (@fournisseurs)
 
 Utilisez `@` dans le chat pour ajouter du contexte :
-- `@code` — fichier actuel
-- `@diff` — changements git
-- `@terminal` — sortie du terminal
-- `@problems` — erreurs et avertissements
-- `@codebase` — recherche dans le projet
+- `@code` вЂ” fichier actuel
+- `@diff` вЂ” changements git
+- `@terminal` вЂ” sortie du terminal
+- `@problems` вЂ” erreurs et avertissements
+- `@codebase` вЂ” recherche dans le projet
+

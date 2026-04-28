@@ -14,7 +14,7 @@ assignees: ''
 - VS Code Version:
 - OS Version:
 - Feature (e.g. agent/edit/ask mode):
-- Selected model (e.g. GPT 4.1, Claude 3.7 Sonnet):
+- Selected model (e.g. GPT 4.1, Xynapse 3.7 Sonnet):
 - Logs:
 
 Steps to Reproduce:

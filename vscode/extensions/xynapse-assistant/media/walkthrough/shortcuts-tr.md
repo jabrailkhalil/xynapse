@@ -1,4 +1,4 @@
-# Xynapse Klavye Kisayollari
+﻿# Xynapse Klavye Kisayollari
 
 Verimli calisma icin temel kisayollari ogrenin:
 
@@ -17,17 +17,18 @@ Verimli calisma icin temel kisayollari ogrenin:
 ## Slash komutlari
 
 Sohbette yazin:
-- `/edit` — secili kodu duzenle
-- `/explain` — kodu acikla
-- `/test` — testler olustur
-- `/review` — kod incelemesi
-- `/council` — coklu ajan tartismasi
+- `/edit` вЂ” secili kodu duzenle
+- `/explain` вЂ” kodu acikla
+- `/test` вЂ” testler olustur
+- `/review` вЂ” kod incelemesi
+- `/council` вЂ” coklu ajan tartismasi
 
 ## Baglam (@saglayicilar)
 
 Sohbette `@` kullanarak baglam ekleyin:
-- `@code` — mevcut dosya
-- `@diff` — git degisiklikleri
-- `@terminal` — terminal ciktisi
-- `@problems` — hatalar ve uyarilar
-- `@codebase` — proje aramasi
+- `@code` вЂ” mevcut dosya
+- `@diff` вЂ” git degisiklikleri
+- `@terminal` вЂ” terminal ciktisi
+- `@problems` вЂ” hatalar ve uyarilar
+- `@codebase` вЂ” proje aramasi
+

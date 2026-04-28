@@ -1,10 +1,10 @@
-# 配置 AI 模型
+﻿# й…ЌзЅ® AI жЁЎећ‹
 
-Xynapse 支持任何 OpenAI 兼容的提供商，以及 YandexGPT 和 GigaChat。
+Xynapse ж”ЇжЊЃд»»дЅ• OpenAI е…је®№зљ„жЏђдѕ›е•†пјЊд»ҐеЏЉ YandexGPT е’Њ GigaChatгЂ‚
 
-## 配置文件
+## й…ЌзЅ®ж–‡д»¶
 
-打开 `~/.xynapse/config.yaml` 并添加您的模型：
+ж‰“ејЂ `~/.xynapse/config.yaml` е№¶ж·»еЉ ж‚Ёзљ„жЁЎећ‹пјљ
 
 ```yaml
 models:
@@ -18,13 +18,13 @@ models:
     provider: yandex
     model: yandexgpt/latest
     folderId: b1g...
-    apiKey: 您的密钥
+    apiKey: ж‚Ёзљ„еЇ†й’Ґ
     roles: [chat]
 
   - title: GigaChat
     provider: gigachat
-    clientId: 您的ID
-    clientSecret: 您的密钥
+    clientId: ж‚Ёзљ„ID
+    clientSecret: ж‚Ёзљ„еЇ†й’Ґ
     roles: [chat]
 
   - title: GPT-4o Mini
@@ -34,15 +34,16 @@ models:
     roles: [autocomplete]
 ```
 
-## 模型角色
+## жЁЎећ‹и§’и‰І
 
-每个模型被分配到角色：
-- **chat** — 与助手对话
-- **edit** — 生成编辑指令
-- **apply** — 将更改应用到代码
-- **autocomplete** — 内联建议（Tab）
-- **summarize** — 上下文压缩
+жЇЏдёЄжЁЎећ‹иў«е€†й…Ќе€°и§’и‰Іпјљ
+- **chat** вЂ” дёЋеЉ©ж‰‹еЇ№иЇќ
+- **edit** вЂ” з”џж€ђзј–иѕ‘жЊ‡д»¤
+- **apply** вЂ” е°†ж›ґж”№еє”з”Ёе€°д»Јз Ѓ
+- **autocomplete** вЂ” е†…иЃ”е»єи®®пј€Tabпј‰
+- **summarize** вЂ” дёЉдё‹ж–‡еЋ‹зј©
 
-## 提示
+## жЏђз¤є
 
-使用快速模型用于 `autocomplete`（GPT-4o-mini、本地模型），使用强大模型用于 `chat` 和 `edit`（GPT-4o、Claude、YandexGPT Pro）。
+дЅїз”Ёеї«йЂџжЁЎећ‹з”ЁдєЋ `autocomplete`пј€GPT-4o-miniгЂЃжњ¬ењ°жЁЎећ‹пј‰пјЊдЅїз”Ёејєе¤§жЁЎећ‹з”ЁдєЋ `chat` е’Њ `edit`пј€GPT-4oгЂЃYandexGPT Proпј‰гЂ‚
+

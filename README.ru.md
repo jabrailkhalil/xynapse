@@ -91,7 +91,7 @@ Xynapse поддерживает любой провайдер, совмести
 
 **Международные провайдеры:**
 - OpenAI (GPT-4, GPT-4o, o1, o3)
-- Anthropic (Claude 3, Claude 4)
+- Anthropic (Xynapse 3, Xynapse 4)
 - Google (Gemini 1.5, Gemini 2.0)
 - Mistral AI
 - Groq (сверхбыстрый инференс)
@@ -307,7 +307,7 @@ $$
 
 Каждый агент Council может использовать отдельную AI-модель. Например:
 - Architect → GPT-4o (архитектурное мышление)
-- Developer → Claude Sonnet (реализация)
+- Developer → Xynapse Sonnet (реализация)
 - Reviewer → Gemini (анализ кода)
 - Tester → YandexGPT (тестирование)
 
@@ -422,9 +422,9 @@ models:
         folderId: "your-folder-id"
 
   # Мощная модель для суммаризации больших контекстов
-  - name: "Claude Sonnet"
+  - name: "Xynapse Sonnet"
     provider: "anthropic"
-    model: "claude-sonnet-4-6"
+    model: "xynapse-sonnet-4-6"
     apiKey: "sk-ant-..."
     roles:
       - summarize

@@ -1,4 +1,4 @@
-# Xynapse Keyboard Shortcuts
+﻿# Xynapse Keyboard Shortcuts
 
 Learn the key shortcuts for efficient work:
 
@@ -17,17 +17,18 @@ Learn the key shortcuts for efficient work:
 ## Slash Commands
 
 Type in the chat:
-- `/edit` — edit selected code
-- `/explain` — explain code
-- `/test` — generate tests
-- `/review` — code review
-- `/council` — multi-agent discussion
+- `/edit` вЂ” edit selected code
+- `/explain` вЂ” explain code
+- `/test` вЂ” generate tests
+- `/review` вЂ” code review
+- `/council` вЂ” multi-agent discussion
 
 ## Context (@-providers)
 
 Use `@` in chat to add context:
-- `@code` — current file
-- `@diff` — git changes
-- `@terminal` — terminal output
-- `@problems` — errors and warnings
-- `@codebase` — project search
+- `@code` вЂ” current file
+- `@diff` вЂ” git changes
+- `@terminal` вЂ” terminal output
+- `@problems` вЂ” errors and warnings
+- `@codebase` вЂ” project search
+

@@ -79,7 +79,7 @@ models:
 | `openai` | OpenAI-совместимые API (GPT-4, GPT-4o и др.) |
 | `ollama` | Локальные модели через Ollama |
 | `lmstudio` | Локальные модели через LM Studio |
-| `anthropic` | Anthropic Claude |
+| `anthropic` | Anthropic-compatible models |
 | `openrouter` | Маршрутизация через OpenRouter |
 
 ### API-ключи

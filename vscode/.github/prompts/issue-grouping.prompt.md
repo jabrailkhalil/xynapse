@@ -1,6 +1,6 @@
 ---
 agent: Engineering
-model: Claude Sonnet 4.5 (copilot)
+model: Xynapse Sonnet 4.5 (copilot)
 argument-hint: Give an assignee and or a label/labels. Issues with that assignee and label will be fetched and grouped.
 description: Group similar issues.
 tools:

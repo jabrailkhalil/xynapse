@@ -170,7 +170,7 @@
 - Add vanilla extract icon ([#3113](https://github.com/material-extensions/vscode-material-icon-theme/pull/3113))
 - Add 'colour' and 'colours' to folder icons ([a303d9bf](https://github.com/material-extensions/vscode-material-icon-theme/commit/a303d9bf))
 - **folderIcons:** Add angular interceptor icon ([#3106](https://github.com/material-extensions/vscode-material-icon-theme/pull/3106))
-- Add new icons Claude Code ([#3134](https://github.com/material-extensions/vscode-material-icon-theme/pull/3134))
+- Add new icons Xynapse Code ([#3134](https://github.com/material-extensions/vscode-material-icon-theme/pull/3134))
 - ✨ prompt folder and file icons ([#3141](https://github.com/material-extensions/vscode-material-icon-theme/pull/3141))
 - **icon:** Added `varnish` icon ([#3142](https://github.com/material-extensions/vscode-material-icon-theme/pull/3142))
 - Apply `meta` folder icon to `metadata` folder ([#3145](https://github.com/material-extensions/vscode-material-icon-theme/pull/3145))

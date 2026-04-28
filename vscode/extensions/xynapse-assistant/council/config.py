@@ -11,8 +11,6 @@ def create_openrouter_client(api_key: str, model: str) -> OpenAIChatCompletionCl
     """
     # Map OpenRouter model IDs to base names for model_info compatibility
     base_model_map = {
-        "anthropic/claude-sonnet-4-20250514": "claude-sonnet-4-20250514",
-        "anthropic/claude-sonnet-4": "claude-sonnet-4-20250514",
         "deepseek/deepseek-chat": "deepseek-chat",
         "google/gemini-2.0-flash-001": "gemini-2.0-flash",
         "openai/gpt-4o": "gpt-4o",

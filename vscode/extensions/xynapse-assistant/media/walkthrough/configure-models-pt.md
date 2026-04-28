@@ -1,4 +1,4 @@
-# Configure modelos de IA
+﻿# Configure modelos de IA
 
 Xynapse suporta qualquer provedor compativel com OpenAI, alem de YandexGPT e GigaChat.
 
@@ -37,12 +37,13 @@ models:
 ## Papeis dos modelos
 
 Cada modelo e atribuido a papeis:
-- **chat** — conversa com o assistente
-- **edit** — gerar instrucoes de edicao
-- **apply** — aplicar alteracoes ao codigo
-- **autocomplete** — sugestoes em linha (Tab)
-- **summarize** — compressao de contexto
+- **chat** вЂ” conversa com o assistente
+- **edit** вЂ” gerar instrucoes de edicao
+- **apply** вЂ” aplicar alteracoes ao codigo
+- **autocomplete** вЂ” sugestoes em linha (Tab)
+- **summarize** вЂ” compressao de contexto
 
 ## Dica
 
-Use um modelo rapido para `autocomplete` (GPT-4o-mini, modelo local) e um poderoso para `chat` e `edit` (GPT-4o, Claude, YandexGPT Pro).
+Use um modelo rapido para `autocomplete` (GPT-4o-mini, modelo local) e um poderoso para `chat` e `edit` (GPT-4o, YandexGPT Pro).
+

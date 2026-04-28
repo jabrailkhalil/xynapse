@@ -519,7 +519,7 @@ const commandAllowList: ReadonlySet<string> = new Set([
 	// AI tools
 	'aider',
 	'amp',
-	'claude',
+	'xynapse',
 	'codex',
 	'copilot',
 	'gemini',

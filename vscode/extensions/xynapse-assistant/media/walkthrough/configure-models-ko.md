@@ -1,10 +1,10 @@
-# AI 모델 구성
+﻿# AI лЄЁлЌё кµ¬м„±
 
-Xynapse는 모든 OpenAI 호환 공급자와 YandexGPT, GigaChat을 지원합니다.
+XynapseлЉ” лЄЁл“  OpenAI нён™ кіµкё‰мћђм™Ђ YandexGPT, GigaChatмќ„ м§Ђм›ђн•©л‹€л‹¤.
 
-## 구성 파일
+## кµ¬м„± нЊЊмќј
 
-`~/.xynapse/config.yaml`을 열고 모델을 추가하세요:
+`~/.xynapse/config.yaml`мќ„ м—ґкі  лЄЁлЌёмќ„ м¶”к°Ђн•м„ёмљ”:
 
 ```yaml
 models:
@@ -18,13 +18,13 @@ models:
     provider: yandex
     model: yandexgpt/latest
     folderId: b1g...
-    apiKey: 귀하의-키
+    apiKey: к·Ђн•мќ-н‚¤
     roles: [chat]
 
   - title: GigaChat
     provider: gigachat
-    clientId: 귀하의-id
-    clientSecret: 귀하의-시크릿
+    clientId: к·Ђн•мќ-id
+    clientSecret: к·Ђн•мќ-м‹њнЃ¬л¦ї
     roles: [chat]
 
   - title: GPT-4o Mini
@@ -34,15 +34,16 @@ models:
     roles: [autocomplete]
 ```
 
-## 모델 역할
+## лЄЁлЌё м—­н• 
 
-각 모델은 역할에 할당됩니다:
-- **chat** — 어시스턴트와의 대화
-- **edit** — 편집 지시 생성
-- **apply** — 코드에 변경 적용
-- **autocomplete** — 인라인 제안 (Tab)
-- **summarize** — 컨텍스트 압축
+к°Ѓ лЄЁлЌёмќЂ м—­н• м—ђ н• л‹№лђ©л‹€л‹¤:
+- **chat** вЂ” м–ґм‹њмЉ¤н„ґнЉём™Ђмќ лЊЂн™”
+- **edit** вЂ” нЋём§‘ м§Ђм‹њ мѓќм„±
+- **apply** вЂ” мЅ”л“њм—ђ ліЂкІЅ м Ѓмљ©
+- **autocomplete** вЂ” мќёлќјмќё м њм•€ (Tab)
+- **summarize** вЂ” м»Ён…ЌмЉ¤нЉё м••м¶•
 
-## 팁
+## нЊЃ
 
-`autocomplete`에는 빠른 모델(GPT-4o-mini, 로컬 모델)을, `chat`과 `edit`에는 강력한 모델(GPT-4o, Claude, YandexGPT Pro)을 사용하세요.
+`autocomplete`м—ђлЉ” л№ лҐё лЄЁлЌё(GPT-4o-mini, лЎњм»¬ лЄЁлЌё)мќ„, `chat`кіј `edit`м—ђлЉ” к°•л Ґн•њ лЄЁлЌё(GPT-4o, YandexGPT Pro)мќ„ м‚¬мљ©н•м„ёмљ”.
+

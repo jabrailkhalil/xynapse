@@ -1,4 +1,4 @@
-# Atajos de teclado de Xynapse
+﻿# Atajos de teclado de Xynapse
 
 Aprenda los atajos clave para trabajar eficientemente:
 
@@ -17,17 +17,18 @@ Aprenda los atajos clave para trabajar eficientemente:
 ## Comandos slash
 
 Escriba en el chat:
-- `/edit` — editar codigo seleccionado
-- `/explain` — explicar codigo
-- `/test` — generar pruebas
-- `/review` — revision de codigo
-- `/council` — discusion multiagente
+- `/edit` вЂ” editar codigo seleccionado
+- `/explain` вЂ” explicar codigo
+- `/test` вЂ” generar pruebas
+- `/review` вЂ” revision de codigo
+- `/council` вЂ” discusion multiagente
 
 ## Contexto (@proveedores)
 
 Use `@` en el chat para agregar contexto:
-- `@code` — archivo actual
-- `@diff` — cambios git
-- `@terminal` — salida del terminal
-- `@problems` — errores y advertencias
-- `@codebase` — busqueda en el proyecto
+- `@code` вЂ” archivo actual
+- `@diff` вЂ” cambios git
+- `@terminal` вЂ” salida del terminal
+- `@problems` вЂ” errores y advertencias
+- `@codebase` вЂ” busqueda en el proyecto
+

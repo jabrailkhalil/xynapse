@@ -1,4 +1,4 @@
-# KI-Modelle konfigurieren
+﻿# KI-Modelle konfigurieren
 
 Xynapse unterstutzt jeden OpenAI-kompatiblen Anbieter sowie YandexGPT und GigaChat.
 
@@ -37,12 +37,13 @@ models:
 ## Modellrollen
 
 Jedes Modell wird Rollen zugewiesen:
-- **chat** — Gesprach mit dem Assistenten
-- **edit** — Bearbeitungsanweisungen generieren
-- **apply** — Anderungen auf Code anwenden
-- **autocomplete** — Inline-Vorschlage (Tab)
-- **summarize** — Kontextkomprimierung
+- **chat** вЂ” Gesprach mit dem Assistenten
+- **edit** вЂ” Bearbeitungsanweisungen generieren
+- **apply** вЂ” Anderungen auf Code anwenden
+- **autocomplete** вЂ” Inline-Vorschlage (Tab)
+- **summarize** вЂ” Kontextkomprimierung
 
 ## Tipp
 
-Verwenden Sie ein schnelles Modell fur `autocomplete` (GPT-4o-mini, lokales Modell) und ein leistungsstarkes fur `chat` und `edit` (GPT-4o, Claude, YandexGPT Pro).
+Verwenden Sie ein schnelles Modell fur `autocomplete` (GPT-4o-mini, lokales Modell) und ein leistungsstarkes fur `chat` und `edit` (GPT-4o, YandexGPT Pro).
+

@@ -1,10 +1,10 @@
-# AI モデルを設定
+﻿# AI гѓўгѓ‡гѓ«г‚’иЁ­е®љ
 
-Xynapse は OpenAI 互換のプロバイダー、YandexGPT、GigaChat をサポートしています。
+Xynapse гЃЇ OpenAI дє’жЏ›гЃ®гѓ—гѓ­гѓђг‚¤гѓЂгѓјгЂЃYandexGPTгЂЃGigaChat г‚’г‚µгѓќгѓјгѓ€гЃ—гЃ¦гЃ„гЃѕгЃ™гЂ‚
 
-## 設定ファイル
+## иЁ­е®љгѓ•г‚Ўг‚¤гѓ«
 
-`~/.xynapse/config.yaml` を開いてモデルを追加：
+`~/.xynapse/config.yaml` г‚’й–‹гЃ„гЃ¦гѓўгѓ‡гѓ«г‚’иїЅеЉ пјљ
 
 ```yaml
 models:
@@ -18,13 +18,13 @@ models:
     provider: yandex
     model: yandexgpt/latest
     folderId: b1g...
-    apiKey: あなたのキー
+    apiKey: гЃ‚гЃЄгЃџгЃ®г‚­гѓј
     roles: [chat]
 
   - title: GigaChat
     provider: gigachat
-    clientId: あなたのID
-    clientSecret: あなたのシークレット
+    clientId: гЃ‚гЃЄгЃџгЃ®ID
+    clientSecret: гЃ‚гЃЄгЃџгЃ®г‚·гѓјг‚Їгѓ¬гѓѓгѓ€
     roles: [chat]
 
   - title: GPT-4o Mini
@@ -34,15 +34,16 @@ models:
     roles: [autocomplete]
 ```
 
-## モデルの役割
+## гѓўгѓ‡гѓ«гЃ®еЅ№е‰І
 
-各モデルは役割に割り当てられます：
-- **chat** — アシスタントとの会話
-- **edit** — 編集指示の生成
-- **apply** — コードへの変更適用
-- **autocomplete** — インライン提案（Tab）
-- **summarize** — コンテキスト圧縮
+еђ„гѓўгѓ‡гѓ«гЃЇеЅ№е‰ІгЃ«е‰Іг‚ЉеЅ“гЃ¦г‚‰г‚ЊгЃѕгЃ™пјљ
+- **chat** вЂ” г‚ўг‚·г‚№г‚їгѓігѓ€гЃЁгЃ®дјљи©±
+- **edit** вЂ” з·Ёй›†жЊ‡з¤єгЃ®з”џж€ђ
+- **apply** вЂ” г‚ігѓјгѓ‰гЃёгЃ®е¤‰ж›ґйЃ©з”Ё
+- **autocomplete** вЂ” г‚¤гѓігѓ©г‚¤гѓіжЏђжЎ€пј€Tabпј‰
+- **summarize** вЂ” г‚ігѓігѓ†г‚­г‚№гѓ€ењ§зё®
 
-## ヒント
+## гѓ’гѓігѓ€
 
-`autocomplete` には高速モデル（GPT-4o-mini、ローカルモデル）を、`chat` と `edit` には強力なモデル（GPT-4o、Claude、YandexGPT Pro）を使用してください。
+`autocomplete` гЃ«гЃЇй«йЂџгѓўгѓ‡гѓ«пј€GPT-4o-miniгЂЃгѓ­гѓјг‚«гѓ«гѓўгѓ‡гѓ«пј‰г‚’гЂЃ`chat` гЃЁ `edit` гЃ«гЃЇеј·еЉ›гЃЄгѓўгѓ‡гѓ«пј€GPT-4oгЂЃYandexGPT Proпј‰г‚’дЅїз”ЁгЃ—гЃ¦гЃЏгЃ гЃ•гЃ„гЂ‚
+

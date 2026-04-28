@@ -61,19 +61,19 @@ plugins/
 # ===========================================
 # AI code agents — BLOCK ALL config/metadata
 # ===========================================
-# Claude / Anthropic
-.claude/
-.claude
-.claude*
-**/CLAUDE.md
-**/claude.md
-**/Claude.md
-**/.claudeignore
-**/.clauderc
-**/.clauderc.*
-**/claude.json
-**/claude.yaml
-**/claude.yml
+# Xynapse / Anthropic
+.xynapse/
+.xynapse
+.xynapse*
+**/XYNAPSE.md
+**/xynapse.md
+**/Xynapse.md
+**/.xynapseignore
+**/.xynapserc
+**/.xynapserc.*
+**/xynapse.json
+**/xynapse.yaml
+**/xynapse.yml
 **/.anthropic/
 **/.anthropic
 **/anthropic.json

@@ -1,4 +1,4 @@
-# Xynapse Tastenkurzel
+﻿# Xynapse Tastenkurzel
 
 Lernen Sie die wichtigsten Kurzel fur effizientes Arbeiten:
 
@@ -17,17 +17,18 @@ Lernen Sie die wichtigsten Kurzel fur effizientes Arbeiten:
 ## Slash-Befehle
 
 Geben Sie im Chat ein:
-- `/edit` — ausgewahlten Code bearbeiten
-- `/explain` — Code erklaren
-- `/test` — Tests generieren
-- `/review` — Code-Review
-- `/council` — Multi-Agenten-Diskussion
+- `/edit` вЂ” ausgewahlten Code bearbeiten
+- `/explain` вЂ” Code erklaren
+- `/test` вЂ” Tests generieren
+- `/review` вЂ” Code-Review
+- `/council` вЂ” Multi-Agenten-Diskussion
 
 ## Kontext (@-Anbieter)
 
 Verwenden Sie `@` im Chat fur Kontext:
-- `@code` — aktuelle Datei
-- `@diff` — Git-Anderungen
-- `@terminal` — Terminal-Ausgabe
-- `@problems` — Fehler und Warnungen
-- `@codebase` — Projektsuche
+- `@code` вЂ” aktuelle Datei
+- `@diff` вЂ” Git-Anderungen
+- `@terminal` вЂ” Terminal-Ausgabe
+- `@problems` вЂ” Fehler und Warnungen
+- `@codebase` вЂ” Projektsuche
+

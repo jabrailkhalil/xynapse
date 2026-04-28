@@ -22,7 +22,7 @@ import { DiscoverySource, discoverySourceLabel, mcpDiscoverySection } from '../m
 import { IMcpRegistry } from '../mcpRegistryTypes.js';
 import { McpCollectionDefinition, McpCollectionSortOrder, McpServerDefinition, McpServerTrust } from '../mcpTypes.js';
 import { IMcpDiscovery } from './mcpDiscovery.js';
-import { ClaudeDesktopMpcDiscoveryAdapter, CursorDesktopMpcDiscoveryAdapter, NativeMpcDiscoveryAdapter, WindsurfDesktopMpcDiscoveryAdapter } from './nativeMcpDiscoveryAdapters.js';
+import { XynapseDesktopMpcDiscoveryAdapter, CursorDesktopMpcDiscoveryAdapter, NativeMpcDiscoveryAdapter, WindsurfDesktopMpcDiscoveryAdapter } from './nativeMcpDiscoveryAdapters.js';
 
 export type WritableMcpCollectionDefinition = McpCollectionDefinition & { serverDefinitions: ISettableObservable<readonly McpServerDefinition[]> };
 
@@ -119,7 +119,7 @@ export abstract class NativeFilesystemMcpDiscovery extends FilesystemMcpDiscover
 		}
 
 		this.adapters = [
-			instantiationService.createInstance(ClaudeDesktopMpcDiscoveryAdapter, remoteAuthority),
+			instantiationService.createInstance(XynapseDesktopMpcDiscoveryAdapter, remoteAuthority),
 			instantiationService.createInstance(CursorDesktopMpcDiscoveryAdapter, remoteAuthority),
 			instantiationService.createInstance(WindsurfDesktopMpcDiscoveryAdapter, remoteAuthority),
 		];

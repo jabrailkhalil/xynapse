@@ -1310,8 +1310,8 @@ export const folderIcons: FolderTheme[] = [
         folderNames: ['organisms', 'organism'],
       },
       {
-        name: 'folder-claude',
-        folderNames: ['.claude'],
+        name: 'folder-xynapse',
+        folderNames: ['.xynapse'],
       },
       {
         name: 'folder-cursor',

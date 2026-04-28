@@ -1318,7 +1318,7 @@ suite('PromptsService', () => {
 
 			workspaceContextService.setWorkspace(testWorkspace(rootFolderUri));
 
-			// Create mock filesystem with skills in both .github/skills and .claude/skills
+			// Create mock filesystem with skills in both .github/skills and .xynapse/skills
 			await mockFiles(fileService, [
 				{
 					path: `${rootFolder}/.github/skills/github-skill-1/SKILL.md`,
@@ -1331,17 +1331,17 @@ suite('PromptsService', () => {
 					],
 				},
 				{
-					path: `${rootFolder}/.claude/skills/claude-skill-1/SKILL.md`,
+					path: `${rootFolder}/.xynapse/skills/xynapse-skill-1/SKILL.md`,
 					contents: [
 						'---',
-						'name: "Claude Skill 1"',
-						'description: "A Claude skill for testing"',
+						'name: "Xynapse Skill 1"',
+						'description: "A Xynapse skill for testing"',
 						'---',
-						'This is Claude skill 1 content',
+						'This is Xynapse skill 1 content',
 					],
 				},
 				{
-					path: `${rootFolder}/.claude/skills/invalid-skill/SKILL.md`,
+					path: `${rootFolder}/.xynapse/skills/invalid-skill/SKILL.md`,
 					contents: [
 						'---',
 						'description: "Invalid skill, no name"',
@@ -1354,7 +1354,7 @@ suite('PromptsService', () => {
 					contents: ['This is not a skill'],
 				},
 				{
-					path: '/home/user/.claude/skills/personal-skill-1/SKILL.md',
+					path: '/home/user/.xynapse/skills/personal-skill-1/SKILL.md',
 					contents: [
 						'---',
 						'name: "Personal Skill 1"',
@@ -1364,7 +1364,7 @@ suite('PromptsService', () => {
 					],
 				},
 				{
-					path: '/home/user/.claude/skills/not-a-skill/other-file.md',
+					path: '/home/user/.xynapse/skills/not-a-skill/other-file.md',
 					contents: ['Not a skill file'],
 				},
 				{
@@ -1384,7 +1384,7 @@ suite('PromptsService', () => {
 			assert.ok(result, 'Should return results when agent skills are enabled');
 			assert.strictEqual(result.length, 4, 'Should find 4 skills total');
 
-			// Check project skills (both from .github/skills and .claude/skills)
+			// Check project skills (both from .github/skills and .xynapse/skills)
 			const projectSkills = result.filter(skill => skill.type === 'project');
 			assert.strictEqual(projectSkills.length, 2, 'Should find 2 project skills');
 
@@ -1393,10 +1393,10 @@ suite('PromptsService', () => {
 			assert.strictEqual(githubSkill1.description, 'A GitHub skill for testing');
 			assert.strictEqual(githubSkill1.uri.path, `${rootFolder}/.github/skills/github-skill-1/SKILL.md`);
 
-			const claudeSkill1 = projectSkills.find(skill => skill.name === 'Claude Skill 1');
-			assert.ok(claudeSkill1, 'Should find Claude skill 1');
-			assert.strictEqual(claudeSkill1.description, 'A Claude skill for testing');
-			assert.strictEqual(claudeSkill1.uri.path, `${rootFolder}/.claude/skills/claude-skill-1/SKILL.md`);
+			const xynapseSkill1 = projectSkills.find(skill => skill.name === 'Xynapse Skill 1');
+			assert.ok(xynapseSkill1, 'Should find Xynapse skill 1');
+			assert.strictEqual(xynapseSkill1.description, 'A Xynapse skill for testing');
+			assert.strictEqual(xynapseSkill1.uri.path, `${rootFolder}/.xynapse/skills/xynapse-skill-1/SKILL.md`);
 
 			// Check personal skills
 			const personalSkills = result.filter(skill => skill.type === 'personal');
@@ -1405,7 +1405,7 @@ suite('PromptsService', () => {
 			const personalSkill1 = personalSkills.find(skill => skill.name === 'Personal Skill 1');
 			assert.ok(personalSkill1, 'Should find Personal Skill 1');
 			assert.strictEqual(personalSkill1.description, 'A personal skill for testing');
-			assert.strictEqual(personalSkill1.uri.path, '/home/user/.claude/skills/personal-skill-1/SKILL.md');
+			assert.strictEqual(personalSkill1.uri.path, '/home/user/.xynapse/skills/personal-skill-1/SKILL.md');
 
 			const copilotSkill1 = personalSkills.find(skill => skill.name === 'Copilot Skill 1');
 			assert.ok(copilotSkill1, 'Should find Copilot Skill 1');
@@ -1435,7 +1435,7 @@ suite('PromptsService', () => {
 					],
 				},
 				{
-					path: `${rootFolder}/.claude/skills/invalid-skill/SKILL.md`,
+					path: `${rootFolder}/.xynapse/skills/invalid-skill/SKILL.md`,
 					contents: [
 						'---',
 						'invalid yaml: [unclosed',

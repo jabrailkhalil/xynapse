@@ -1,4 +1,4 @@
-# Atalhos de teclado do Xynapse
+﻿# Atalhos de teclado do Xynapse
 
 Aprenda os atalhos principais para trabalhar eficientemente:
 
@@ -17,17 +17,18 @@ Aprenda os atalhos principais para trabalhar eficientemente:
 ## Comandos slash
 
 Digite no chat:
-- `/edit` — editar codigo selecionado
-- `/explain` — explicar codigo
-- `/test` — gerar testes
-- `/review` — revisao de codigo
-- `/council` — discussao multiagente
+- `/edit` вЂ” editar codigo selecionado
+- `/explain` вЂ” explicar codigo
+- `/test` вЂ” gerar testes
+- `/review` вЂ” revisao de codigo
+- `/council` вЂ” discussao multiagente
 
 ## Contexto (@provedores)
 
 Use `@` no chat para adicionar contexto:
-- `@code` — arquivo atual
-- `@diff` — alteracoes git
-- `@terminal` — saida do terminal
-- `@problems` — erros e avisos
-- `@codebase` — busca no projeto
+- `@code` вЂ” arquivo atual
+- `@diff` вЂ” alteracoes git
+- `@terminal` вЂ” saida do terminal
+- `@problems` вЂ” erros e avisos
+- `@codebase` вЂ” busca no projeto
+

@@ -1,4 +1,4 @@
-# Configure AI Models
+﻿# Configure AI Models
 
 Xynapse supports any OpenAI-compatible provider, as well as YandexGPT and GigaChat.
 
@@ -37,12 +37,13 @@ models:
 ## Model Roles
 
 Each model is assigned to roles:
-- **chat** — conversation with the assistant
-- **edit** — generating edit instructions
-- **apply** — applying changes to code
-- **autocomplete** — inline suggestions (Tab)
-- **summarize** — context compression
+- **chat** вЂ” conversation with the assistant
+- **edit** вЂ” generating edit instructions
+- **apply** вЂ” applying changes to code
+- **autocomplete** вЂ” inline suggestions (Tab)
+- **summarize** вЂ” context compression
 
 ## Tip
 
-Use a fast model for `autocomplete` (GPT-4o-mini, local model) and a powerful one for `chat` and `edit` (GPT-4o, Claude, YandexGPT Pro).
+Use a fast model for `autocomplete` (GPT-4o-mini, local model) and a powerful one for `chat` and `edit` (GPT-4o, YandexGPT Pro).
+

@@ -25,27 +25,27 @@ export const mcpActivationEvent = (contributedCollectionId: string) =>
 	mcpActivationEventPrefix + contributedCollectionId;
 
 export const enum DiscoverySource {
-	ClaudeDesktop = 'claude-desktop',
+	XynapseDesktop = 'xynapse-desktop',
 	Windsurf = 'windsurf',
 	CursorGlobal = 'cursor-global',
 	CursorWorkspace = 'cursor-workspace',
 }
 
 export const allDiscoverySources = Object.keys({
-	[DiscoverySource.ClaudeDesktop]: true,
+	[DiscoverySource.XynapseDesktop]: true,
 	[DiscoverySource.Windsurf]: true,
 	[DiscoverySource.CursorGlobal]: true,
 	[DiscoverySource.CursorWorkspace]: true,
 } satisfies Record<DiscoverySource, true>) as DiscoverySource[];
 
 export const discoverySourceLabel: Record<DiscoverySource, string> = {
-	[DiscoverySource.ClaudeDesktop]: localize('mcp.discovery.source.claude-desktop', "Claude Desktop"),
+	[DiscoverySource.XynapseDesktop]: localize('mcp.discovery.source.xynapse-desktop', "Xynapse Desktop"),
 	[DiscoverySource.Windsurf]: localize('mcp.discovery.source.windsurf', "Windsurf"),
 	[DiscoverySource.CursorGlobal]: localize('mcp.discovery.source.cursor-global', "Cursor (Global)"),
 	[DiscoverySource.CursorWorkspace]: localize('mcp.discovery.source.cursor-workspace', "Cursor (Workspace)"),
 };
 export const discoverySourceSettingsLabel: Record<DiscoverySource, string> = {
-	[DiscoverySource.ClaudeDesktop]: localize('mcp.discovery.source.claude-desktop.config', "Claude Desktop configuration (`claude_desktop_config.json`)"),
+	[DiscoverySource.XynapseDesktop]: localize('mcp.discovery.source.xynapse-desktop.config', "Xynapse Desktop configuration (`xynapse_desktop_config.json`)"),
 	[DiscoverySource.Windsurf]: localize('mcp.discovery.source.windsurf.config', "Windsurf configurations (`~/.codeium/windsurf/mcp_config.json`)"),
 	[DiscoverySource.CursorGlobal]: localize('mcp.discovery.source.cursor-global.config', "Cursor global configuration (`~/.cursor/mcp.json`)"),
 	[DiscoverySource.CursorWorkspace]: localize('mcp.discovery.source.cursor-workspace.config', "Cursor workspace configuration (`.cursor/mcp.json`)"),

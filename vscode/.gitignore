@@ -36,15 +36,15 @@ config.local.json
 # ===========================================
 # AI code agents — config/metadata
 # ===========================================
-.claude/
-.claude
-.claude*
-CLAUDE.md
-claude.md
-Claude.md
-.claudeignore
-.clauderc
-.clauderc.*
+.xynapse-agent/
+.xynapse-agent
+.xynapse-agent*
+XYNAPSE.md
+xynapse.md
+Xynapse.md
+.xynapseignore
+.xynapserc
+.xynapserc.*
 .anthropic/
 .anthropic
 .cursor/

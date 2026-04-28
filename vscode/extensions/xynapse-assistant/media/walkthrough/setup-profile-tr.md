@@ -1,4 +1,4 @@
-# Xynapse Profilinizi Olusturun
+﻿# Xynapse Profilinizi Olusturun
 
 Xynapse profiliniz yerel bir hesaptir. Ucuncu taraf sunucularda kayit gerekmez.
 
@@ -14,18 +14,19 @@ Profil `~/.xynapse/profile.json` dosyasina kaydedilir ve git commitlerinde ve as
 
 Tum ayarlarinizi ve API anahtarlarinizi sifreli bir dosyaya aktarabilirsiniz:
 
-1. `Ctrl+Shift+P` → **Xynapse: Export Encrypted Config Backup**
+1. `Ctrl+Shift+P` в†’ **Xynapse: Export Encrypted Config Backup**
 2. Bir sifreleme parolasi girin
 3. `.enc` dosyasini kaydedin
 
 Baska bir bilgisayarda geri yuklemek icin:
-1. `Ctrl+Shift+P` → **Xynapse: Import Encrypted Config Backup**
+1. `Ctrl+Shift+P` в†’ **Xynapse: Import Encrypted Config Backup**
 2. Dosyayi secin ve parolayi girin
 
 ## Git ile senkronizasyon
 
 Sifreli yapilandirmayi kendi git deponuza gonderebilirsiniz:
-- **Push**: `Ctrl+Shift+P` → **Xynapse: Push Encrypted Config to Git**
-- **Pull**: `Ctrl+Shift+P` → **Xynapse: Pull Encrypted Config from Git**
+- **Push**: `Ctrl+Shift+P` в†’ **Xynapse: Push Encrypted Config to Git**
+- **Pull**: `Ctrl+Shift+P` в†’ **Xynapse: Pull Encrypted Config from Git**
 
-Dosya AES-256-GCM ile sifrelenir — herkese acik bir depoda bile guvenlidir.
+Dosya AES-256-GCM ile sifrelenir вЂ” herkese acik bir depoda bile guvenlidir.
+

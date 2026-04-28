@@ -21,7 +21,7 @@ export interface NativeMpcDiscoveryAdapter {
 	adaptFile(contents: VSBuffer, details: INativeMcpDiscoveryData): Promise<McpServerDefinition[] | undefined>;
 }
 
-export async function claudeConfigToServerDefinition(idPrefix: string, contents: VSBuffer, cwd?: URI) {
+export async function xynapseConfigToServerDefinition(idPrefix: string, contents: VSBuffer, cwd?: URI) {
 	let parsed: {
 		mcpServers: Record<string, {
 			command: string;
@@ -60,33 +60,33 @@ export async function claudeConfigToServerDefinition(idPrefix: string, contents:
 	}));
 }
 
-export class ClaudeDesktopMpcDiscoveryAdapter implements NativeMpcDiscoveryAdapter {
+export class XynapseDesktopMpcDiscoveryAdapter implements NativeMpcDiscoveryAdapter {
 	public id: string;
 	public readonly order = McpCollectionSortOrder.Filesystem;
-	public readonly discoverySource: DiscoverySource = DiscoverySource.ClaudeDesktop;
+	public readonly discoverySource: DiscoverySource = DiscoverySource.XynapseDesktop;
 
 	constructor(public readonly remoteAuthority: string | null) {
-		this.id = `claude-desktop.${this.remoteAuthority}`;
+		this.id = `xynapse-desktop.${this.remoteAuthority}`;
 	}
 
 	getFilePath({ platform, winAppData, xdgHome, homedir }: INativeMcpDiscoveryData): URI | undefined {
 		if (platform === Platform.Windows) {
 			const appData = winAppData || URI.joinPath(homedir, 'AppData', 'Roaming');
-			return URI.joinPath(appData, 'Claude', 'claude_desktop_config.json');
+			return URI.joinPath(appData, 'Xynapse', 'xynapse_desktop_config.json');
 		} else if (platform === Platform.Mac) {
-			return URI.joinPath(homedir, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+			return URI.joinPath(homedir, 'Library', 'Application Support', 'Xynapse', 'xynapse_desktop_config.json');
 		} else {
 			const configDir = xdgHome || URI.joinPath(homedir, '.config');
-			return URI.joinPath(configDir, 'Claude', 'claude_desktop_config.json');
+			return URI.joinPath(configDir, 'Xynapse', 'xynapse_desktop_config.json');
 		}
 	}
 
 	adaptFile(contents: VSBuffer, { homedir }: INativeMcpDiscoveryData): Promise<McpServerDefinition[] | undefined> {
-		return claudeConfigToServerDefinition(this.id, contents, homedir);
+		return xynapseConfigToServerDefinition(this.id, contents, homedir);
 	}
 }
 
-export class WindsurfDesktopMpcDiscoveryAdapter extends ClaudeDesktopMpcDiscoveryAdapter {
+export class WindsurfDesktopMpcDiscoveryAdapter extends XynapseDesktopMpcDiscoveryAdapter {
 	public override readonly discoverySource: DiscoverySource = DiscoverySource.Windsurf;
 
 	constructor(remoteAuthority: string | null) {
@@ -99,7 +99,7 @@ export class WindsurfDesktopMpcDiscoveryAdapter extends ClaudeDesktopMpcDiscover
 	}
 }
 
-export class CursorDesktopMpcDiscoveryAdapter extends ClaudeDesktopMpcDiscoveryAdapter {
+export class CursorDesktopMpcDiscoveryAdapter extends XynapseDesktopMpcDiscoveryAdapter {
 	public override readonly discoverySource: DiscoverySource = DiscoverySource.CursorGlobal;
 
 	constructor(remoteAuthority: string | null) {

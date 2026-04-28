@@ -3,7 +3,7 @@
 agent: Engineering
 argument-hint: Provide a link or issue number to find duplicates for
 description: Find duplicates for a VS Code GitHub issue
-model: Claude Sonnet 4.5 (copilot)
+model: Xynapse Sonnet 4.5 (copilot)
 tools:
   - execute/getTerminalOutput
   - execute/runInTerminal

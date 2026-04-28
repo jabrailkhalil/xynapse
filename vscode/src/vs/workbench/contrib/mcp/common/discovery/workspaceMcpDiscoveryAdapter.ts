@@ -17,7 +17,7 @@ import { IMcpRegistry } from '../mcpRegistryTypes.js';
 import { McpCollectionSortOrder, McpServerTrust } from '../mcpTypes.js';
 import { IMcpDiscovery } from './mcpDiscovery.js';
 import { FilesystemMcpDiscovery, WritableMcpCollectionDefinition } from './nativeMcpDiscoveryAbstract.js';
-import { claudeConfigToServerDefinition } from './nativeMcpDiscoveryAdapters.js';
+import { xynapseConfigToServerDefinition } from './nativeMcpDiscoveryAdapters.js';
 
 export class CursorWorkspaceMcpDiscoveryAdapter extends FilesystemMcpDiscovery implements IMcpDiscovery {
 	private readonly _collections = this._register(new DisposableMap<string, IDisposable>());
@@ -68,7 +68,7 @@ export class CursorWorkspaceMcpDiscoveryAdapter extends FilesystemMcpDiscovery i
 			collection,
 			DiscoverySource.CursorWorkspace,
 			async contents => {
-				const defs = await claudeConfigToServerDefinition(collection.id, contents, folder.uri);
+				const defs = await xynapseConfigToServerDefinition(collection.id, contents, folder.uri);
 				defs?.forEach(d => d.roots = [folder.uri]);
 				return defs;
 			}

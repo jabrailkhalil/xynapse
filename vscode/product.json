@@ -338,8 +338,5 @@
 		"editor.codeActionsOnSave": {
 			"source.organizeImports": "explicit"
 		}
-	},
-	"checksums": {
-		"vs/workbench/workbench.desktop.main.js": "MACGnqB5nlyzabw8L4gITQEQIxjAq6bpgO2DCY/kDTc"
 	}
 }

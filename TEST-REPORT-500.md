@@ -330,7 +330,7 @@ Tests expected interface/field names that differ from actual code:
 - TEST-1000: System partially complete (different algorithms)
 
 ### Documentation (1 FAIL)
-- TEST-875: BVC algorithm not documented in CLAUDE.md
+- TEST-875: BVC algorithm not documented in XYNAPSE.md
 
 ---
 

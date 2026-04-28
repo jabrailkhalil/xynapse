@@ -1,15 +1,15 @@
-# Willkommen bei Xynapse IDE
+﻿# Willkommen bei Xynapse IDE
 
 Xynapse IDE ist eine integrierte Entwicklungsumgebung mit eingebautem KI-Assistenten.
 
 ## Funktionen
 
-- **KI-Chat** — stellen Sie Fragen zum Code, erhalten Sie Erklarungen und generieren Sie Losungen
-- **Autovervollstandigung** — intelligente Vorschlage direkt im Editor (Tab zum Akzeptieren)
-- **Inline-Bearbeitung** — wahlen Sie Code aus und drucken Sie `Ctrl+I` fur KI-Bearbeitung
-- **Projektkontext** — der Assistent sieht Ihren Code, Diff, Terminal und Fehler
-- **Council** — Multi-Agenten-Diskussion von Architekturentscheidungen (`/council`)
-- **Russische Modelle** — integrierte Unterstutzung fur YandexGPT und GigaChat
+- **KI-Chat** вЂ” stellen Sie Fragen zum Code, erhalten Sie Erklarungen und generieren Sie Losungen
+- **Autovervollstandigung** вЂ” intelligente Vorschlage direkt im Editor (Tab zum Akzeptieren)
+- **Inline-Bearbeitung** вЂ” wahlen Sie Code aus und drucken Sie `Ctrl+I` fur KI-Bearbeitung
+- **Projektkontext** вЂ” der Assistent sieht Ihren Code, Diff, Terminal und Fehler
+- **Council** вЂ” Multi-Agenten-Diskussion von Architekturentscheidungen (`/council`)
+- **Russische Modelle** вЂ” integrierte Unterstutzung fur YandexGPT und GigaChat
 
 ## Ihre Daten sind sicher
 
@@ -20,3 +20,4 @@ Xynapse sendet keine Daten an IDE-Server. Alle API-Schlussel werden **lokal** in
 1. Offnen Sie das **Xynapse**-Seitenpanel (Symbol links)
 2. Konfigurieren Sie Modelle in `~/.xynapse/config.yaml`
 3. Verwenden Sie `Ctrl+L` fur Chat, `Ctrl+I` fur Bearbeitung, `Tab` fur Autovervollstandigung
+

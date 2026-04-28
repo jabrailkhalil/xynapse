@@ -658,11 +658,11 @@ suite('ChatModelsViewModel', () => {
 			when: undefined
 		});
 
-		languageModelsService.addModel('anthropic', 'anthropic-claude', {
+		languageModelsService.addModel('anthropic', 'anthropic-xynapse', {
 			extension: new ExtensionIdentifier('anthropic.api'),
-			id: 'claude-3',
-			name: 'Claude 3',
-			family: 'claude',
+			id: 'xynapse-3',
+			name: 'Xynapse 3',
+			family: 'xynapse',
 			version: '1.0',
 			vendor: 'anthropic',
 			maxInputTokens: 100000,
@@ -804,11 +804,11 @@ suite('ChatModelsViewModel', () => {
 			when: undefined
 		});
 
-		languageModelsService.addModel('anthropic', 'anthropic-claude', {
+		languageModelsService.addModel('anthropic', 'anthropic-xynapse', {
 			extension: new ExtensionIdentifier('anthropic.api'),
-			id: 'claude-3',
-			name: 'Claude 3',
-			family: 'claude',
+			id: 'xynapse-3',
+			name: 'Xynapse 3',
+			family: 'xynapse',
 			version: '1.0',
 			vendor: 'anthropic',
 			maxInputTokens: 100000,
@@ -836,7 +836,7 @@ suite('ChatModelsViewModel', () => {
 		assert.strictEqual(visibleModels[1].modelEntry.metadata.name, 'GPT-4o');
 		assert.strictEqual(visibleModels[1].modelEntry.vendor, 'copilot');
 
-		assert.strictEqual(visibleModels[2].modelEntry.metadata.name, 'Claude 3');
+		assert.strictEqual(visibleModels[2].modelEntry.metadata.name, 'Xynapse 3');
 		assert.strictEqual(visibleModels[2].modelEntry.vendor, 'anthropic');
 
 		assert.strictEqual(visibleModels[3].modelEntry.metadata.name, 'GPT-3.5 Turbo');

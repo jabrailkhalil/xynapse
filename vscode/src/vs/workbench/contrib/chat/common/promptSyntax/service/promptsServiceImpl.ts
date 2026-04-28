@@ -666,8 +666,8 @@ export class PromptsService extends Disposable implements IPromptsService {
 			// Send telemetry about skill usage
 			type AgentSkillsFoundEvent = {
 				totalSkillsFound: number;
-				claudePersonal: number;
-				claudeWorkspace: number;
+				xynapsePersonal: number;
+				xynapseWorkspace: number;
 				copilotPersonal: number;
 				githubWorkspace: number;
 				customPersonal: number;
@@ -679,8 +679,8 @@ export class PromptsService extends Disposable implements IPromptsService {
 
 			type AgentSkillsFoundClassification = {
 				totalSkillsFound: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Total number of agent skills found.' };
-				claudePersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Claude personal skills.' };
-				claudeWorkspace: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Claude workspace skills.' };
+				xynapsePersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Xynapse personal skills.' };
+				xynapseWorkspace: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Xynapse workspace skills.' };
 				copilotPersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Copilot personal skills.' };
 				githubWorkspace: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of GitHub workspace skills.' };
 				customPersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of custom personal skills.' };
@@ -694,8 +694,8 @@ export class PromptsService extends Disposable implements IPromptsService {
 
 			this.telemetryService.publicLog2<AgentSkillsFoundEvent, AgentSkillsFoundClassification>('agentSkillsFound', {
 				totalSkillsFound: result.length,
-				claudePersonal: skillTypes.get('claude-personal') ?? 0,
-				claudeWorkspace: skillTypes.get('claude-workspace') ?? 0,
+				xynapsePersonal: skillTypes.get('xynapse-personal') ?? 0,
+				xynapseWorkspace: skillTypes.get('xynapse-workspace') ?? 0,
 				copilotPersonal: skillTypes.get('copilot-personal') ?? 0,
 				githubWorkspace: skillTypes.get('github-workspace') ?? 0,
 				customPersonal: skillTypes.get('custom-personal') ?? 0,

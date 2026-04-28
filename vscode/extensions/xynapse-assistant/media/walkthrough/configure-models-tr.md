@@ -1,4 +1,4 @@
-# AI Modellerini Yapilandirin
+﻿# AI Modellerini Yapilandirin
 
 Xynapse, herhangi bir OpenAI uyumlu saglayiciyi, YandexGPT ve GigaChat'i destekler.
 
@@ -37,12 +37,13 @@ models:
 ## Model rolleri
 
 Her model rollere atanir:
-- **chat** — asistanla sohbet
-- **edit** — duzenleme talimatlari olusturma
-- **apply** — koda degisiklikleri uygulama
-- **autocomplete** — satir ici oneriler (Tab)
-- **summarize** — baglam sikistirma
+- **chat** вЂ” asistanla sohbet
+- **edit** вЂ” duzenleme talimatlari olusturma
+- **apply** вЂ” koda degisiklikleri uygulama
+- **autocomplete** вЂ” satir ici oneriler (Tab)
+- **summarize** вЂ” baglam sikistirma
 
 ## Ipucu
 
-`autocomplete` icin hizli bir model (GPT-4o-mini, yerel model) ve `chat` ile `edit` icin guclu bir model (GPT-4o, Claude, YandexGPT Pro) kullanin.
+`autocomplete` icin hizli bir model (GPT-4o-mini, yerel model) ve `chat` ile `edit` icin guclu bir model (GPT-4o, YandexGPT Pro) kullanin.
+

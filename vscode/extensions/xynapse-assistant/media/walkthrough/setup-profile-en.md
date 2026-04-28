@@ -1,4 +1,4 @@
-# Create Your Xynapse Profile
+﻿# Create Your Xynapse Profile
 
 Your Xynapse profile is a local account. No registration on third-party servers required.
 
@@ -14,18 +14,19 @@ The profile is saved in `~/.xynapse/profile.json` and is used for identification
 
 You can export all your settings and API keys to an encrypted file:
 
-1. `Ctrl+Shift+P` → **Xynapse: Export Encrypted Config Backup**
+1. `Ctrl+Shift+P` в†’ **Xynapse: Export Encrypted Config Backup**
 2. Enter an encryption password
 3. Save the `.enc` file
 
 To restore on another computer:
-1. `Ctrl+Shift+P` → **Xynapse: Import Encrypted Config Backup**
+1. `Ctrl+Shift+P` в†’ **Xynapse: Import Encrypted Config Backup**
 2. Select the file and enter the password
 
 ## Sync via Git
 
 You can push the encrypted config to your own git repository:
-- **Push**: `Ctrl+Shift+P` → **Xynapse: Push Encrypted Config to Git**
-- **Pull**: `Ctrl+Shift+P` → **Xynapse: Pull Encrypted Config from Git**
+- **Push**: `Ctrl+Shift+P` в†’ **Xynapse: Push Encrypted Config to Git**
+- **Pull**: `Ctrl+Shift+P` в†’ **Xynapse: Pull Encrypted Config from Git**
 
-The file is encrypted with AES-256-GCM — safe even in a public repository.
+The file is encrypted with AES-256-GCM вЂ” safe even in a public repository.
+

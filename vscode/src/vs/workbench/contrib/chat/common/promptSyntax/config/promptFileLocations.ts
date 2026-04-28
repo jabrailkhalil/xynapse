@@ -58,7 +58,7 @@ export const AGENTS_SOURCE_FOLDER = '.github/agents';
  */
 export const DEFAULT_AGENT_SKILLS_WORKSPACE_FOLDERS = [
 	{ path: '.github/skills', type: 'github-workspace' },
-	{ path: '.claude/skills', type: 'claude-workspace' }
+	{ path: '.xynapse/skills', type: 'xynapse-workspace' }
 ] as const;
 
 /**
@@ -66,7 +66,7 @@ export const DEFAULT_AGENT_SKILLS_WORKSPACE_FOLDERS = [
  */
 export const DEFAULT_AGENT_SKILLS_USER_HOME_FOLDERS = [
 	{ path: '.copilot/skills', type: 'copilot-personal' },
-	{ path: '.claude/skills', type: 'claude-personal' }
+	{ path: '.xynapse/skills', type: 'xynapse-personal' }
 ] as const;
 
 /**
