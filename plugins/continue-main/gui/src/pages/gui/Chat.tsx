@@ -70,6 +70,9 @@ import {
   buildPreviousDiscussion,
   createClientRunId,
   findCoreRuntimeModel,
+  type XynapseMode,
+  XynapseModeSwitcher,
+  XynapseResearchCard,
 } from "../../components/claw/ClawSidecarCard";
 import { EmptyChatBody } from "./EmptyChatBody";
 import { ExploreDialogWatcher } from "./ExploreDialogWatcher";
@@ -148,6 +151,8 @@ export function Chat() {
   const isStreaming = useAppSelector((state) => state.session.isStreaming);
   const [stepsOpen] = useState<(boolean | undefined)[]>([]);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
+  const [xynapsePaneMode, setXynapsePaneMode] =
+    useState<XynapseMode>("core");
   const mainTextInputRef = useRef<HTMLInputElement>(null);
   const stepsDivRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -644,6 +649,8 @@ export function Chat() {
 
   const showScrollbar = showChatScrollbar ?? window.innerHeight > 5000;
   const shouldShowMainInput = hasWorkspace;
+  const shouldShowXynapseTabs =
+    hasWorkspace && !isInEdit && mode !== "background";
   const emptyStateBody =
     history.length > 0 ? null : mode === "background" ? (
       <BackgroundModeView isCreatingAgent={isCreatingAgent} />
@@ -665,6 +672,19 @@ export function Chat() {
         className={`min-h-0 flex-1 overflow-y-scroll pt-[8px] ${showScrollbar ? "thin-scrollbar" : "no-scrollbar"}`}
       >
         {highlights}
+        {shouldShowXynapseTabs ? (
+          <div className="mx-2 mb-3">
+            <XynapseModeSwitcher
+              mode={xynapsePaneMode}
+              onModeChange={setXynapsePaneMode}
+            />
+            {xynapsePaneMode === "lab" ? (
+              <div className="mt-3">
+                <XynapseResearchCard showOpenFolderAction={!hasWorkspace} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {history
           .filter((item) => item.message.role !== "system")
           .map((item, index: number) => (
@@ -685,7 +705,9 @@ export function Chat() {
               {index === history.length - 1 && <InlineErrorMessage />}
             </div>
           ))}
-        {emptyStateBody}
+        {shouldShowXynapseTabs && xynapsePaneMode === "lab"
+          ? null
+          : emptyStateBody}
       </StepsDiv>
       <div className={"relative"}>
         <div

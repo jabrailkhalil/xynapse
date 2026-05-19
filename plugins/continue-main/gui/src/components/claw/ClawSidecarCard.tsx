@@ -229,18 +229,18 @@ function ModeTabButton({
   return (
     <button
       type="button"
-      className={`min-w-0 flex-1 cursor-pointer rounded-xl border border-solid px-3 py-2 text-left transition ${
+      role="tab"
+      aria-selected={active}
+      aria-label={`${label}: ${description}`}
+      className={`min-w-0 cursor-pointer border-x-0 border-b-2 border-t-0 border-solid bg-transparent px-3 py-2 text-left text-sm font-semibold transition focus:outline-none ${
         active
-          ? "border-violet-300/40 bg-violet-300/15 text-foreground shadow-[0_0_28px_rgba(139,92,246,0.18)]"
-          : "border-white/10 bg-black/25 text-description hover:border-violet-200/25 hover:bg-white/5"
+          ? "border-violet-300 text-foreground"
+          : "border-transparent text-description hover:border-violet-200/40 hover:text-foreground"
       }`}
       onClick={onClick}
       title={title}
     >
-      <div className="truncate text-sm font-semibold">{label}</div>
-      <div className="mt-0.5 truncate text-[11px] opacity-70">
-        {description}
-      </div>
+      <span className="truncate">{label}</span>
     </button>
   );
 }
@@ -695,8 +695,8 @@ export function XynapseModeSwitcher({
   onModeChange,
 }: XynapseModeSwitcherProps) {
   return (
-    <div className="rounded-2xl border border-solid border-violet-300/15 bg-[linear-gradient(135deg,rgba(139,92,246,0.18),rgba(18,18,18,0.94)_42%,rgba(18,18,18,0.98))] p-2 shadow-[0_18px_48px_rgba(0,0,0,0.28)]">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="border-x-0 border-b border-t-0 border-solid border-white/10">
+      <div className="flex gap-2" role="tablist" aria-label="Xynapse area">
         <ModeTabButton
           active={mode === "core"}
           label="Xynapse Core"
