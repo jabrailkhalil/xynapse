@@ -58,7 +58,7 @@ use tools::{
 
 const DEFAULT_MODEL: &str = "openai/gpt-4.1-mini";
 
-/// #148: Model provenance for `claw status` JSON/text output. Records where
+/// #148: Model provenance for `xynapse status` JSON/text output. Records where
 /// the resolved model string came from so claws don't have to re-read argv
 /// to audit whether their `--model` flag was honored vs falling back to env
 /// or config or default.
@@ -230,11 +230,11 @@ fn main() {
             // don't need to regex-scrape the prose.
             let kind = classify_error_kind(&message);
             let display_message = message
-                .replace("`claw --help`", "Xynapse Lab help")
-                .replace("claw --help", "Xynapse Lab help")
-                .replace("`claw prompt <text>`", "the Xynapse Lab prompt box")
-                .replace("start `claw` and use /help", "open Xynapse Lab help");
-            if message.contains("`claw --help`") {
+                .replace("`xynapse --help`", "Xynapse Lab help")
+                .replace("xynapse --help", "Xynapse Lab help")
+                .replace("`xynapse prompt <text>`", "the Xynapse Lab prompt box")
+                .replace("start `xynapse` and use /help", "open Xynapse Lab help");
+            if message.contains("`xynapse --help`") {
                 eprintln!(
                     "[error-kind: {kind}]
 error: {display_message}"
@@ -550,7 +550,7 @@ enum CliAction {
     Init {
         output_format: CliOutputFormat,
     },
-    // #146: `claw config` and `claw diff` are pure-local read-only
+    // #146: `xynapse config` and `xynapse diff` are pure-local read-only
     // introspection commands; wire them as standalone CLI subcommands.
     Config {
         section: Option<String>,
@@ -586,7 +586,7 @@ enum LocalHelpTopic {
     Doctor,
     Acp,
     // #141: extend the local-help pattern to every subcommand so
-    // `claw <subcommand> --help` has one consistent contract.
+    // `xynapse <subcommand> --help` has one consistent contract.
     Init,
     State,
     Export,
@@ -643,7 +643,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
                     && matches!(rest[0].as_str(), "prompt" | "commit" | "pr" | "issue") =>
             {
                 // `--help` following a subcommand that would otherwise forward
-                // the arg to the API (e.g. `claw prompt --help`) should show
+                // the arg to the API (e.g. `xynapse prompt --help`) should show
                 // top-level help instead. Subcommands that consume their own
                 // args (agents, mcp, plugins, skills) and local help-topic
                 // subcommands (status, sandbox, doctor, init, state, export,
@@ -741,7 +741,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
                 index += 1;
             }
             "-p" => {
-                // Claw Code compat: -p "prompt" = one-shot prompt
+                // xynapse Code compat: -p "prompt" = one-shot prompt
                 let prompt = args[index + 1..].join(" ");
                 if prompt.trim().is_empty() {
                     return Err("-p requires a prompt string".to_string());
@@ -760,7 +760,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
                 });
             }
             "--print" => {
-                // Claw Code compat: --print makes output non-interactive
+                // xynapse Code compat: --print makes output non-interactive
                 output_format = CliOutputFormat::Text;
                 index += 1;
             }
@@ -875,8 +875,8 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
             output_format,
         }),
         // #145: `plugins` was routed through the prompt fallback because no
-        // top-level parser arm produced CliAction::Plugins. That made `claw
-        // plugins` (and `claw plugins --help`, `claw plugins list`, ...)
+        // top-level parser arm produced CliAction::Plugins. That made `xynapse
+        // plugins` (and `xynapse plugins --help`, `xynapse plugins list`, ...)
         // attempt an Anthropic network call, surfacing the misleading error
         // `missing Anthropic credentials` even though the command is purely
         // local introspection. Mirror `agents`/`mcp`/`skills`: action is the
@@ -887,7 +887,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
             let target = tail.get(1).cloned();
             if tail.len() > 2 {
                 return Err(format!(
-                    "unexpected extra arguments after `claw plugins {}`: {}",
+                    "unexpected extra arguments after `xynapse plugins {}`: {}",
                     tail[..2].join(" "),
                     tail[2..].join(" ")
                 ));
@@ -901,7 +901,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
         // #146: `config` is pure-local read-only introspection (merges
         // `.claw.json` + `.claw/settings.json` from disk, no network, no
         // state mutation). Previously callers had to spin up a session with
-        // `claw --resume SESSION.jsonl /config` to see their own config,
+        // `xynapse --resume SESSION.jsonl /config` to see their own config,
         // which is synthetic friction. Accepts an optional section name
         // (env|hooks|model|plugins) matching the slash command shape.
         "config" => {
@@ -909,7 +909,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
             let section = tail.first().cloned();
             if tail.len() > 1 {
                 return Err(format!(
-                    "unexpected extra arguments after `claw config {}`: {}",
+                    "unexpected extra arguments after `xynapse config {}`: {}",
                     tail[0],
                     tail[1..].join(" ")
                 ));
@@ -924,7 +924,7 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
         "diff" => {
             if rest.len() > 1 {
                 return Err(format!(
-                    "unexpected extra arguments after `claw diff`: {}",
+                    "unexpected extra arguments after `xynapse diff`: {}",
                     rest[1..].join(" ")
                 ));
             }
@@ -992,14 +992,14 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
                         message.push_str(&line);
                     }
                     message.push_str(
-                        "\nRun Xynapse runtime help for the full list. If you meant to send a prompt literally, use `xynapse-runtime prompt <text>`.",
+                        "\nRun Xynapse runtime help for the full list. If you meant to send a prompt literally, use `xynapse prompt <text>`.",
                     );
                     return Err(message);
                 }
             }
             // #147: guard empty/whitespace-only prompts at the fallthrough
             // path the same way `"prompt"` arm above does. Without this,
-            // `claw ""`, `claw "   "`, and `claw "" ""` silently route to
+            // `xynapse ""`, `xynapse "   "`, and `xynapse "" ""` silently route to
             // the Anthropic call and surface a misleading
             // `missing Anthropic credentials` error (or burn API tokens on
             // an empty prompt when credentials are present).
@@ -1139,11 +1139,11 @@ fn bare_slash_command_guidance(command_name: &str) -> Option<String> {
         .find(|spec| spec.name == command_name)?;
     let guidance = if slash_command.resume_supported {
         format!(
-            "`claw {command_name}` is a slash command. Use `claw --resume SESSION.jsonl /{command_name}` or start `claw` and run `/{command_name}`."
+            "`xynapse {command_name}` is a slash command. Use `xynapse --resume SESSION.jsonl /{command_name}` or start `xynapse` and run `/{command_name}`."
         )
     } else {
         format!(
-            "`claw {command_name}` is a slash command. Start `claw` and run `/{command_name}` inside the REPL."
+            "`xynapse {command_name}` is a slash command. Start `xynapse` and run `/{command_name}` inside the REPL."
         )
     };
     Some(guidance)
@@ -1151,7 +1151,7 @@ fn bare_slash_command_guidance(command_name: &str) -> Option<String> {
 
 fn removed_auth_surface_error(command_name: &str) -> String {
     format!(
-        "`claw {command_name}` has been removed. Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN instead."
+        "`xynapse {command_name}` has been removed. Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN instead."
     )
 }
 
@@ -1160,7 +1160,7 @@ fn parse_acp_args(args: &[String], output_format: CliOutputFormat) -> Result<Cli
         [] => Ok(CliAction::Acp { output_format }),
         [subcommand] if subcommand == "serve" => Ok(CliAction::Acp { output_format }),
         _ => Err(String::from(
-            "unsupported ACP invocation. Use `claw acp`, `claw acp serve`, `claw --acp`, or `claw -acp`.",
+            "unsupported ACP invocation. Use `xynapse acp`, `xynapse acp serve`, `xynapse --acp`, or `xynapse -acp`.",
         )),
     }
 }
@@ -1238,7 +1238,7 @@ fn parse_direct_slash_cli_action(
         Ok(Some(command)) => Err({
             let _ = command;
             format!(
-                "slash command {command_name} is interactive-only. Start `claw` and run it there, or use `claw --resume SESSION.jsonl {command_name}` / `claw --resume {latest} {command_name}` when the command is marked [resume] in /help.",
+                "slash command {command_name} is interactive-only. Start `xynapse` and run it there, or use `xynapse --resume SESSION.jsonl {command_name}` / `xynapse --resume {latest} {command_name}` when the command is marked [resume] in /help.",
                 command_name = rest[0],
                 latest = LATEST_SESSION_REFERENCE,
             )
@@ -2022,7 +2022,7 @@ fn run_doctor(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::
 /// dispatched through [`tools::execute_tool`], so this server exposes exactly
 /// Read `.claw/worker-state.json` from the current working directory and print it.
 /// This is the file-based worker observability surface: `push_event()` in `worker_boot.rs`
-/// atomically writes state transitions here so external observers (clawhip, orchestrators)
+/// atomically writes state transitions here so external observers (Xynapse/CI, orchestrators)
 /// can poll current `WorkerStatus` without needing an HTTP route on the opencode binary.
 fn run_worker_state(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
@@ -2030,18 +2030,18 @@ fn run_worker_state(output_format: CliOutputFormat) -> Result<(), Box<dyn std::e
     if !state_path.exists() {
         // #139: this error used to say "run a worker first" without telling
         // callers how to run one. "worker" is an internal concept (there is
-        // no `claw worker` subcommand), so claws/CI had no discoverable path
+        // no `xynapse worker` subcommand), so claws/CI had no discoverable path
         // from the error to a fix. Emit an actionable, structured error that
         // names the two concrete commands that produce worker state.
         //
         // Format in both text and JSON modes is stable so scripts can match:
         //   error: no worker state file found at <path>
         //     Hint: worker state is written by the interactive REPL or a non-interactive prompt.
-        //     Run:   claw               # start the REPL (writes state on first turn)
-        //     Or:    claw prompt <text> # run one non-interactive turn
-        //     Then rerun: claw state [--output-format json]
+        //     Run:   xynapse               # start the REPL (writes state on first turn)
+        //     Or:    xynapse prompt <text> # run one non-interactive turn
+        //     Then rerun: xynapse state [--output-format json]
         return Err(format!(
-            "no worker state file found at {path}\n  Hint: worker state is written by the interactive REPL or a non-interactive prompt.\n  Run:   claw               # start the REPL (writes state on first turn)\n  Or:    claw prompt <text> # run one non-interactive turn\n  Then rerun: claw state [--output-format json]",
+            "no worker state file found at {path}\n  Hint: worker state is written by the interactive REPL or a non-interactive prompt.\n  Run:   xynapse               # start the REPL (writes state on first turn)\n  Or:    xynapse prompt <text> # run one non-interactive turn\n  Then rerun: xynapse state [--output-format json]",
             path = state_path.display()
         )
         .into());
@@ -2160,7 +2160,7 @@ fn check_auth_health() -> DiagnosticCheck {
                     token_set.scopes.join(",")
                 }
             ),
-            "Suggested action  set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN; `claw login` is removed"
+            "Suggested action  set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN; `xynapse login` is removed"
                 .to_string(),
         ])
         .with_data(Map::from_iter([
@@ -3029,7 +3029,7 @@ fn render_resume_usage() -> String {
     format!(
         "Resume
   Usage            /resume <session-path|session-id|{LATEST_SESSION_REFERENCE}>
-  Auto-save        .claw/sessions/<session-id>.{PRIMARY_SESSION_EXTENSION}
+  Auto-save        .xynapse/sessions/<session-id>.{PRIMARY_SESSION_EXTENSION}
   Tip              use /session list to inspect saved sessions"
     )
 }
@@ -3227,7 +3227,7 @@ fn run_resume_command(
             Ok(ResumeCommandOutcome {
                 session: cleared,
                 message: Some(format!(
-                    "Session cleared\n  Mode             resumed session reset\n  Previous session {previous_session_id}\n  Backup           {}\n  Resume previous  claw --resume {}\n  New session      {new_session_id}\n  Session file     {}",
+                    "Session cleared\n  Mode             resumed session reset\n  Previous session {previous_session_id}\n  Backup           {}\n  Resume previous  xynapse --resume {}\n  New session      {new_session_id}\n  Session file     {}",
                     backup_path.display(),
                     backup_path.display(),
                     session_path.display()
@@ -3388,7 +3388,7 @@ fn run_resume_command(
         SlashCommand::Skills { args } => {
             if let SkillSlashDispatch::Invoke(_) = classify_skills_slash_command(args.as_deref()) {
                 return Err(
-                    "resumed /skills invocations are interactive-only; start `claw` and run `/skills <skill>` in the REPL".into(),
+                    "resumed /skills invocations are interactive-only; start `xynapse` and run `/skills <skill>` in the REPL".into(),
                 );
             }
             let cwd = env::current_dir()?;
@@ -3549,7 +3549,7 @@ fn enforce_broad_cwd_policy(
     if is_interactive {
         // Interactive mode: print warning and ask for confirmation
         eprintln!(
-            "Warning: claw is running from a very broad directory ({}).\n\
+            "Warning: xynapse is running from a very broad directory ({}).\n\
              The agent can read and search everything under this path.\n\
              Consider running from inside your project: cd /path/to/project && claw",
             cwd.display()
@@ -3568,7 +3568,7 @@ fn enforce_broad_cwd_policy(
     } else {
         // Non-interactive mode: exit with error (JSON or text)
         let message = format!(
-            "claw is running from a very broad directory ({}). \
+            "xynapse is running from a very broad directory ({}). \
              The agent can read and search everything under this path. \
              Use --allow-broad-cwd to proceed anyway, \
              or run from inside your project: cd /path/to/project && claw",
@@ -4900,7 +4900,7 @@ impl LiveCli {
         args: Option<&str>,
         output_format: CliOutputFormat,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // `claw mcp serve` starts a stdio MCP server exposing claw's built-in
+        // `xynapse mcp serve` starts a stdio MCP server exposing claw's built-in
         // tools. All other `mcp` subcommands fall through to the existing
         // configured-server reporter (`list`, `status`, ...).
         if matches!(args.map(str::trim), Some("serve")) {
@@ -5617,7 +5617,7 @@ fn status_context(
     let loader = ConfigLoader::default_for(&cwd);
     let discovered_config_files = loader.discover().len();
     // #143: degrade gracefully on config parse failure rather than hard-fail.
-    // `claw doctor` already does this; `claw status` now matches that contract
+    // `xynapse doctor` already does this; `xynapse status` now matches that contract
     // so that one malformed `mcpServers.*` entry doesn't take down the whole
     // health surface (workspace, git, model, permission, sandbox can still be
     // reported independently).
@@ -5678,7 +5678,7 @@ fn format_status_report(
     let mut blocks: Vec<String> = Vec::new();
     if let Some(err) = context.config_load_error.as_deref() {
         blocks.push(format!(
-            "Config load error\n  Status           fail\n  Summary          runtime config failed to load; reporting partial status\n  Details          {err}\n  Hint             `claw doctor` classifies config parse errors; fix the listed field and rerun"
+            "Config load error\n  Status           fail\n  Summary          runtime config failed to load; reporting partial status\n  Details          {err}\n  Hint             `xynapse doctor` classifies config parse errors; fix the listed field and rerun"
         ));
     }
     // #148: render Model source line after Model, showing where the string
@@ -5858,85 +5858,85 @@ fn sandbox_json_value(status: &runtime::SandboxStatus) -> serde_json::Value {
 fn render_help_topic(topic: LocalHelpTopic) -> String {
     match topic {
         LocalHelpTopic::Status => "Status
-  Usage            claw status [--output-format <format>]
+  Usage            xynapse status [--output-format <format>]
   Purpose          show the local workspace snapshot without entering the REPL
   Output           model, permissions, git state, config files, and sandbox status
   Formats          text (default), json
-  Related          /status · claw --resume latest /status"
+  Related          /status · xynapse --resume latest /status"
             .to_string(),
         LocalHelpTopic::Sandbox => "Sandbox
-  Usage            claw sandbox [--output-format <format>]
+  Usage            xynapse sandbox [--output-format <format>]
   Purpose          inspect the resolved sandbox and isolation state for the current directory
   Output           namespace, network, filesystem, and fallback details
   Formats          text (default), json
-  Related          /sandbox · claw status"
+  Related          /sandbox · xynapse status"
             .to_string(),
         LocalHelpTopic::Doctor => "Doctor
-  Usage            claw doctor [--output-format <format>]
+  Usage            xynapse doctor [--output-format <format>]
   Purpose          diagnose local auth, config, workspace, sandbox, and build metadata
   Output           local-only health report; no provider request or session resume required
   Formats          text (default), json
-  Related          /doctor · claw --resume latest /doctor"
+  Related          /doctor · xynapse --resume latest /doctor"
             .to_string(),
         LocalHelpTopic::Acp => "ACP / Zed
-  Usage            claw acp [serve] [--output-format <format>]
-  Aliases          claw --acp · claw -acp
+  Usage            xynapse acp [serve] [--output-format <format>]
+  Aliases          xynapse --acp · xynapse -acp
   Purpose          explain the current editor-facing ACP/Zed launch contract without starting the runtime
   Status           discoverability only; `serve` is a status alias and does not launch a daemon yet
   Formats          text (default), json
-  Related          ROADMAP #64a (discoverability) · ROADMAP #76 (real ACP support) · claw --help"
+  Related          ROADMAP #64a (discoverability) · ROADMAP #76 (real ACP support) · xynapse --help"
             .to_string(),
         LocalHelpTopic::Init => "Init
-  Usage            claw init [--output-format <format>]
-  Purpose          create .claw/, .claw.json, .gitignore, and Xynapse instructions in the current project
+  Usage            xynapse init [--output-format <format>]
+  Purpose          create .xynapse/, .gitignore, and Xynapse instructions in the current project
   Output           list of created vs. skipped files (idempotent: safe to re-run)
   Formats          text (default), json
-  Related          claw status · claw doctor"
+  Related          xynapse status · xynapse doctor"
             .to_string(),
         LocalHelpTopic::State => "State
-  Usage            claw state [--output-format <format>]
-  Purpose          read .claw/worker-state.json written by the interactive REPL or a one-shot prompt
+  Usage            xynapse state [--output-format <format>]
+  Purpose          read .xynapse/worker-state.json written by the interactive REPL or a one-shot prompt
   Output           worker id, model, permissions, session reference (text or json)
   Formats          text (default), json
-  Produces state   `claw` (interactive REPL) or `claw prompt <text>` (one non-interactive turn)
-  Observes state   `claw state` reads; clawhip/CI may poll this file without HTTP
+  Produces state   `xynapse` (interactive REPL) or `xynapse prompt <text>` (one non-interactive turn)
+  Observes state   `xynapse state` reads; Xynapse/CI may poll this file without HTTP
   Exit codes       0 if state file exists and parses; 1 with actionable hint otherwise
-  Related          claw status · ROADMAP #139 (this worker-concept contract)"
+  Related          xynapse status · ROADMAP #139 (this worker-concept contract)"
             .to_string(),
         LocalHelpTopic::Export => "Export
-  Usage            claw export [--session <id|latest>] [--output <path>] [--output-format <format>]
+  Usage            xynapse export [--session <id|latest>] [--output <path>] [--output-format <format>]
   Purpose          serialize a managed session to JSON for review, transfer, or archival
-  Defaults         --session latest (most recent managed session in .claw/sessions/)
+  Defaults         --session latest (most recent managed session in .xynapse/sessions/)
   Formats          text (default), json
-  Related          /session list · claw --resume latest"
+  Related          /session list · xynapse --resume latest"
             .to_string(),
         LocalHelpTopic::Version => "Version
-  Usage            claw version [--output-format <format>]
-  Aliases          claw --version · claw -V
-  Purpose          print the claw CLI version and build metadata
+  Usage            xynapse version [--output-format <format>]
+  Aliases          xynapse --version · xynapse -V
+  Purpose          print the Xynapse runtime version and build metadata
   Formats          text (default), json
-  Related          claw doctor (full build/auth/config diagnostic)"
+  Related          xynapse doctor (full build/auth/config diagnostic)"
             .to_string(),
         LocalHelpTopic::SystemPrompt => "System Prompt
-  Usage            claw system-prompt [--cwd <path>] [--date YYYY-MM-DD] [--output-format <format>]
-  Purpose          render the resolved system prompt that `claw` would send for the given cwd + date
+  Usage            xynapse system-prompt [--cwd <path>] [--date YYYY-MM-DD] [--output-format <format>]
+  Purpose          render the resolved system prompt that `xynapse` would send for the given cwd + date
   Options          --cwd overrides the workspace dir · --date injects a deterministic date stamp
   Formats          text (default), json
-  Related          claw doctor · claw dump-manifests"
+  Related          xynapse doctor · xynapse dump-manifests"
             .to_string(),
         LocalHelpTopic::DumpManifests => "Dump Manifests
-  Usage            claw dump-manifests [--manifests-dir <path>] [--output-format <format>]
+  Usage            xynapse dump-manifests [--manifests-dir <path>] [--output-format <format>]
   Purpose          emit every skill/agent/tool manifest the resolver would load for the current cwd
   Options          --manifests-dir scopes discovery to a specific directory
   Formats          text (default), json
-  Related          claw skills · claw agents · claw doctor"
+  Related          xynapse skills · xynapse agents · xynapse doctor"
             .to_string(),
         LocalHelpTopic::BootstrapPlan => "Bootstrap Plan
-  Usage            claw bootstrap-plan [--output-format <format>]
+  Usage            xynapse bootstrap-plan [--output-format <format>]
   Purpose          list the ordered startup phases the CLI would execute before dispatch
   Output           phase names (text) or structured phase list (json) — primary output is the plan itself
   Formats          text (default), json
-  Related          claw doctor · claw status"
+  Related          xynapse doctor · xynapse status"
             .to_string(),
     }
 }
@@ -5946,11 +5946,11 @@ fn print_help_topic(topic: LocalHelpTopic) {
 }
 
 fn print_acp_status(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::Error>> {
-    let message = "ACP/Zed editor integration is not implemented in claw-code yet. `claw acp serve` is only a discoverability alias today; it does not launch a daemon or Zed-specific protocol endpoint. Use the normal terminal surfaces for now and track ROADMAP #76 for real ACP support.";
+    let message = "ACP/Zed editor integration is not implemented in claw-code yet. `xynapse acp serve` is only a discoverability alias today; it does not launch a daemon or Zed-specific protocol endpoint. Use the normal terminal surfaces for now and track ROADMAP #76 for real ACP support.";
     match output_format {
         CliOutputFormat::Text => {
             println!(
-                "ACP / Zed\n  Status           discoverability only\n  Launch           `claw acp serve` / `claw --acp` / `claw -acp` report status only; no editor daemon is available yet\n  Today            use `claw prompt`, the REPL, or `claw doctor` for local verification\n  Tracking         ROADMAP #76\n  Message          {message}"
+                "ACP / Zed\n  Status           discoverability only\n  Launch           `xynapse acp serve` / `xynapse --acp` / `xynapse -acp` report status only; no editor daemon is available yet\n  Today            use `xynapse prompt`, the REPL, or `xynapse doctor` for local verification\n  Tracking         ROADMAP #76\n  Message          {message}"
             );
         }
         CliOutputFormat::Json => {
@@ -5967,9 +5967,9 @@ fn print_acp_status(output_format: CliOutputFormat) -> Result<(), Box<dyn std::e
                     "discoverability_tracking": "ROADMAP #64a",
                     "tracking": "ROADMAP #76",
                     "recommended_workflows": [
-                        "claw prompt TEXT",
+                        "xynapse prompt TEXT",
                         "claw",
-                        "claw doctor"
+                        "xynapse doctor"
                     ],
                 }))?
             );
@@ -7534,7 +7534,7 @@ impl AnthropicRuntimeClient {
         // reads `ANTHROPIC_BASE_URL` and is required for the local
         // mock-server test harness
         // (`crates/rusty-xynapse-cli/tests/compact_output.rs`) to point
-        // claw at its fake Anthropic endpoint. We also attach a
+        // xynapse at its fake Anthropic endpoint. We also attach a
         // session-scoped prompt cache on the Anthropic path; the
         // prompt cache is Anthropic-only so non-Anthropic variants
         // skip it.
@@ -7897,7 +7897,7 @@ fn format_context_window_blocked_error(session_id: &str, error: &api::ApiError) 
     lines.push("Recovery".to_string());
     lines.push("  Compact          /compact".to_string());
     lines.push(format!(
-        "  Resume compact   claw --resume {session_id} /compact"
+        "  Resume compact   xynapse --resume {session_id} /compact"
     ));
     lines.push("  Fresh session    /clear --confirm".to_string());
     lines.push(
@@ -8913,49 +8913,49 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
 
 #[allow(clippy::too_many_lines)]
 fn print_help_to(out: &mut impl Write) -> io::Result<()> {
-    writeln!(out, "claw v{VERSION}")?;
+    writeln!(out, "Xynapse runtime v{VERSION}")?;
     writeln!(out)?;
     writeln!(out, "Usage:")?;
     writeln!(
         out,
-        "  claw [--model MODEL] [--allowedTools TOOL[,TOOL...]]"
+        "  xynapse [--model MODEL] [--allowedTools TOOL[,TOOL...]]"
     )?;
     writeln!(out, "      Start the interactive REPL")?;
     writeln!(
         out,
-        "  claw [--model MODEL] [--output-format text|json] prompt TEXT"
+        "  xynapse [--model MODEL] [--output-format text|json] prompt TEXT"
     )?;
     writeln!(out, "      Send one prompt and exit")?;
     writeln!(
         out,
-        "  claw [--model MODEL] [--output-format text|json] TEXT"
+        "  xynapse [--model MODEL] [--output-format text|json] TEXT"
     )?;
     writeln!(out, "      Shorthand non-interactive prompt mode")?;
     writeln!(
         out,
-        "  claw --resume [SESSION.jsonl|session-id|latest] [/status] [/compact] [...]"
+        "  xynapse --resume [SESSION.jsonl|session-id|latest] [/status] [/compact] [...]"
     )?;
     writeln!(
         out,
         "      Inspect or maintain a saved session without entering the REPL"
     )?;
-    writeln!(out, "  claw help")?;
+    writeln!(out, "  xynapse help")?;
     writeln!(out, "      Alias for --help")?;
-    writeln!(out, "  claw version")?;
+    writeln!(out, "  xynapse version")?;
     writeln!(out, "      Alias for --version")?;
-    writeln!(out, "  claw status")?;
+    writeln!(out, "  xynapse status")?;
     writeln!(
         out,
         "      Show the current local workspace status snapshot"
     )?;
-    writeln!(out, "  claw sandbox")?;
+    writeln!(out, "  xynapse sandbox")?;
     writeln!(out, "      Show the current sandbox isolation snapshot")?;
-    writeln!(out, "  claw doctor")?;
+    writeln!(out, "  xynapse doctor")?;
     writeln!(
         out,
         "      Diagnose local auth, config, workspace, and sandbox health"
     )?;
-    writeln!(out, "  xynapse-runtime acp [serve]")?;
+    writeln!(out, "  xynapse acp [serve]")?;
     writeln!(
         out,
         "      Show ACP/Zed editor integration status (currently unsupported; aliases: --acp, -acp)"
@@ -8965,16 +8965,16 @@ fn print_help_to(out: &mut impl Write) -> io::Result<()> {
         out,
         "      Warning: use the bundled Xynapse runtime"
     )?;
-    writeln!(out, "  xynapse-runtime dump-manifests [--manifests-dir PATH]")?;
-    writeln!(out, "  xynapse-runtime bootstrap-plan")?;
-    writeln!(out, "  xynapse-runtime agents")?;
-    writeln!(out, "  xynapse-runtime mcp")?;
-    writeln!(out, "  xynapse-runtime skills")?;
-    writeln!(out, "  xynapse-runtime system-prompt [--cwd PATH] [--date YYYY-MM-DD]")?;
-    writeln!(out, "  xynapse-runtime init")?;
+    writeln!(out, "  xynapse dump-manifests [--manifests-dir PATH]")?;
+    writeln!(out, "  xynapse bootstrap-plan")?;
+    writeln!(out, "  xynapse agents")?;
+    writeln!(out, "  xynapse mcp")?;
+    writeln!(out, "  xynapse skills")?;
+    writeln!(out, "  xynapse system-prompt [--cwd PATH] [--date YYYY-MM-DD]")?;
+    writeln!(out, "  xynapse init")?;
     writeln!(
         out,
-        "  claw export [PATH] [--session SESSION] [--output PATH]"
+        "  xynapse export [PATH] [--session SESSION] [--output PATH]"
     )?;
     writeln!(
         out,
@@ -9024,7 +9024,7 @@ fn print_help_to(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Session shortcuts:")?;
     writeln!(
         out,
-        "  REPL turns auto-save to .claw/sessions/<session-id>.{PRIMARY_SESSION_EXTENSION}"
+        "  REPL turns auto-save to .xynapse/sessions/<session-id>.{PRIMARY_SESSION_EXTENSION}"
     )?;
     writeln!(
         out,
@@ -9041,30 +9041,30 @@ fn print_help_to(out: &mut impl Write) -> io::Result<()> {
     )?;
     writeln!(
         out,
-        "  claw --output-format json prompt \"explain src/main.rs\""
+        "  xynapse --output-format json prompt \"explain src/main.rs\""
     )?;
-    writeln!(out, "  claw --compact \"summarize Cargo.toml\" | wc -l")?;
+    writeln!(out, "  xynapse --compact \"summarize Cargo.toml\" | wc -l")?;
     writeln!(
         out,
-        "  claw --allowedTools read,glob \"summarize Cargo.toml\""
+        "  xynapse --allowedTools read,glob \"summarize Cargo.toml\""
     )?;
-    writeln!(out, "  xynapse-runtime --resume {LATEST_SESSION_REFERENCE}")?;
+    writeln!(out, "  xynapse --resume {LATEST_SESSION_REFERENCE}")?;
     writeln!(
         out,
-        "  xynapse-runtime --resume {LATEST_SESSION_REFERENCE} /status /diff /export notes.txt"
+        "  xynapse --resume {LATEST_SESSION_REFERENCE} /status /diff /export notes.txt"
     )?;
-    writeln!(out, "  xynapse-runtime agents")?;
-    writeln!(out, "  xynapse-runtime mcp show my-server")?;
-    writeln!(out, "  xynapse-runtime /skills")?;
-    writeln!(out, "  xynapse-runtime doctor")?;
+    writeln!(out, "  xynapse agents")?;
+    writeln!(out, "  xynapse mcp show my-server")?;
+    writeln!(out, "  xynapse /skills")?;
+    writeln!(out, "  xynapse doctor")?;
     writeln!(out, "  source of truth: {OFFICIAL_REPO_URL}")?;
     writeln!(
         out,
         "  do not run `{DEPRECATED_INSTALL_COMMAND}` — it installs a deprecated stub"
     )?;
-    writeln!(out, "  xynapse-runtime init")?;
-    writeln!(out, "  xynapse-runtime export")?;
-    writeln!(out, "  xynapse-runtime export conversation.md")?;
+    writeln!(out, "  xynapse init")?;
+    writeln!(out, "  xynapse export")?;
+    writeln!(out, "  xynapse export conversation.md")?;
     Ok(())
 }
 
@@ -9232,7 +9232,7 @@ mod tests {
         );
         assert!(rendered.contains("Compact          /compact"), "{rendered}");
         assert!(
-            rendered.contains("Resume compact   claw --resume session-issue-32 /compact"),
+            rendered.contains("Resume compact   xynapse --resume session-issue-32 /compact"),
             "{rendered}"
         );
         assert!(
@@ -9305,7 +9305,7 @@ mod tests {
         );
         assert!(rendered.contains("Compact          /compact"), "{rendered}");
         assert!(
-            rendered.contains("Resume compact   claw --resume session-issue-32 /compact"),
+            rendered.contains("Resume compact   xynapse --resume session-issue-32 /compact"),
             "{rendered}"
         );
     }
@@ -10283,9 +10283,9 @@ mod tests {
 
     #[test]
     fn status_degrades_gracefully_on_malformed_mcp_config_143() {
-        // #143: previously `claw status` hard-failed on any config parse error,
+        // #143: previously `xynapse status` hard-failed on any config parse error,
         // taking down the entire health surface for one malformed MCP entry.
-        // `claw doctor` already degrades gracefully; this test locks `status`
+        // `xynapse doctor` already degrades gracefully; this test locks `status`
         // to the same contract.
         let _guard = env_lock();
         let root = temp_dir();
@@ -10413,15 +10413,15 @@ mod tests {
         );
         // New actionable hints — this is what #139 is fixing.
         assert!(
-            message.contains("claw prompt"),
-            "error should name `claw prompt <text>` as a producer: {message}"
+            message.contains("xynapse prompt"),
+            "error should name `xynapse prompt <text>` as a producer: {message}"
         );
         assert!(
             message.contains("REPL"),
             "error should mention the interactive REPL as a producer: {message}"
         );
         assert!(
-            message.contains("claw state"),
+            message.contains("xynapse state"),
             "error should tell the user what to rerun once state exists: {message}"
         );
         // And the State --help topic must document the worker relationship
@@ -10432,8 +10432,8 @@ mod tests {
             "state help must document how state is produced: {state_help}"
         );
         assert!(
-            state_help.contains("claw prompt"),
-            "state help must name `claw prompt <text>` as a producer: {state_help}"
+            state_help.contains("xynapse prompt"),
+            "state help must name `xynapse prompt <text>` as a producer: {state_help}"
         );
     }
 
@@ -11012,7 +11012,7 @@ mod tests {
         let error = parse_args(&["/status".to_string()])
             .expect_err("/status should remain REPL-only when invoked directly");
         assert!(error.contains("interactive-only"));
-        assert!(error.contains("claw --resume SESSION.jsonl /status"));
+        assert!(error.contains("xynapse --resume SESSION.jsonl /status"));
     }
 
     #[test]
@@ -11227,7 +11227,7 @@ mod tests {
         let error = parse_args(&["--resum".to_string()]).expect_err("unknown option should fail");
         assert!(error.contains("unknown option: --resum"));
         assert!(error.contains("Did you mean --resume?"));
-        assert!(error.contains("claw --help"));
+        assert!(error.contains("xynapse --help"));
     }
 
     #[test]
@@ -11570,20 +11570,20 @@ mod tests {
         let mut help = Vec::new();
         print_help_to(&mut help).expect("help should render");
         let help = String::from_utf8(help).expect("help should be utf8");
-        assert!(help.contains("claw help"));
-        assert!(help.contains("claw version"));
-        assert!(help.contains("claw status"));
-        assert!(help.contains("claw sandbox"));
-        assert!(help.contains("claw init"));
-        assert!(help.contains("claw acp [serve]"));
-        assert!(help.contains("claw agents"));
-        assert!(help.contains("claw mcp"));
-        assert!(help.contains("claw skills"));
-        assert!(help.contains("claw /skills"));
+        assert!(help.contains("xynapse help"));
+        assert!(help.contains("xynapse version"));
+        assert!(help.contains("xynapse status"));
+        assert!(help.contains("xynapse sandbox"));
+        assert!(help.contains("xynapse init"));
+        assert!(help.contains("xynapse acp [serve]"));
+        assert!(help.contains("xynapse agents"));
+        assert!(help.contains("xynapse mcp"));
+        assert!(help.contains("xynapse skills"));
+        assert!(help.contains("xynapse /skills"));
         assert!(help.contains("ultraworkers/claw-code"));
         assert!(help.contains("cargo install claw-code"));
-        assert!(!help.contains("claw login"));
-        assert!(!help.contains("claw logout"));
+        assert!(!help.contains("xynapse login"));
+        assert!(!help.contains("xynapse logout"));
     }
 
     #[test]
@@ -11979,10 +11979,10 @@ UU conflicted.rs",
         let mut help = Vec::new();
         print_help_to(&mut help).expect("help should render");
         let help = String::from_utf8(help).expect("help should be utf8");
-        assert!(help.contains("claw --resume [SESSION.jsonl|session-id|latest]"));
+        assert!(help.contains("xynapse --resume [SESSION.jsonl|session-id|latest]"));
         assert!(help.contains("Use `latest` with --resume, /resume, or /session switch"));
-        assert!(help.contains("claw --resume latest"));
-        assert!(help.contains("claw --resume latest /status /diff /export notes.txt"));
+        assert!(help.contains("xynapse --resume latest"));
+        assert!(help.contains("xynapse --resume latest /status /diff /export notes.txt"));
     }
 
     #[test]

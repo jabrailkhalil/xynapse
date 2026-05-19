@@ -55,7 +55,7 @@ models:
   # ===== YandexGPT 5-е поколение =====
   - name: YandexGPT Pro 5
     provider: yandex_gpt
-    model: yandexgpt/rc
+    model: yandexgpt
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -70,7 +70,7 @@ models:
 
   - name: YandexGPT Pro 5.1
     provider: yandex_gpt
-    model: yandexgpt/latest
+    model: yandexgpt/rc
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -85,7 +85,7 @@ models:
 
   - name: YandexGPT Lite 5
     provider: yandex_gpt
-    model: yandexgpt-lite/rc
+    model: yandexgpt-lite
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -99,7 +99,7 @@ models:
 
   - name: Alice AI LLM
     provider: yandex_gpt
-    model: alice-ai-llm/latest
+    model: aliceai-llm
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -114,7 +114,7 @@ models:
   # ===== Сторонние модели на Yandex Cloud =====
   - name: DeepSeek V3.2
     provider: yandex_gpt
-    model: deepseek-v32/latest
+    model: deepseek-v32
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -129,7 +129,7 @@ models:
 
   - name: Qwen3 235B
     provider: yandex_gpt
-    model: qwen3-235b-a22b/latest
+    model: qwen3-235b-a22b-fp8
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -141,9 +141,24 @@ models:
       extraBodyProperties:
         folderId: YOUR_YANDEX_FOLDER_ID
 
+  - name: Qwen3.6 35B
+    provider: yandex_gpt
+    model: qwen3.6-35b-a3b
+    apiKey: YOUR_YANDEX_API_KEY
+    folderId: YOUR_YANDEX_FOLDER_ID
+    roles:
+      - chat
+      - edit
+    defaultCompletionOptions:
+      temperature: 0.3
+      maxTokens: 8192
+    requestOptions:
+      extraBodyProperties:
+        folderId: YOUR_YANDEX_FOLDER_ID
+
   - name: gpt-oss-120b
     provider: yandex_gpt
-    model: gpt-oss-120b/latest
+    model: gpt-oss-120b
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -157,7 +172,7 @@ models:
 
   - name: gpt-oss-20b
     provider: yandex_gpt
-    model: gpt-oss-20b/latest
+    model: gpt-oss-20b
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -171,7 +186,7 @@ models:
 
   - name: Gemma 3 27B
     provider: yandex_gpt
-    model: gemma3-27b-it/latest
+    model: gemma-3-27b-it
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -319,32 +334,26 @@ models:
         scope: GIGACHAT_API_PERS
 
 rules:
-  - >-
-    Ты — Xynapse Assistant, умный помощник для разработки.
-
-    Когда пользователь просит создать файл, ВСЕГДА используй путь относительно
-    корня открытого проекта (workspace).
-
-    Например: 'calculator.py', 'src/utils.py', 'tests/test_main.py'.
-
-    НЕ используй абсолютные пути (вроде C:\...) если пользователь не указал их
-    явно.
-
-    Когда создаёшь файл, убедись что путь начинается от корня проекта.
-
-    Если у пользователя нет открытой папки в IDE, предупреди его: 'Откройте
-    папку проекта через File → Open Folder, иначе я не смогу создать файлы.'
-  - >-
-    Отвечай на русском языке. Будь лаконичным и полезным.
-
-    При создании файлов используй инструмент create_new_file.
-
-    При редактировании существующих файлов используй инструмент
-    edit_existing_file.
-  - |-
-    ВАЖНО: Когда пользователь просит создать, отредактировать или удалить файлы,
-    НЕМЕДЛЕННО выполняй действие с помощью доступных инструментов.
-    НЕ спрашивай подтверждения — сразу вызывай нужный инструмент.
+  - name: Workspace file safety
+    alwaysApply: true
+    rule: |-
+      You are Xynapse Assistant, a coding assistant working inside the opened workspace.
+      When you create or edit files, use paths relative to the workspace root.
+      Do not use absolute paths such as C:\... unless the user explicitly asks for them.
+      If no workspace is open, tell the user to open a project folder with File -> Open Folder.
+  - name: Response style
+    alwaysApply: true
+    rule: |-
+      Reply in Russian. Be concise and useful.
+  - name: File actions
+    alwaysApply: true
+    rule: |-
+      When the user asks to create, fix, improve, edit, or delete files, complete the action with the available tools.
+      Use write_file to create files.
+      Use edit_file to change existing files.
+      If the user says a previous result looks wrong, inspect the file and apply a concrete correction before the final answer.
+      Do not say the existing result is already correct unless there is a specific blocker.
+      Do not ask for confirmation for ordinary edits inside the workspace.
 context:
   - provider: code
   - provider: docs

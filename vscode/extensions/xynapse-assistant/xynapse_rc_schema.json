@@ -3040,13 +3040,6 @@
             ]
           }
         },
-        "allowAnonymousTelemetry": {
-          "title": "Allow Anonymous Telemetry",
-          "markdownDescription": "If this field is set to `true`, we will collect anonymous telemetry as described in the documentation page on telemetry. If set to `false`, we will not collect any data. Learn more in [the docs](https://docs.continue.dev/telemetry).",
-          "x-intellij-html-description": "If this field is set to `true`, we will collect anonymous telemetry as described in the documentation page on telemetry. If set to `false`, we will not collect any data. Learn more in <a href='https://docs.continue.dev/telemetry'>the docs</a>.",
-          "default": true,
-          "type": "boolean"
-        },
         "models": {
           "title": "Models",
           "markdownDescription": "Learn about setting up models in [the documentation](https://docs.continue.dev/model-setup/overview).",
@@ -3694,68 +3687,6 @@
               "default": false
             }
           }
-        },
-        "analytics": {
-          "type": "object",
-          "properties": {
-            "provider": {
-              "type": "string",
-              "enum": [
-                "posthog",
-                "logstash"
-              ],
-              "description": "The 3rd party analytics provider to use.",
-              "default": "posthog",
-              "markdownEnumDescriptions": [
-                "### Posthog\nTo use Posthog, set up an account, obtain your client key, and enter it in the client key field."
-              ]
-            },
-            "url": {
-              "type": "string",
-              "description": "The URL to which analytics will be sent"
-            },
-            "clientKey": {
-              "type": "string",
-              "description": "The client key to use for analytics"
-            }
-          },
-          "required": [
-            "provider"
-          ],
-          "allOf": [
-            {
-              "if": {
-                "properties": {
-                  "provider": {
-                    "enum": [
-                      "posthog"
-                    ]
-                  }
-                }
-              },
-              "then": {
-                "required": [
-                  "clientKey"
-                ]
-              }
-            },
-            {
-              "if": {
-                "properties": {
-                  "provider": {
-                    "enum": [
-                      "logstash"
-                    ]
-                  }
-                }
-              },
-              "then": {
-                "required": [
-                  "url"
-                ]
-              }
-            }
-          ]
         },
         "experimental": {
           "type": "object",

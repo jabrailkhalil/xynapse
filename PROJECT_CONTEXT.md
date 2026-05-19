@@ -96,7 +96,7 @@ Public site:
 - `openInNewWindow` no longer force-closes the auxiliary (right) sidebar.
 - Startup walkthrough logic updated to avoid opening duplicate onboarding tabs.
 - Extension startup now auto-focuses `xynapse.xynapseGUIView` to keep assistant visible by default.
-- Rebuild completed:
+- Generated outputs were updated during development; this review set does not include raw build logs and does not use this note as release-build evidence:
   - `plugins/continue-main/extensions/vscode/out/extension.js`
   - `vscode/extensions/xynapse-assistant/out/extension.js`
   - `vscode/out/...` via `transpile-client-esbuild`
@@ -195,13 +195,13 @@ Fallback behavior:
 - If no profile/account exists, app creates local profile and notifies user.
 - Without account payload, key-dependent models are unavailable by design.
 
-## 6) Release gate checklist
+## 6) Release gate checklist to verify
 
-- App starts without gray screen or main-process exceptions.
+- Verify: app starts without gray screen or main-process exceptions.
 - Assistant is visible in the expected sidebar container after restart.
 - Exactly one onboarding tab appears on first run.
 - `Help -> Check for Updates` detects newer GitHub release correctly.
-- Portable artifact launches from `Xynapse.exe` and keeps data under `data/`.
+- Verify: portable artifact launches from `Xynapse.exe` and keeps data under `data/`.
 - Profile export/import recovers model keys on a clean machine.
 
 ## 7) Operating notes for next bot

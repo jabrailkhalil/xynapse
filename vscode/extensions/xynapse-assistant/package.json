@@ -16,9 +16,9 @@
   },
   "homepage": "https://xynapse.dev",
   "license": "Apache-2.0",
-  "displayName": "Xynapse Assistant",
+  "displayName": "%extension.displayName%",
   "pricing": "Free",
-  "description": "AI ассистент для Xynapse IDE с поддержкой YandexGPT и GigaChat",
+  "description": "%extension.description%",
   "publisher": "xynapse",
   "engines": {
     "vscode": "^1.70.0",
@@ -50,9 +50,9 @@
     "onUri",
     "onStartupFinished",
     "onCommand:xynapse.openConfigFile",
-    "onCommand:xynapse.clawDoctor",
-    "onCommand:xynapse.clawPrompt",
-    "onView:xynapseGUIView"
+    "onCommand:xynapse.runtimeDoctor",
+    "onCommand:xynapse.runtimePrompt",
+    "onView:xynapse.xynapseGUIView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -95,37 +95,25 @@
     "configuration": {
       "title": "Xynapse",
       "properties": {
-        "xynapse.telemetryEnabled": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Xynapse collects anonymous usage data, cleaned of PII, to help us improve the product for our users. Read more  at [xynapse.dev › Telemetry](https://docs.xynapse.dev/telemetry).",
-          "markdownDeprecationMessage": "This setting is deprecated and will be removed in a later version. Please use the _Telemetry > Allow Anonymous Telemetry_ setting in the extension's User Settings page.",
-          "deprecationMessage": "Please use the _Telemetry > Allow Anonymous Telemetry_ setting in the extension's User Settings page."
-        },
         "xynapse.showInlineTip": {
           "type": "boolean",
           "default": true,
           "description": "Show inline suggestion to use the Xynapse keyboard shortcuts (e.g. \"Cmd/Ctrl L to select code, Cmd/Ctrl I to edit\")."
         },
-        "xynapse.disableQuickFix": {
-          "type": "boolean",
-          "default": false,
-          "description": "Disable the quick fix feature."
-        },
         "xynapse.enableQuickActions": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable the experimental Quick Actions feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev › Walkthrough: Quick Actions (experimental)](https://docs.xynapse.dev/customize/deep-dives/vscode-actions#quick-actions)"
+          "markdownDescription": "Enable the experimental Quick Actions feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev > Walkthrough: Quick Actions (experimental)](https://docs.xynapse.dev/customize/deep-dives/vscode-actions#quick-actions)"
         },
         "xynapse.enableTabAutocomplete": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable Xynapse tab autocomplete feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev › Walkthrough: Tab Autocomplete (beta)](https://docs.xynapse.dev/features/tab-autocomplete)"
+          "markdownDescription": "Enable Xynapse tab autocomplete feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev > Walkthrough: Tab Autocomplete (beta)](https://docs.xynapse.dev/features/tab-autocomplete)"
         },
         "xynapse.enableNextEdit": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable Xynapse next edit feature. Read our docs to learn about configuration and how to share feedback: [xynapse.dev › Features › Autocomplete › Next Edit (experimental)](https://docs.xynapse.dev/features/autocomplete/next-edit)"
+          "markdownDescription": "Enable Xynapse next edit feature. Read our docs to learn about configuration and how to share feedback: [xynapse.dev > Features > Autocomplete > Next Edit (experimental)](https://docs.xynapse.dev/features/autocomplete/next-edit)"
         },
         "xynapse.pauseTabAutocompleteOnBattery": {
           "type": "boolean",
@@ -157,12 +145,12 @@
           "default": 60,
           "description": "The period of time in minutes between automatic syncs."
         },
-        "xynapse.clawPath": {
+        "xynapse.runtimePath": {
           "type": "string",
           "default": "",
           "description": "Path to the Xynapse runtime executable. Leave empty to use PATH or the bundled runtime."
         },
-        "xynapse.clawModel": {
+        "xynapse.runtimeModel": {
           "type": "string",
           "default": "auto",
           "description": "Model passed to Xynapse Core runtime prompts. Use auto to follow the selected Xynapse model when compatible, or set an explicit runtime model such as openai/gpt-4.1-mini, grok, or qwen-plus."
@@ -234,7 +222,7 @@
       {
         "command": "xynapse.openConfigPage",
         "category": "Xynapse",
-        "title": "Open Settings",
+        "title": "Open Xynapse Settings",
         "icon": "$(gear)",
         "group": "Xynapse"
       },
@@ -245,13 +233,13 @@
         "group": "Xynapse"
       },
       {
-        "command": "xynapse.clawDoctor",
+        "command": "xynapse.runtimeDoctor",
         "category": "Xynapse",
         "title": "Run Xynapse Runtime Diagnostic",
         "group": "Xynapse"
       },
       {
-        "command": "xynapse.clawPrompt",
+        "command": "xynapse.runtimePrompt",
         "category": "Xynapse",
         "title": "Run Xynapse Core Runtime Prompt",
         "group": "Xynapse"
@@ -562,10 +550,10 @@
           "command": "xynapse.openInNewWindow"
         },
         {
-          "command": "xynapse.clawDoctor"
+          "command": "xynapse.runtimeDoctor"
         },
         {
-          "command": "xynapse.clawPrompt"
+          "command": "xynapse.runtimePrompt"
         }
       ],
       "editor/context": [
@@ -640,7 +628,7 @@
       ]
     },
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "xynapse",
           "title": "Xynapse",
@@ -796,7 +784,6 @@
     "ncp": "^2.0.0",
     "node-fetch": "^3.3.2",
     "node-machine-id": "^1.1.12",
-    "posthog-node": "^3.6.3",
     "react-markdown": "^8.0.7",
     "react-redux": "^8.0.5",
     "read-last-lines": "^1.8.0",

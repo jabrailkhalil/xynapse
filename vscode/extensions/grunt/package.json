@@ -8,7 +8,7 @@
   "icon": "images/grunt.png",
   "license": "MIT",
   "engines": {
-    "vscode": "*"
+    "vscode": "^1.0.0"
   },
   "categories": [
     "Other"

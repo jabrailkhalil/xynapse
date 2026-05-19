@@ -1,4 +1,4 @@
-﻿/*---------------------------------------------------------------------------------------------
+/*---------------------------------------------------------------------------------------------
  *  Copyright (c) Xynapse. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
@@ -152,13 +152,11 @@ registerAction2(class ClearXynapseProfileAction extends Action2 {
 	}
 });
 
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
-//  Encrypted Config Backup вЂ” Export / Import / Git Push / Git Pull
+// Encrypted Config Backup - Export / Import / Git Push / Git Pull
 //  All accounts are LOCAL. A single encrypted .enc file stores
 //  config.yaml, config.json, profile.json, and account.json (with keys bundle).
 //  The user authenticates via built-in GitHub login (github-authentication
 //  extension) to push/pull the encrypted backup to/from their git repo.
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 async function collectBundle(
 	fileService: IFileService,
@@ -617,7 +615,7 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 				await commandService.executeCommand('workbench.action.terminal.new');
 				await commandService.executeCommand('workbench.action.terminal.sendSequence', { text: gitCommands + '\n' });
 			} else {
-				// Fresh clone вЂ” git clone creates the directory itself
+				// Fresh clone - git clone creates the directory itself
 				const gitCommands = `git clone "${repoUrl}" "${syncDir.fsPath}" --depth 1`;
 
 				await commandService.executeCommand('workbench.action.terminal.new');

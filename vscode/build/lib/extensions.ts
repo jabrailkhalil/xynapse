@@ -205,11 +205,137 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string, 
 	return result.pipe(createStatsStream(path.basename(extensionPath)));
 }
 
+function copyXynapseRuntime(sourcePath: string, destinationPath: string): void {
+	if (!fs.existsSync(sourcePath)) {
+		throw new Error(`Xynapse runtime binary was not found at ${sourcePath}`);
+	}
+	fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+	fs.copyFileSync(sourcePath, destinationPath);
+	if (process.platform !== 'win32') {
+		fs.chmodSync(destinationPath, 0o755);
+	}
+}
+
+function buildXynapseRuntimeForHost(extensionPath: string, runtimePath: string, runtimeName: string): boolean {
+	const workspaceRoot = path.dirname(root);
+	const rustRoot = path.join(workspaceRoot, '.external', 'claw-code', 'rust');
+	const manifestPath = path.join(rustRoot, 'Cargo.toml');
+	if (!fs.existsSync(manifestPath)) {
+		return false;
+	}
+
+	fancyLog('Building bundled Xynapse runtime:', ansiColors.yellow(runtimeName), '...');
+	const result = cp.spawnSync('cargo', ['build', '--release', '--manifest-path', manifestPath, '--bin', 'xynapse'], {
+		cwd: rustRoot,
+		stdio: 'inherit'
+	});
+	if (result.error) {
+		const error = result.error as NodeJS.ErrnoException;
+		if (error.code === 'ENOENT') {
+			fancyLog('Skipping Xynapse runtime rebuild because Cargo is not on PATH.');
+			return false;
+		}
+		throw error;
+	}
+	if (result.status !== 0) {
+		throw new Error(`Failed to build bundled Xynapse runtime for ${path.basename(extensionPath)}.`);
+	}
+
+	const builtRuntimePath = path.join(rustRoot, 'target', 'release', runtimeName);
+	copyXynapseRuntime(builtRuntimePath, runtimePath);
+	return true;
+}
+
+function prepareXynapseAssistantRuntime(extensionPath: string): void {
+	const runtimeName = process.platform === 'win32' ? 'xynapse.exe' : 'xynapse';
+	const runtimePath = path.join(extensionPath, 'bin', runtimeName);
+	const explicitRuntimePath = process.env.XYNAPSE_RUNTIME_BINARY;
+	for (const legacyRuntimePath of [
+		path.join(extensionPath, 'bin', 'claw.exe'),
+		path.join(extensionPath, 'bin', 'claw')
+	]) {
+		fs.rmSync(legacyRuntimePath, { force: true });
+	}
+
+	if (explicitRuntimePath) {
+		copyXynapseRuntime(explicitRuntimePath, runtimePath);
+		return;
+	}
+
+	const rebuiltRuntime = buildXynapseRuntimeForHost(extensionPath, runtimePath, runtimeName);
+	if (!rebuiltRuntime && !fs.existsSync(runtimePath)) {
+		throw new Error(`xynapse-assistant cannot be packaged without ${path.relative(extensionPath, runtimePath)}. Run the extension prepackage step or set XYNAPSE_RUNTIME_BINARY.`);
+	}
+}
+
+function assertXynapseAssistantConnectorBundle(extensionPath: string): void {
+	const requiredFiles = [
+		'package.json',
+		'package.nls.json',
+		'xynapse-config.yaml',
+		'config_schema.json',
+		'xynapse_rc_schema.json',
+		path.join('out', 'extension.js'),
+		path.join('gui', 'assets', 'index.js'),
+		path.join('bin', process.platform === 'win32' ? 'xynapse.exe' : 'xynapse'),
+	];
+	for (const relativePath of requiredFiles) {
+		const fullPath = path.join(extensionPath, relativePath);
+		if (!fs.existsSync(fullPath)) {
+			throw new Error(`xynapse-assistant cannot be packaged without ${relativePath}.`);
+		}
+	}
+
+	for (const legacyRuntimePath of [
+		path.join(extensionPath, 'bin', 'claw.exe'),
+		path.join(extensionPath, 'bin', 'claw')
+	]) {
+		if (fs.existsSync(legacyRuntimePath)) {
+			throw new Error(`xynapse-assistant still contains legacy runtime ${path.relative(extensionPath, legacyRuntimePath)}.`);
+		}
+	}
+
+	const packageJson = JSON.parse(fs.readFileSync(path.join(extensionPath, 'package.json'), 'utf8'));
+	if (packageJson.name !== 'xynapse-assistant' || packageJson.publisher !== 'xynapse') {
+		throw new Error(`xynapse-assistant package identity is ${packageJson.publisher}.${packageJson.name}, expected xynapse.xynapse-assistant.`);
+	}
+
+	const configYaml = fs.readFileSync(path.join(extensionPath, 'xynapse-config.yaml'), 'utf8');
+	const extensionJs = fs.readFileSync(path.join(extensionPath, 'out', 'extension.js'), 'utf8');
+	const guiJs = fs.readFileSync(path.join(extensionPath, 'gui', 'assets', 'index.js'), 'utf8');
+	for (const provider of ['yandex_gpt', 'gigachat']) {
+		if (!configYaml.includes(`provider: ${provider}`)) {
+			throw new Error(`xynapse-assistant config is missing provider ${provider}.`);
+		}
+		if (!extensionJs.includes(`"${provider}"`) && !extensionJs.includes(`'${provider}'`)) {
+			throw new Error(`xynapse-assistant bundled extension is missing provider ${provider}. Rebuild the assistant extension before packaging.`);
+		}
+	}
+	for (const marker of ['XynapseFindCoreRuntimeModel', 'XynapseCollectCoreRuntimeModels']) {
+		if (!guiJs.includes(marker)) {
+			throw new Error(`xynapse-assistant bundled GUI is missing ${marker}. Rebuild the assistant GUI before packaging.`);
+		}
+	}
+}
+
 function fromLocalNormal(extensionPath: string): Stream {
 	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
 	const result = es.through();
+	const extensionName = path.basename(extensionPath);
+	if (extensionName === 'xynapse-assistant') {
+		try {
+			prepareXynapseAssistantRuntime(extensionPath);
+			assertXynapseAssistantConnectorBundle(extensionPath);
+		} catch (error) {
+			process.nextTick(() => result.emit('error', error));
+			return result.pipe(createStatsStream(extensionName));
+		}
+	}
+	const packageManager = extensionName === 'xynapse-assistant'
+		? vsce.PackageManager.None
+		: vsce.PackageManager.Npm;
 
-	vsce.listFiles({ cwd: extensionPath, packageManager: vsce.PackageManager.Npm })
+	vsce.listFiles({ cwd: extensionPath, packageManager })
 		.then(fileNames => {
 			const files = fileNames
 				.map(fileName => path.join(extensionPath, fileName))

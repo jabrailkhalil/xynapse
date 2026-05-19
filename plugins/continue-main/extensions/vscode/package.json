@@ -50,9 +50,9 @@
     "onUri",
     "onStartupFinished",
     "onCommand:xynapse.openConfigFile",
-    "onCommand:xynapse.clawDoctor",
-    "onCommand:xynapse.clawPrompt",
-    "onView:xynapseGUIView"
+    "onCommand:xynapse.runtimeDoctor",
+    "onCommand:xynapse.runtimePrompt",
+    "onView:xynapse.xynapseGUIView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -95,13 +95,6 @@
     "configuration": {
       "title": "Xynapse",
       "properties": {
-        "xynapse.telemetryEnabled": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Xynapse collects anonymous usage data, cleaned of PII, to help us improve the product for our users. Read more  at [xynapse.dev › Telemetry](https://docs.xynapse.dev/telemetry).",
-          "markdownDeprecationMessage": "This setting is deprecated and will be removed in a later version. Please use the _Telemetry > Allow Anonymous Telemetry_ setting in the extension's User Settings page.",
-          "deprecationMessage": "Please use the _Telemetry > Allow Anonymous Telemetry_ setting in the extension's User Settings page."
-        },
         "xynapse.showInlineTip": {
           "type": "boolean",
           "default": true,
@@ -157,12 +150,12 @@
           "default": 60,
           "description": "The period of time in minutes between automatic syncs."
         },
-        "xynapse.clawPath": {
+        "xynapse.runtimePath": {
           "type": "string",
           "default": "",
           "description": "Path to the Xynapse runtime executable. Leave empty to use PATH or the bundled runtime."
         },
-        "xynapse.clawModel": {
+        "xynapse.runtimeModel": {
           "type": "string",
           "default": "auto",
           "description": "Model passed to Xynapse Core runtime prompts. Use auto to follow the selected Xynapse model when compatible, or set an explicit runtime model such as openai/gpt-4.1-mini, grok, or qwen-plus."
@@ -234,7 +227,7 @@
       {
         "command": "xynapse.openConfigPage",
         "category": "Xynapse",
-        "title": "Open Settings",
+        "title": "Open Xynapse Settings",
         "icon": "$(gear)",
         "group": "Xynapse"
       },
@@ -245,13 +238,13 @@
         "group": "Xynapse"
       },
       {
-        "command": "xynapse.clawDoctor",
+        "command": "xynapse.runtimeDoctor",
         "category": "Xynapse",
         "title": "Run Xynapse Runtime Diagnostic",
         "group": "Xynapse"
       },
       {
-        "command": "xynapse.clawPrompt",
+        "command": "xynapse.runtimePrompt",
         "category": "Xynapse",
         "title": "Run Xynapse Core Runtime Prompt",
         "group": "Xynapse"
@@ -562,10 +555,10 @@
           "command": "xynapse.openInNewWindow"
         },
         {
-          "command": "xynapse.clawDoctor"
+          "command": "xynapse.runtimeDoctor"
         },
         {
-          "command": "xynapse.clawPrompt"
+          "command": "xynapse.runtimePrompt"
         }
       ],
       "editor/context": [
@@ -640,7 +633,7 @@
       ]
     },
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "xynapse",
           "title": "Xynapse",
@@ -796,7 +789,6 @@
     "ncp": "^2.0.0",
     "node-fetch": "^3.3.2",
     "node-machine-id": "^1.1.12",
-    "posthog-node": "^3.6.3",
     "react-markdown": "^8.0.7",
     "react-redux": "^8.0.5",
     "read-last-lines": "^1.8.0",

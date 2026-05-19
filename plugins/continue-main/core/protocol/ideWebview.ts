@@ -25,11 +25,11 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   toggleDevTools: [undefined, void];
   reloadWindow: [undefined, void];
   "xynapse/importProfile": [undefined, void];
-  "xynapse/clawDoctor": [
+  "xynapse/runtimeDoctor": [
     { runId?: string; workspaceDir?: string } | undefined,
     void,
   ];
-  "xynapse/clawPrompt": [
+  "xynapse/runtimePrompt": [
     {
       prompt?: string;
       model?: string;
@@ -40,10 +40,33 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
       runId?: string;
       surface?: "core" | "lab";
       workspaceDir?: string;
+      sessionId?: string;
+      previousDiscussion?: string;
+      runtimeRules?: string;
+      allowedTools?: string;
     } | undefined,
     void,
   ];
-  "xynapse/clawStop": [{ runId?: string } | undefined, void];
+  "xynapse/runtimeStop": [{ runId?: string } | undefined, void];
+  "xynapse/deleteRuntimeSession": [
+    { sessionId?: string; workspaceDir?: string } | undefined,
+    void,
+  ];
+  "xynapse/clearRuntimeSessions": [
+    { workspaceDir?: string } | undefined,
+    void,
+  ];
+  "xynapse/confirmAndRestoreRuntimeCheckpoint": [
+    {
+      runId?: string;
+      sessionId?: string;
+      workspaceDir?: string;
+    } | undefined,
+    {
+      action: "restored" | "continue" | "cancel";
+      message?: string;
+    },
+  ];
   focusEditor: [undefined, void];
   toggleFullScreen: [{ newWindow?: boolean } | undefined, void];
   insertAtCursor: [{ text: string }, void];

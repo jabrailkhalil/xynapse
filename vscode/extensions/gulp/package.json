@@ -7,7 +7,7 @@
   "icon": "images/gulp.png",
   "license": "MIT",
   "engines": {
-    "vscode": "*"
+    "vscode": "^1.0.0"
   },
   "categories": [
     "Other"

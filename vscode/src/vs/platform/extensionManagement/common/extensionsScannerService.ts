@@ -596,6 +596,9 @@ class ExtensionsScanner extends Disposable {
 				if (input.type === ExtensionType.User && basename(c.resource).indexOf('.') === 0) {
 					return null;
 				}
+				if (!await this.fileService.exists(joinPath(c.resource, 'package.json'))) {
+					return null;
+				}
 				const extensionScannerInput = new ExtensionScannerInput(c.resource, input.mtime, input.applicationExtensionslocation, input.applicationExtensionslocationMtime, input.profile, input.profileScanOptions, input.type, input.validate, input.productVersion, input.productDate, input.productCommit, input.devMode, input.language, input.translations);
 				return this.scanExtension(extensionScannerInput);
 			}));

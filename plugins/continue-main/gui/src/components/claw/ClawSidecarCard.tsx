@@ -1,15 +1,21 @@
 import {
   BeakerIcon,
   ChevronDownIcon,
-  CommandLineIcon,
   FolderOpenIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
-import { useContext, useMemo, useState } from "react";
+import { renderChatMessage } from "core/util/messageContent";
+import { useContext, useMemo, useRef, useState } from "react";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { selectSelectedChatModel } from "../../redux/slices/configSlice";
+import {
+  appendRuntimeChatChunk,
+  finishRuntimeChatTurn,
+  startRuntimeChatTurn,
+} from "../../redux/slices/sessionSlice";
+import { saveCurrentSession } from "../../redux/thunks/session";
 import { setDialogMessage, setShowDialog } from "../../redux/slices/uiSlice";
 import CouncilDialog, { CouncilConfig } from "../council/CouncilDialog";
 
@@ -19,6 +25,11 @@ type XynapseModeTabsProps = {
   showOpenFolderAction?: boolean;
   mode?: XynapseMode;
   onModeChange?: (mode: XynapseMode) => void;
+  coreModelKey?: string;
+  onCoreModelKeyChange?: (key: string) => void;
+  coreRunMode?: CoreRunMode;
+  onCoreRunModeChange?: (mode: CoreRunMode) => void;
+  coreRunState?: LabRunState;
 };
 
 type XynapseModeSwitcherProps = {
@@ -26,8 +37,8 @@ type XynapseModeSwitcherProps = {
   onModeChange: (mode: XynapseMode) => void;
 };
 
-type LabRunStatus = "idle" | "running" | "done" | "error";
-type CoreRunMode = "plan" | "workspace-write" | "danger-full-access";
+export type LabRunStatus = "idle" | "running" | "done" | "error";
+export type CoreRunMode = "plan" | "workspace-write" | "danger-full-access";
 
 type LabOutputChunk = {
   id: string;
@@ -35,7 +46,7 @@ type LabOutputChunk = {
   text: string;
 };
 
-type LabRunState = {
+export type LabRunState = {
   runId?: string;
   status: LabRunStatus;
   title: string;
@@ -45,7 +56,7 @@ type LabRunState = {
   output: LabOutputChunk[];
 };
 
-type LabModelLike = {
+export type LabModelLike = {
   model?: string;
   title?: string;
   provider?: string;
@@ -59,13 +70,17 @@ type LabNotice = {
   runPrompt?: string;
 };
 
-const defaultCorePrompt = "implement the requested code change in this workspace";
+export const DEFAULT_CORE_RUN_STATE: LabRunState = {
+  status: "idle",
+  title: "Ready for Core run",
+  output: [],
+};
 
-function createClientRunId() {
+export function createClientRunId() {
   return `lab-ui-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function getLabModelKey(model: LabModelLike | null | undefined) {
+export function getLabModelKey(model: LabModelLike | null | undefined) {
   if (!model) {
     return "";
   }
@@ -79,7 +94,90 @@ function getLabModelLabel(model: LabModelLike | null | undefined) {
   return model.title ?? model.model ?? "selected model";
 }
 
-function collectLabModels(config: any, selectedModel: LabModelLike | null) {
+export function isCoreRuntimeSupportedModel(
+  model: LabModelLike | null | undefined,
+) {
+  if (!model) {
+    return false;
+  }
+
+  const provider = (model.provider ?? "").toLowerCase();
+  const modelName = (model.model ?? model.title ?? "").toLowerCase();
+
+  if (provider.includes("yandex") || modelName.startsWith("gpt://")) {
+    return true;
+  }
+  if (provider.includes("anthropic")) {
+    return true;
+  }
+  if (
+    provider.includes("openai") ||
+    provider.includes("openai-compatible") ||
+    provider.includes("deepseek") ||
+    modelName.includes("deepseek")
+  ) {
+    return true;
+  }
+  if (provider.includes("xai") || provider.includes("grok") || modelName.includes("grok")) {
+    return true;
+  }
+  if (provider.includes("dashscope") || provider === "qwen" || provider === "kimi") {
+    return true;
+  }
+
+  return false;
+}
+
+export function collectCoreRuntimeModels(
+  config: any,
+  selectedModel: LabModelLike | null,
+) {
+  return collectLabModels(config, selectedModel).filter(
+    isCoreRuntimeSupportedModel,
+  );
+}
+
+export function findCoreRuntimeModel(
+  config: any,
+  selectedModel: LabModelLike | null | undefined,
+) {
+  const models = collectCoreRuntimeModels(config, selectedModel ?? null);
+  return (
+    models.find((model) => getLabModelKey(model) === getLabModelKey(selectedModel)) ??
+    models[0]
+  );
+}
+
+function trimChatContext(text: string, limit = 1_800) {
+  if (text.length <= limit) {
+    return text;
+  }
+  return `${text.slice(0, 600)}\n[...trimmed...]\n${text.slice(-limit + 600)}`;
+}
+
+export function buildPreviousDiscussion(
+  history: Array<{ message?: { role?: string } }>,
+) {
+  const turns = history
+    .filter((item) => {
+      const role = item.message?.role;
+      return role === "user" || role === "assistant";
+    })
+    .slice(-8)
+    .map((item) => {
+      const role = item.message?.role === "assistant" ? "Xynapse" : "User";
+      const text = item.message ? renderChatMessage(item.message as any) : "";
+      return `${role}: ${trimChatContext(text.trim())}`;
+    })
+    .filter((line) => !line.endsWith(": "));
+
+  return trimChatContext(turns.join("\n\n"), 10_000);
+}
+
+export function collectLabModels(
+  config: any,
+  selectedModel: LabModelLike | null,
+) {
   const models: LabModelLike[] = [];
   const seen = new Set<string>();
 
@@ -266,6 +364,12 @@ export function XynapseResearchCard({
 }: XynapseModeTabsProps) {
   const ideMessenger = useContext(IdeMessengerContext);
   const dispatch = useAppDispatch();
+  const loggedRunIdsRef = useRef(new Set<string>());
+  const chatHistory = useAppSelector((state) => state.session.history);
+  const previousDiscussion = useMemo(
+    () => buildPreviousDiscussion(chatHistory),
+    [chatHistory],
+  );
   const [labNotice, setLabNotice] = useState<LabNotice | null>(null);
   const [runState, setRunState] = useState<LabRunState>({
     status: "idle",
@@ -276,6 +380,32 @@ export function XynapseResearchCard({
   useWebviewListener(
     "xynapse/labRunEvent",
     async (event) => {
+      if (loggedRunIdsRef.current.has(event.runId)) {
+        if (event.kind === "chunk" || event.kind === "error") {
+          dispatch(
+            appendRuntimeChatChunk({
+              runId: event.runId,
+              text: event.text ?? "",
+            }),
+          );
+        }
+        if (event.kind === "end" || event.kind === "error") {
+          dispatch(
+            finishRuntimeChatTurn({
+              runId: event.runId,
+              exitCode: event.exitCode,
+            }),
+          );
+          loggedRunIdsRef.current.delete(event.runId);
+          void dispatch(
+            saveCurrentSession({
+              openNewSession: false,
+              generateTitle: true,
+            }),
+          );
+        }
+      }
+
       setRunState((previous) => {
         if (event.kind === "start") {
           return {
@@ -376,21 +506,32 @@ export function XynapseResearchCard({
   };
 
   const runLabPrompt = (prompt: string) => {
-    if (!prompt.trim() || runState.status === "running") {
+    if (showOpenFolderAction || !prompt.trim() || runState.status === "running") {
       return;
     }
-    ideMessenger.post("xynapse/clawPrompt", {
-      runId: createClientRunId(),
+    const runId = createClientRunId();
+    loggedRunIdsRef.current.add(runId);
+    dispatch(
+      startRuntimeChatTurn({
+        runId,
+        prompt,
+        surface: "lab",
+      }),
+    );
+    ideMessenger.post("xynapse/runtimePrompt", {
+      runId,
       prompt,
       surface: "lab",
+      sessionId: "xynapse-lab",
       permissionMode: "read-only",
       planMode: true,
+      previousDiscussion,
     });
   };
 
   const stopLabRun = () => {
     if (runState.runId) {
-      ideMessenger.post("xynapse/clawStop", { runId: runState.runId });
+      ideMessenger.post("xynapse/runtimeStop", { runId: runState.runId });
     }
   };
 
@@ -487,11 +628,17 @@ export function XynapseResearchCard({
               <button
                 type="button"
                 className="mt-3 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-xs font-medium text-violet-50 transition hover:bg-violet-300/16 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={runState.status === "running"}
+                disabled={showOpenFolderAction || runState.status === "running"}
                 onClick={() => runLabPrompt(labNotice.runPrompt!)}
-                title="Run this Lab algorithm in read-only mode against the current project context."
+                title={
+                  showOpenFolderAction
+                    ? "Open a project folder before running a prompt."
+                    : "Run this Lab algorithm in read-only mode against the current project context."
+                }
               >
-                {runState.status === "running"
+                {showOpenFolderAction
+                  ? "Open project first"
+                  : runState.status === "running"
                   ? "Running..."
                   : labNotice.runLabel ?? "Run"}
               </button>
@@ -583,7 +730,14 @@ export function XynapseModeTabs(props: XynapseModeTabsProps) {
     <div className="space-y-3">
       <XynapseModeSwitcher mode={mode} onModeChange={setMode} />
       {mode === "core" ? (
-        <ClawSidecarCard showOpenFolderAction={props.showOpenFolderAction} />
+        <ClawSidecarCard
+          modelKey={props.coreModelKey}
+          onModelKeyChange={props.onCoreModelKeyChange}
+          onRunModeChange={props.onCoreRunModeChange}
+          runMode={props.coreRunMode}
+          runState={props.coreRunState}
+          showOpenFolderAction={props.showOpenFolderAction}
+        />
       ) : (
         <XynapseResearchCard {...props} />
       )}
@@ -593,134 +747,56 @@ export function XynapseModeTabs(props: XynapseModeTabsProps) {
 
 export function ClawSidecarCard({
   showOpenFolderAction,
+  modelKey,
+  onModelKeyChange,
+  runMode,
+  onRunModeChange,
+  runState = DEFAULT_CORE_RUN_STATE,
 }: {
   showOpenFolderAction?: boolean;
+  modelKey?: string;
+  onModelKeyChange?: (key: string) => void;
+  runMode?: CoreRunMode;
+  onRunModeChange?: (mode: CoreRunMode) => void;
+  runState?: LabRunState;
 } = {}) {
   const ideMessenger = useContext(IdeMessengerContext);
   const coreSelectedModel = useAppSelector(selectSelectedChatModel);
   const config = useAppSelector((state) => state.config.config);
-  const [prompt, setPrompt] = useState(defaultCorePrompt);
-  const [modelMenuKey, setModelMenuKey] = useState<string>("");
-  const [runMode, setRunMode] = useState<CoreRunMode>("workspace-write");
-  const [runState, setRunState] = useState<LabRunState>({
-    status: "idle",
-    title: "Ready for Core run",
-    output: [],
-  });
+  const [localModelKey, setLocalModelKey] = useState<string>("");
+  const [localRunMode, setLocalRunMode] =
+    useState<CoreRunMode>("workspace-write");
+  const activeModelKey = modelKey ?? localModelKey;
+  const activeRunMode = runMode ?? localRunMode;
+  const setActiveModelKey = onModelKeyChange ?? setLocalModelKey;
+  const setActiveRunMode = onRunModeChange ?? setLocalRunMode;
 
   const models = useMemo(
-    () => collectLabModels(config, coreSelectedModel),
+    () => collectCoreRuntimeModels(config, coreSelectedModel),
     [config, coreSelectedModel],
   );
   const selectedModel =
-    models.find((model) => getLabModelKey(model) === modelMenuKey) ??
-    coreSelectedModel ??
+    models.find((model) => getLabModelKey(model) === activeModelKey) ??
     models[0];
   const selectedModelKey = getLabModelKey(selectedModel);
-
-  useWebviewListener(
-    "xynapse/labRunEvent",
-    async (event) => {
-      setRunState((previous) => {
-        if (event.kind === "start") {
-          return {
-            runId: event.runId,
-            status: "running",
-            title: event.title ?? "Xynapse Core run",
-            cwd: event.cwd,
-            model: event.model,
-            output: event.text
-              ? [
-                  {
-                    id: `${event.runId}-start`,
-                    stream: event.stream ?? "system",
-                    text: event.text,
-                  },
-                ]
-              : [],
-          };
-        }
-
-        if (previous.runId && event.runId !== previous.runId) {
-          return previous;
-        }
-
-        const output =
-          event.text && event.text.length > 0
-            ? [
-                ...previous.output,
-                {
-                  id: `${event.runId}-${previous.output.length}-${Date.now()}`,
-                  stream: event.stream ?? "system",
-                  text: event.text,
-                },
-              ]
-            : previous.output;
-
-        if (event.kind === "chunk") {
-          return { ...previous, status: "running", output };
-        }
-
-        if (event.kind === "error") {
-          return { ...previous, status: "error", output };
-        }
-
-        return {
-          ...previous,
-          status: event.exitCode === 0 ? "done" : "error",
-          exitCode: event.exitCode,
-          output,
-        };
-      });
-    },
-    [],
-  );
+  const workspaceLocked = !!showOpenFolderAction;
 
   const runDoctor = () => {
-    ideMessenger.post("xynapse/clawDoctor", { runId: createClientRunId() });
+    if (workspaceLocked) {
+      return;
+    }
+    ideMessenger.post("xynapse/runtimeDoctor", { runId: createClientRunId() });
   };
 
   const stopRun = () => {
     if (runState.runId) {
-      ideMessenger.post("xynapse/clawStop", { runId: runState.runId });
+      ideMessenger.post("xynapse/runtimeStop", { runId: runState.runId });
     }
   };
-
-  const runPrompt = () => {
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || runState.status === "running") {
-      return;
-    }
-
-    if (
-      runMode === "danger-full-access" &&
-      !window.confirm(
-        "Full access allows the runtime to use all available tools, including shell commands. Continue?",
-      )
-    ) {
-      return;
-    }
-
-    ideMessenger.post("xynapse/clawPrompt", {
-      runId: createClientRunId(),
-      prompt: trimmedPrompt,
-      model: selectedModel?.model,
-      modelTitle: selectedModel?.title,
-      provider: selectedModel?.provider,
-      surface: "core",
-      permissionMode: runMode === "plan" ? "read-only" : runMode,
-      planMode: runMode === "plan",
-    });
-  };
-
-  const outputText =
-    runState.output.length > 0
-      ? runState.output.map((chunk) => chunk.text).join("")
-      : "No Core runtime output yet. Open a project folder, describe the code task, then run. After the first answer, type the next instruction in the same box and run again.";
 
   return (
     <section
-      className="m-0 box-border min-w-0 max-w-full overflow-visible rounded-2xl border border-solid border-violet-300/20 bg-[#101010] p-3 text-foreground shadow-[0_18px_60px_rgba(0,0,0,0.35)]"
+      className="m-0 box-border min-w-0 max-w-full overflow-visible rounded-xl border border-solid border-violet-300/15 bg-[#101010] p-3 text-foreground"
       title="Xynapse Core is the coding runtime. It can inspect, plan, and edit files in the opened workspace."
     >
       <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
@@ -729,14 +805,10 @@ export function ClawSidecarCard({
             <h3 className="m-0 truncate text-base font-semibold">
               Xynapse Core
             </h3>
-            <span className="rounded-full border border-solid border-emerald-300/20 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200">
+          <span className="rounded-full border border-solid border-emerald-300/20 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200">
               coding runtime
             </span>
           </div>
-          <p className="m-0 mt-1 text-xs leading-5 text-description">
-            Core uses the stronger workspace runtime for code writing and
-            edits. Council and BVC live in Xynapse Lab.
-          </p>
         </div>
         <button
           type="button"
@@ -773,9 +845,11 @@ export function ClawSidecarCard({
         Core model
       </label>
       <ModelDropdown
-        disabled={runState.status === "running" || models.length === 0}
+        disabled={
+          workspaceLocked || runState.status === "running" || models.length === 0
+        }
         models={models}
-        onChange={setModelMenuKey}
+        onChange={setActiveModelKey}
         selectedKey={selectedModelKey}
         selectedModel={selectedModel}
       />
@@ -784,12 +858,12 @@ export function ClawSidecarCard({
         <button
           type="button"
           className={`rounded-lg border border-solid px-3 py-2 text-left text-xs ${
-            runMode === "plan"
+            activeRunMode === "plan"
               ? "border-violet-300/35 bg-violet-300/15 text-violet-50"
               : "border-white/10 bg-black/30 text-description"
           } disabled:bg-black/30 disabled:text-description disabled:opacity-60`}
-          disabled={runState.status === "running"}
-          onClick={() => setRunMode("plan")}
+          disabled={workspaceLocked || runState.status === "running"}
+          onClick={() => setActiveRunMode("plan")}
           title="Plan mode: inspect and propose a plan without editing files."
         >
           Plan
@@ -798,12 +872,12 @@ export function ClawSidecarCard({
         <button
           type="button"
           className={`rounded-lg border border-solid px-3 py-2 text-left text-xs ${
-            runMode === "workspace-write"
+            activeRunMode === "workspace-write"
               ? "border-violet-300/35 bg-violet-300/15 text-violet-50"
               : "border-white/10 bg-black/30 text-description"
           } disabled:bg-black/30 disabled:text-description disabled:opacity-60`}
-          disabled={runState.status === "running"}
-          onClick={() => setRunMode("workspace-write")}
+          disabled={workspaceLocked || runState.status === "running"}
+          onClick={() => setActiveRunMode("workspace-write")}
           title="Edit mode: allow file changes inside the opened workspace."
         >
           Edit
@@ -812,12 +886,12 @@ export function ClawSidecarCard({
         <button
           type="button"
           className={`rounded-lg border border-solid px-3 py-2 text-left text-xs ${
-            runMode === "danger-full-access"
+            activeRunMode === "danger-full-access"
               ? "border-red-300/35 bg-[#281316] text-red-50"
               : "border-white/10 bg-black/30 text-description"
           } disabled:bg-black/30 disabled:text-description disabled:opacity-60`}
-          disabled={runState.status === "running"}
-          onClick={() => setRunMode("danger-full-access")}
+          disabled={workspaceLocked || runState.status === "running"}
+          onClick={() => setActiveRunMode("danger-full-access")}
           title="Full mode: all runtime tools, including shell commands. Requires explicit confirmation before run."
         >
           Full
@@ -825,39 +899,11 @@ export function ClawSidecarCard({
         </button>
       </div>
 
-      <textarea
-        className="box-border min-h-[92px] w-full max-w-full resize-y rounded-xl border border-solid border-white/10 bg-[#09090b] px-3 py-2 text-sm leading-5 text-foreground outline-none transition focus:border-violet-300/40"
-        disabled={runState.status === "running"}
-        onChange={(event) => setPrompt(event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-            event.preventDefault();
-            runPrompt();
-          }
-        }}
-        placeholder="Describe the code task..."
-        value={prompt}
-      />
-      <div className="mt-1 text-[11px] leading-4 text-description">
-        Follow-up prompts continue the same Core context. Select Full mode when
-        the task must run scripts or shell commands.
-      </div>
-
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-xs font-medium text-violet-50 transition hover:bg-violet-300/16 disabled:cursor-not-allowed disabled:bg-[#191322] disabled:text-violet-100 disabled:opacity-60"
-          disabled={runState.status === "running" || prompt.trim().length === 0}
-          onClick={runPrompt}
-          title="Run the prompt through Xynapse Core runtime"
-        >
-          <CommandLineIcon className="h-3.5 w-3.5" />
-          Run Core task
-        </button>
-        <button
-          type="button"
           className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-2 text-xs text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-description disabled:opacity-60"
-          disabled={runState.status === "running"}
+          disabled={workspaceLocked || runState.status === "running"}
           onClick={runDoctor}
           title="Run runtime diagnostics for the opened workspace"
         >
@@ -875,10 +921,6 @@ export function ClawSidecarCard({
           </button>
         ) : null}
       </div>
-
-      <pre className="mt-3 box-border max-h-[360px] max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl border border-solid border-white/10 bg-[#070708] p-3 font-mono text-[11px] leading-5 text-zinc-200">
-        {outputText}
-      </pre>
     </section>
   );
 }

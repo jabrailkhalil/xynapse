@@ -4,7 +4,11 @@ import {
 } from "@heroicons/react/24/outline";
 import { Editor, JSONContent } from "@tiptap/react";
 import { ChatHistoryItem, InputModifiers } from "core";
-import { renderChatMessage } from "core/util/messageContent";
+import { getSystemMessageWithRules } from "core/llm/rules/getSystemMessageWithRules";
+import {
+  renderChatMessage,
+  renderContextItems,
+} from "core/util/messageContent";
 import {
   useCallback,
   useContext,
@@ -33,20 +37,25 @@ import {
 } from "../../redux/selectors/selectToolCalls";
 import { selectCurrentOrg } from "../../redux/slices/profilesSlice";
 import {
+  appendRuntimeChatChunk,
   cancelToolCall,
   ChatHistoryItemWithMessageId,
+  finishRuntimeChatTurn,
   newSession,
+  startRuntimeChatTurn,
   updateToolCallOutput,
 } from "../../redux/slices/sessionSlice";
 import { streamEditThunk } from "../../redux/thunks/edit";
-import { loadLastSession } from "../../redux/thunks/session";
+import {
+  loadLastSession,
+  saveCurrentSession,
+} from "../../redux/thunks/session";
 import { streamResponseThunk } from "../../redux/thunks/streamResponse";
 import { isJetBrains, isMetaEquivalentKeyPressed } from "../../util";
 import { ToolCallDiv } from "./ToolCallDiv";
 
 import { useStore } from "react-redux";
 import { BackgroundModeView } from "../../components/BackgroundMode/BackgroundModeView";
-import { CliInstallBanner } from "../../components/CliInstallBanner";
 import FeedbackDialog from "../../components/dialogs/FeedbackDialog";
 
 import { FatalErrorIndicator } from "../../components/config/FatalErrorNotice";
@@ -56,12 +65,12 @@ import { setDialogMessage, setShowDialog } from "../../redux/slices/uiSlice";
 import { RootState } from "../../redux/store";
 import { cancelStream } from "../../redux/thunks/cancelStream";
 import { getLocalStorage, setLocalStorage } from "../../util/localStorage";
+import { getRuntimeAllowedToolsForMode } from "../../util/xynapseRuntimeTools";
 import {
-  ClawSidecarCard,
-  XynapseResearchCard,
-  XynapseModeSwitcher,
+  buildPreviousDiscussion,
+  createClientRunId,
+  findCoreRuntimeModel,
 } from "../../components/claw/ClawSidecarCard";
-import type { XynapseMode } from "../../components/claw/ClawSidecarCard";
 import { EmptyChatBody } from "./EmptyChatBody";
 import { ExploreDialogWatcher } from "./ExploreDialogWatcher";
 import { useAutoScroll } from "./useAutoScroll";
@@ -90,6 +99,23 @@ const StepsDiv = styled.div`
 `;
 
 export const MAIN_EDITOR_INPUT_ID = "main-editor-input";
+
+function renderRuntimePromptFromEditorContent(
+  content: any,
+  contextItems: any[],
+) {
+  const prompt = renderChatMessage({
+    role: "user",
+    content,
+  } as any).trim();
+  const contextText = contextItems?.length
+    ? renderContextItems(contextItems as any).trim()
+    : "";
+
+  return [prompt, contextText ? `Attached context:\n${contextText}` : ""]
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 function fallbackRender({ error, resetErrorBoundary }: any) {
   // Call resetErrorBoundary() to reset the error boundary and retry the render.
@@ -129,7 +155,6 @@ export function Chat() {
   const showChatScrollbar = useAppSelector(
     (state) => state.config.config.ui?.showChatScrollbar,
   );
-  const codeToEdit = useAppSelector((state) => state.editModeState.codeToEdit);
   const isInEdit = useAppSelector((store) => store.session.isInEdit);
 
   const lastSessionId = useAppSelector((state) => state.session.lastSessionId);
@@ -140,7 +165,7 @@ export function Chat() {
     (state) => state.ui.hasDismissedExploreDialog,
   );
   const mode = useAppSelector((state) => state.session.mode);
-  const currentOrg = useAppSelector(selectCurrentOrg);
+  const runtimeRunIdsRef = useRef(new Set<string>());
   const jetbrains = useMemo(() => {
     return isJetBrains();
   }, []);
@@ -154,8 +179,43 @@ export function Chat() {
     async (paths) => {
       (window as any).workspacePaths = paths;
       setHasWorkspace(paths.length > 0);
-      if (paths.length > 0) {
+      if (paths.length > 0 && history.length === 0 && !lastSessionId) {
         dispatch(newSession());
+      }
+    },
+    [dispatch, history.length, lastSessionId],
+  );
+
+  useWebviewListener(
+    "xynapse/labRunEvent",
+    async (event) => {
+      if (!runtimeRunIdsRef.current.has(event.runId)) {
+        return;
+      }
+
+      if (event.kind === "chunk" || event.kind === "error") {
+        dispatch(
+          appendRuntimeChatChunk({
+            runId: event.runId,
+            text: event.text ?? "",
+          }),
+        );
+      }
+
+      if (event.kind === "end" || event.kind === "error") {
+        dispatch(
+          finishRuntimeChatTurn({
+            runId: event.runId,
+            exitCode: event.exitCode,
+          }),
+        );
+        runtimeRunIdsRef.current.delete(event.runId);
+        void dispatch(
+          saveCurrentSession({
+            openNewSession: false,
+            generateTitle: true,
+          }),
+        );
       }
     },
     [dispatch],
@@ -194,6 +254,10 @@ export function Chat() {
       index?: number,
       editorToClearOnSend?: Editor,
     ) => {
+      if (!hasWorkspace) {
+        return;
+      }
+
       const stateSnapshot = reduxStore.getState();
       const latestPendingToolCalls = selectPendingToolCalls(stateSnapshot);
       const latestPendingApplyStates = selectDoneApplyStates(stateSnapshot);
@@ -268,6 +332,124 @@ export function Chat() {
           ideMessenger.post("rejectDiff", applyState);
         }
       });
+
+      const shouldUseRuntime =
+        !isCurrentlyInEdit &&
+        (currentMode === "agent" ||
+          currentMode === "plan" ||
+          currentMode === "full");
+
+      if (shouldUseRuntime) {
+        void (async () => {
+          if (
+            typeof index === "number" &&
+            currentMode !== "plan" &&
+            stateSnapshot.session.history.length > index + 1 &&
+            ((stateSnapshot.session.history[index]?.message as any)?.metadata as any)
+              ?.xynapseRuntimeRunId
+          ) {
+            const restoreResult = await ideMessenger.request(
+              "xynapse/confirmAndRestoreRuntimeCheckpoint",
+              {
+                runId: (
+                  (stateSnapshot.session.history[index]?.message as any)?.metadata as any
+                )?.xynapseRuntimeRunId,
+                sessionId: stateSnapshot.session.id,
+              },
+            );
+
+            if (restoreResult.action === "cancel") {
+              return;
+            }
+          }
+
+          const defaultContextProviders =
+            stateSnapshot.config.config.experimental?.defaultContext ?? [];
+          const { selectedContextItems, content } =
+            await resolveEditorContent({
+              editorState,
+              modifiers,
+              ideMessenger,
+              defaultContextProviders,
+              availableSlashCommands: stateSnapshot.config.config.slashCommands,
+              dispatch,
+              getState: () => reduxStore.getState(),
+            });
+          const { systemMessage: runtimeRules, appliedRules } =
+            getSystemMessageWithRules({
+              availableRules: stateSnapshot.config.config.rules,
+              userMessage: {
+                role: "user",
+                content,
+              } as any,
+              contextItems: selectedContextItems,
+              rulePolicies: stateSnapshot.ui.ruleSettings,
+            });
+          const prompt = renderRuntimePromptFromEditorContent(
+            content,
+            selectedContextItems,
+          );
+
+          if (!prompt.trim()) {
+            return;
+          }
+
+          const runtimeModel = findCoreRuntimeModel(
+            stateSnapshot.config.config,
+            selectedModelByRole.chat,
+          );
+          if (!runtimeModel) {
+            return;
+          }
+          const allowedTools = getRuntimeAllowedToolsForMode({
+            mode: currentMode,
+            availableTools: stateSnapshot.config.config.tools,
+            toolSettings: stateSnapshot.ui.toolSettings,
+            toolGroupSettings: stateSnapshot.ui.toolGroupSettings,
+          });
+
+          const runId = createClientRunId();
+          const branchHistory =
+            typeof index === "number"
+              ? stateSnapshot.session.history.slice(0, index)
+              : stateSnapshot.session.history;
+          runtimeRunIdsRef.current.add(runId);
+          dispatch(
+            startRuntimeChatTurn({
+              runId,
+              prompt,
+              surface: "core",
+              index,
+              editorState,
+              contextItems: selectedContextItems,
+              appliedRules,
+            }),
+          );
+          ideMessenger.post("xynapse/runtimePrompt", {
+            runId,
+            prompt,
+            model: runtimeModel?.model,
+            modelTitle: runtimeModel?.title,
+            provider: runtimeModel?.provider,
+            surface: "core",
+            sessionId: stateSnapshot.session.id,
+            permissionMode:
+              currentMode === "plan"
+                ? "read-only"
+                : currentMode === "full"
+                  ? "danger-full-access"
+                  : "workspace-write",
+            planMode: currentMode === "plan",
+            runtimeRules: runtimeRules.trim() || undefined,
+            allowedTools,
+            previousDiscussion: buildPreviousDiscussion(branchHistory),
+          });
+          editorToClearOnSend?.commands.clearContent();
+        })();
+
+        return;
+      }
+
       const model = isCurrentlyInEdit
         ? (selectedModelByRole.edit ?? selectedModelByRole.chat)
         : selectedModelByRole.chat;
@@ -307,7 +489,13 @@ export function Chat() {
         setLocalStorage("mainTextEntryCounter", 1);
       }
     },
-    [dispatch, ideMessenger, reduxStore, setIsCreatingAgent],
+    [
+      dispatch,
+      hasWorkspace,
+      ideMessenger,
+      reduxStore,
+      setIsCreatingAgent,
+    ],
   );
 
   useWebviewListener(
@@ -370,6 +558,7 @@ export function Chat() {
             contextItems={contextItems}
             appliedRules={appliedRules}
             inputId={message.id}
+            disabled={!hasWorkspace}
           />
         );
       }
@@ -450,42 +639,19 @@ export function Chat() {
         </div>
       );
     },
-    [sendInput, isLastUserInput, history, stepsOpen, isStreaming],
+    [sendInput, isLastUserInput, history, stepsOpen, isStreaming, hasWorkspace],
   );
 
   const showScrollbar = showChatScrollbar ?? window.innerHeight > 5000;
-  const [xynapseMode, setXynapseMode] = useState<XynapseMode>("core");
-  const shouldShowMainInput =
-    hasWorkspace && mode === "background" && xynapseMode === "core";
-  const shouldShowPersistentModeSwitcher =
-    mode !== "background" && hasWorkspace && history.length > 0;
-  const shouldShowCoreRuntimeCard =
-    mode !== "background" &&
-    hasWorkspace &&
-    xynapseMode === "core" &&
-    history.length > 0;
-  const shouldShowLabAlgorithmsCard =
-    mode !== "background" &&
-    hasWorkspace &&
-    xynapseMode === "lab" &&
-    history.length > 0;
-  const shouldShowCoreChat = mode === "background" && xynapseMode === "core";
+  const shouldShowMainInput = hasWorkspace;
   const emptyStateBody =
-    mode === "background" && xynapseMode === "core" ? (
+    history.length > 0 ? null : mode === "background" ? (
       <BackgroundModeView isCreatingAgent={isCreatingAgent} />
     ) : !hasWorkspace ? (
-      <EmptyChatBody
-        noWorkspace
-        xynapseMode={xynapseMode}
-        onXynapseModeChange={setXynapseMode}
-      />
+      <EmptyChatBody noWorkspace />
     ) : (
       history.length === 0 && (
-        <EmptyChatBody
-          showOnboardingCard={onboardingCard.show}
-          xynapseMode={xynapseMode}
-          onXynapseModeChange={setXynapseMode}
-        />
+        <EmptyChatBody showOnboardingCard={onboardingCard.show} />
       )
     );
 
@@ -494,31 +660,12 @@ export function Chat() {
       {!!showSessionTabs && !isInEdit && <TabBar ref={tabsRef} />}
       {widget}
 
-      {shouldShowPersistentModeSwitcher ? (
-        <div className="mx-2 mb-2">
-          <XynapseModeSwitcher
-            mode={xynapseMode}
-            onModeChange={setXynapseMode}
-          />
-        </div>
-      ) : null}
-
       <StepsDiv
         ref={stepsDivRef}
         className={`min-h-0 flex-1 overflow-y-scroll pt-[8px] ${showScrollbar ? "thin-scrollbar" : "no-scrollbar"}`}
       >
-        {shouldShowCoreRuntimeCard ? (
-          <div className="mx-2 mb-3">
-            <ClawSidecarCard />
-          </div>
-        ) : null}
-        {shouldShowLabAlgorithmsCard ? (
-          <div className="mx-2 mb-3">
-            <XynapseResearchCard />
-          </div>
-        ) : null}
-        {shouldShowCoreChat ? highlights : null}
-        {hasWorkspace && shouldShowCoreChat && history
+        {highlights}
+        {history
           .filter((item) => item.message.role !== "system")
           .map((item, index: number) => (
             <div
@@ -547,7 +694,7 @@ export function Chat() {
           }}
         >
           <div className="flex flex-row items-center justify-between pb-1 pl-0.5 pr-2">
-            <div className="xs:inline hidden">
+            <div className="xs:flex hidden items-center gap-1">
               {history.length === 0 && lastSessionId && !isInEdit && (
                 <NewSessionButton
                   onClick={async () => {
@@ -576,11 +723,6 @@ export function Chat() {
           />
         ) : null}
 
-        <CliInstallBanner
-          sessionCount={allSessionMetadata.length}
-          sessionThreshold={3}
-          permanentDismissal={true}
-        />
       </div>
     </>
   );

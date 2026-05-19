@@ -16,6 +16,7 @@ import { startLocalOllama } from "core/util/ollamaHelper";
 import {
   getConfigJsonPath,
   getConfigYamlPath,
+  getXynapseGlobalPath,
   setConfigFilePermissions,
 } from "core/util/paths";
 import { Telemetry } from "core/util/posthog";
@@ -56,28 +57,32 @@ let fullScreenPanel: vscode.WebviewPanel | undefined;
 let isMovingFullScreenPanelToNewWindow = false;
 const labProcesses = new Map<string, ReturnType<typeof spawn>>();
 
-type ClawPromptRequest =
+type RuntimePromptRequest =
   | string
   | {
       prompt?: string;
       model?: string;
       modelTitle?: string;
       provider?: string;
-      permissionMode?: ClawPermissionMode;
+      permissionMode?: RuntimePermissionMode;
       planMode?: boolean;
       runId?: string;
       surface?: "core" | "lab";
       workspaceDir?: string;
+      sessionId?: string;
+      previousDiscussion?: string;
+      runtimeRules?: string;
+      allowedTools?: string;
     };
 
-type ClawDoctorRequest = { runId?: string; workspaceDir?: string } | undefined;
+type RuntimeDoctorRequest = { runId?: string; workspaceDir?: string } | undefined;
 
-type ClawPermissionMode =
+type RuntimePermissionMode =
   | "read-only"
   | "workspace-write"
   | "danger-full-access";
 
-type ClawRunPlan = {
+type RuntimeRunPlan = {
   model: string;
   env: Record<string, string>;
   label: string;
@@ -89,9 +94,254 @@ type CoreConversationTurn = {
   assistant: string;
   exitCode: number | null;
   model?: string;
-  permissionMode?: ClawPermissionMode;
+  permissionMode?: RuntimePermissionMode;
   planMode?: boolean;
 };
+
+type RuntimeCheckpointRestoreRequest = {
+  runId?: string;
+  sessionId?: string;
+  workspaceDir?: string;
+};
+
+type RuntimeCheckpointRestoreResult = {
+  action: "restored" | "continue" | "cancel";
+  message?: string;
+};
+
+const XYNAPSE_PROFILE_FILES = [
+  "config.yaml",
+  "config.yml",
+  "config.json",
+  "account.json",
+  "profile.json",
+] as const;
+
+type XynapseProfileFileName = (typeof XYNAPSE_PROFILE_FILES)[number];
+
+type XynapseProfileBackupPayload = {
+  files?: Partial<Record<XynapseProfileFileName, string | object>>;
+  configYaml?: string;
+  configJson?: string | object;
+  accountJson?: string | object;
+  profileJson?: string | object;
+};
+
+function createProfileImportBackup(targetDir: string): string | undefined {
+  if (!fs.existsSync(targetDir)) {
+    return undefined;
+  }
+
+  const backupPath = path.join(
+    path.dirname(targetDir),
+    `${path.basename(targetDir)}.backup-before-import-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}`,
+  );
+  fs.cpSync(targetDir, backupPath, { recursive: true });
+  return backupPath;
+}
+
+function writeImportedProfileFile(
+  targetDir: string,
+  fileName: XynapseProfileFileName,
+  contents: string | object,
+) {
+  const outputName = fileName === "config.yml" ? "config.yaml" : fileName;
+  const serialized =
+    typeof contents === "string" ? contents : JSON.stringify(contents, null, 2);
+  const outputPath = path.join(targetDir, outputName);
+
+  fs.writeFileSync(outputPath, serialized);
+  if (outputName === "config.yaml" || outputName === "config.json") {
+    setConfigFilePermissions(outputPath);
+  }
+}
+
+function copyProfileFolder(sourceDir: string, targetDir: string): string[] {
+  const copied: string[] = [];
+
+  for (const fileName of XYNAPSE_PROFILE_FILES) {
+    const sourcePath = path.join(sourceDir, fileName);
+    if (!fs.existsSync(sourcePath)) {
+      continue;
+    }
+
+    const outputName = fileName === "config.yml" ? "config.yaml" : fileName;
+    const targetPath = path.join(targetDir, outputName);
+    fs.copyFileSync(sourcePath, targetPath);
+    if (outputName === "config.yaml" || outputName === "config.json") {
+      setConfigFilePermissions(targetPath);
+    }
+    copied.push(outputName);
+  }
+
+  return [...new Set(copied)];
+}
+
+function parseProfileBackupPayload(raw: string): XynapseProfileBackupPayload {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new Error("Selected backup is empty.");
+  }
+
+  const parsed =
+    trimmed.startsWith("{") || trimmed.startsWith("[")
+      ? JSON.parse(trimmed)
+      : YAML.parse(trimmed);
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Selected backup does not contain a profile object.");
+  }
+
+  return parsed as XynapseProfileBackupPayload;
+}
+
+function applyProfileBackupPayload(
+  payload: XynapseProfileBackupPayload,
+  targetDir: string,
+): string[] {
+  const written: string[] = [];
+
+  if (payload.files && typeof payload.files === "object") {
+    for (const [fileName, contents] of Object.entries(payload.files)) {
+      if (
+        !XYNAPSE_PROFILE_FILES.includes(fileName as XynapseProfileFileName) ||
+        contents === undefined
+      ) {
+        continue;
+      }
+      writeImportedProfileFile(
+        targetDir,
+        fileName as XynapseProfileFileName,
+        contents,
+      );
+      written.push(fileName === "config.yml" ? "config.yaml" : fileName);
+    }
+  }
+
+  if (payload.configYaml !== undefined) {
+    writeImportedProfileFile(targetDir, "config.yaml", payload.configYaml);
+    written.push("config.yaml");
+  }
+  if (payload.configJson !== undefined) {
+    writeImportedProfileFile(targetDir, "config.json", payload.configJson);
+    written.push("config.json");
+  }
+  if (payload.accountJson !== undefined) {
+    writeImportedProfileFile(targetDir, "account.json", payload.accountJson);
+    written.push("account.json");
+  }
+  if (payload.profileJson !== undefined) {
+    writeImportedProfileFile(targetDir, "profile.json", payload.profileJson);
+    written.push("profile.json");
+  }
+
+  return [...new Set(written)];
+}
+
+async function readProfileBackupFile(
+  filePath: string,
+  ide: VsCodeIde,
+): Promise<string> {
+  const raw = fs.readFileSync(filePath);
+  const text = raw.toString("utf8");
+  const trimmed = text.trim();
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("name:")) {
+    return text;
+  }
+
+  try {
+    return await ide.secretStorage.decrypt(filePath);
+  } catch (error) {
+    throw new Error(
+      `Could not decode encrypted backup. The file may belong to another encryption format or machine. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+async function importXynapseProfileBackup(
+  ide: VsCodeIde,
+  configHandler: ConfigHandler,
+) {
+  const selected = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: true,
+    canSelectMany: false,
+    openLabel: "Import Xynapse profile",
+    filters: {
+      "Xynapse profile backup": ["enc", "yaml", "yml", "json"],
+      "All files": ["*"],
+    },
+  });
+
+  if (!selected?.[0]) {
+    return;
+  }
+
+  const sourcePath = selected[0].fsPath;
+  const targetDir = getXynapseGlobalPath();
+  fs.mkdirSync(targetDir, { recursive: true });
+  const backupPath = createProfileImportBackup(targetDir);
+
+  const sourceStat = fs.statSync(sourcePath);
+  let importedFiles: string[] = [];
+
+  if (sourceStat.isDirectory()) {
+    importedFiles = copyProfileFolder(sourcePath, targetDir);
+  } else {
+    const ext = path.extname(sourcePath).toLowerCase();
+    const baseName = path.basename(sourcePath).toLowerCase();
+
+    if (baseName === "config.yaml" || baseName === "config.yml") {
+      fs.copyFileSync(sourcePath, getConfigYamlPath("vscode"));
+      setConfigFilePermissions(getConfigYamlPath("vscode"));
+      importedFiles = ["config.yaml"];
+    } else if (baseName === "config.json") {
+      fs.copyFileSync(sourcePath, getConfigJsonPath());
+      setConfigFilePermissions(getConfigJsonPath());
+      importedFiles = ["config.json"];
+    } else if (baseName === "account.json" || baseName === "profile.json") {
+      fs.copyFileSync(sourcePath, path.join(targetDir, baseName));
+      importedFiles = [baseName];
+    } else if (ext === ".enc" || ext === ".json" || ext === ".yaml" || ext === ".yml") {
+      const raw = await readProfileBackupFile(sourcePath, ide);
+
+      if (ext === ".yaml" || ext === ".yml") {
+        const parsed = YAML.parse(raw);
+        if (parsed?.models || parsed?.version || parsed?.schema) {
+          fs.writeFileSync(getConfigYamlPath("vscode"), raw);
+          setConfigFilePermissions(getConfigYamlPath("vscode"));
+          importedFiles = ["config.yaml"];
+        } else {
+          importedFiles = applyProfileBackupPayload(
+            parseProfileBackupPayload(raw),
+            targetDir,
+          );
+        }
+      } else {
+        importedFiles = applyProfileBackupPayload(
+          parseProfileBackupPayload(raw),
+          targetDir,
+        );
+      }
+    }
+  }
+
+  if (importedFiles.length === 0) {
+    throw new Error(
+      "No Xynapse profile files were found in the selected backup.",
+    );
+  }
+
+  await configHandler.reloadConfig("Imported Xynapse profile backup");
+
+  const backupMessage = backupPath ? ` Backup: ${backupPath}` : "";
+  void vscode.window.showInformationMessage(
+    `Imported Xynapse profile: ${importedFiles.join(", ")}.${backupMessage}`,
+  );
+}
 
 function getFullScreenTab() {
   const tabs = vscode.window.tabGroups.all.flatMap((tabGroup) => tabGroup.tabs);
@@ -167,7 +417,10 @@ function isSameOrInsidePath(parent: string, child: string) {
 }
 
 function getRequestedWorkspaceDir(
-  request: ClawPromptRequest | ClawDoctorRequest,
+  request:
+    | RuntimePromptRequest
+    | RuntimeDoctorRequest
+    | { workspaceDir?: string },
 ) {
   const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
   const requested =
@@ -196,7 +449,7 @@ function getRequestedWorkspaceDir(
   return workspaceFolders[0]?.uri.fsPath;
 }
 
-function getClawPermissionMode(request: ClawPromptRequest): ClawPermissionMode {
+function getRuntimePermissionMode(request?: RuntimePromptRequest): RuntimePermissionMode {
   if (
     request &&
     typeof request === "object" &&
@@ -214,7 +467,14 @@ function getClawPermissionMode(request: ClawPromptRequest): ClawPermissionMode {
   return "read-only";
 }
 
-function getLabAllowedTools(permissionMode: ClawPermissionMode) {
+function getLabAllowedTools(
+  permissionMode: RuntimePermissionMode,
+  requestedAllowedTools?: string,
+) {
+  if (requestedAllowedTools !== undefined) {
+    return requestedAllowedTools;
+  }
+
   if (permissionMode === "danger-full-access") {
     return undefined;
   }
@@ -226,9 +486,11 @@ function getLabAllowedTools(permissionMode: ClawPermissionMode) {
 function buildWorkspaceAwareLabPrompt(
   prompt: string,
   cwd: string,
-  permissionMode: ClawPermissionMode,
+  permissionMode: RuntimePermissionMode,
   planMode = false,
   previousTurns: CoreConversationTurn[] = [],
+  previousDiscussion?: string,
+  runtimeRules?: string,
 ) {
   const modeInstruction =
     planMode
@@ -238,6 +500,10 @@ function buildWorkspaceAwareLabPrompt(
         : permissionMode === "workspace-write"
       ? "You may inspect and edit files inside this workspace only. Before writing, identify the target files, keep changes minimal, and do not modify files outside the workspace."
       : "Read-only mode: inspect files and explain results, but do not edit files.";
+  const actionInstruction =
+    planMode || permissionMode === "read-only"
+      ? ""
+      : "When the user asks to create, fix, change, or improve files, use write_file/edit_file to complete the change before the final answer. If the user says a previous result is wrong, inspect the file and apply a concrete correction; do not merely defend the existing file unless there is a specific blocker.";
 
   return [
     `Workspace root: ${cwd}`,
@@ -245,7 +511,12 @@ function buildWorkspaceAwareLabPrompt(
     permissionMode === "danger-full-access"
       ? "Use file/search tools first. Shell/runtime tools are available only in full access mode after the user explicitly selected and confirmed this mode."
       : "Use the workspace file tools first: glob_search/grep_search/read_file for inspection, and edit_file/write_file only when edit mode is enabled. Do not use shell/bash in this embedded panel unless full access mode is selected.",
+    actionInstruction,
+    runtimeRules?.trim()
+      ? `Active Xynapse rules:\n${runtimeRules.trim()}`
+      : "",
     formatCoreConversationContext(previousTurns),
+    formatUiConversationContext(previousDiscussion),
     "User task:",
     prompt.trim(),
   ]
@@ -253,14 +524,14 @@ function buildWorkspaceAwareLabPrompt(
     .join("\n\n");
 }
 
-function getClawRequestRunId(request: ClawPromptRequest | ClawDoctorRequest) {
+function getRuntimeRequestRunId(request?: RuntimePromptRequest | RuntimeDoctorRequest) {
   if (request && typeof request === "object" && "runId" in request) {
     return request.runId;
   }
   return undefined;
 }
 
-function isCoreRuntimeRequest(request: ClawPromptRequest) {
+function isCoreRuntimeRequest(request?: RuntimePromptRequest) {
   return !(request && typeof request === "object" && request.surface === "lab");
 }
 
@@ -304,10 +575,89 @@ function sanitizeLabOutput(text: string) {
     .replace(/\bGlob\b/g, "File search")
     .replace(/\bGrep\b/g, "Text search")
     .replace(/🦀/g, "🧬")
+    .replace(/^claw\s+v/gim, "Xynapse runtime v")
     .replace(/\bclaw-code\b/gi, "Xynapse runtime")
-    .replace(/\bclaw\.exe\b/gi, "xynapse-runtime.exe")
+    .replace(/\bclaw\.exe\b/gi, "xynapse.exe")
     .replace(/\bclaw\b/gi, "Xynapse runtime")
     .replace(new RegExp(`\\b${["cla", "ude"].join("")}\\b`, "gi"), "Xynapse");
+}
+
+function cleanRuntimeOutputForChat(text: string) {
+  return text
+    .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/gm, "")
+    .replace(/^.*?\bXynapse thinking\.\.\.\s*/gm, "")
+    .replace(/\s*╭─\s*([^─]+?)\s*─╮\s*/g, "\n$1\n")
+    .replace(/^╭─\s*([^─]+?)\s*─╮\s*$/gm, "\n$1")
+    .replace(/^╰[─╯]+$/gm, "")
+    .replace(/^│\s?/gm, "")
+    .replace(/^╰─$/gm, "")
+    .replace(/\\\?\\([A-Za-z]:\\)/g, "$1")
+    .replace(/\?\\([A-Za-z]:\\)/g, "$1")
+    .replace(/^\s*Open Xynapse Lab help from the IDE for usage\.\s*$/gim, "")
+    .replace(/^\n+/, "")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+function isNoContentAssistantStreamError(text: string) {
+  return /assistant stream (produced|ended with).*no content/i.test(text);
+}
+
+function hasSuccessfulWorkspaceMutation(text: string) {
+  return /\b(Edited|Wrote|Created|Updated|Deleted)\b/i.test(text);
+}
+
+function buildToolOnlyCompletionMessage(text: string) {
+  const edited = /\bEdited\b/i.test(text);
+  const wrote = /\bWrote\b/i.test(text);
+
+  if (edited && wrote) {
+    return "\nXynapse applied the requested file changes and wrote the needed files.\n";
+  }
+  if (edited) {
+    return "\nXynapse applied the requested file changes.\n";
+  }
+  if (wrote) {
+    return "\nXynapse wrote the requested files.\n";
+  }
+  return "\nXynapse completed the requested workspace changes.\n";
+}
+
+function stripNoContentAssistantError(text: string) {
+  const markers = ["Xynapse request failed", "[error-kind:"];
+  const cutAt = markers
+    .map((marker) => text.lastIndexOf(marker))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+
+  if (cutAt === undefined) {
+    return text;
+  }
+
+  const suffix = text.slice(cutAt);
+  if (!isNoContentAssistantStreamError(suffix)) {
+    return text;
+  }
+
+  return text.slice(0, cutAt).trimEnd();
+}
+
+function recoverToolOnlyConversationTurn(
+  turn: CoreConversationTurn,
+): CoreConversationTurn {
+  if (
+    turn.exitCode === 0 ||
+    !isNoContentAssistantStreamError(turn.assistant) ||
+    !hasSuccessfulWorkspaceMutation(turn.assistant)
+  ) {
+    return turn;
+  }
+
+  const assistant = stripNoContentAssistantError(turn.assistant);
+  return {
+    ...turn,
+    assistant: `${assistant}${buildToolOnlyCompletionMessage(turn.assistant)}`,
+    exitCode: 0,
+  };
 }
 
 function providerEnvSummary(env: Record<string, string>) {
@@ -325,6 +675,53 @@ function providerEnvSummary(env: Record<string, string>) {
     `dashscope=${present("DASHSCOPE_API_KEY")}`,
     `xai=${present("XAI_API_KEY")}`,
   ].join(" ");
+}
+
+function getRuntimePathKey(env: Record<string, string | undefined>) {
+  if (process.platform !== "win32") {
+    return "PATH";
+  }
+  return Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "Path";
+}
+
+function getWindowsRuntimePathPrefixes() {
+  if (process.platform !== "win32") {
+    return [];
+  }
+
+  return [
+    path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "bin"),
+    path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "usr", "bin"),
+    path.join(
+      process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+      "Git",
+      "bin",
+    ),
+    path.join(
+      process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+      "Git",
+      "usr",
+      "bin",
+    ),
+  ].filter((candidate) => fs.existsSync(candidate));
+}
+
+function applyRuntimePathFixes(env: Record<string, string | undefined>) {
+  const pathKey = getRuntimePathKey(env);
+  const existingPath = env[pathKey] ?? env.PATH ?? process.env.PATH ?? "";
+  const pathParts = existingPath
+    .split(path.delimiter)
+    .filter((part) => part.trim().length > 0);
+  const normalizedExisting = new Set(
+    pathParts.map((part) => path.resolve(part).toLowerCase()),
+  );
+  const prefixes = getWindowsRuntimePathPrefixes().filter(
+    (prefix) => !normalizedExisting.has(path.resolve(prefix).toLowerCase()),
+  );
+  const fixedPath = [...prefixes, ...pathParts].join(path.delimiter);
+
+  env[pathKey] = fixedPath;
+  env.PATH = fixedPath;
 }
 
 function ensureXynapseRuntimeState(
@@ -368,8 +765,363 @@ function ensureXynapseRuntimeState(
   return { stateDir, runtimeDir, homeDir, configDir, cacheDir, xdgConfigDir };
 }
 
-function coreConversationPath(cwd: string) {
-  return path.join(cwd, ".xynapse", "runtime", "core-conversation.json");
+function runtimePromptFileRelPath(runId: string) {
+  return [".xynapse", "runtime", "prompts", `${safeRuntimeSessionId(runId) ?? "prompt"}.md`].join("/");
+}
+
+function writeRuntimePromptFile(cwd: string, runId: string, prompt: string) {
+  const relPath = runtimePromptFileRelPath(runId);
+  const absPath = path.join(cwd, ...relPath.split("/"));
+  fs.mkdirSync(path.dirname(absPath), { recursive: true });
+  fs.writeFileSync(absPath, prompt, "utf8");
+  return relPath;
+}
+
+function buildRuntimePromptFileBootstrap(promptRelPath: string) {
+  return [
+    "The full task prompt is stored as UTF-8 text in this workspace file:",
+    promptRelPath,
+    "",
+    "First call read_file for that exact relative path.",
+    "Then follow the file contents exactly as the user's task and conversation context.",
+    "Do not answer this bootstrap text directly.",
+  ].join("\n");
+}
+
+function safeRuntimeSessionId(sessionId?: string) {
+  const safe = sessionId?.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 120);
+  return safe || undefined;
+}
+
+function coreConversationPath(cwd: string, sessionId?: string) {
+  const safeSessionId = safeRuntimeSessionId(sessionId);
+  if (!safeSessionId) {
+    return undefined;
+  }
+  return path.join(
+    cwd,
+    ".xynapse",
+    "sessions",
+    safeSessionId,
+    "core-conversation.json",
+  );
+}
+
+function runtimeSessionsDir(cwd: string) {
+  return path.join(cwd, ".xynapse", "sessions");
+}
+
+function runtimeCheckpointsDir(cwd: string) {
+  return path.join(cwd, ".xynapse", "checkpoints");
+}
+
+function removeEmptyDirsUpTo(dir: string, stopDir: string) {
+  let current = path.resolve(dir);
+  const stop = path.resolve(stopDir);
+
+  while (isSameOrInsidePath(stop, current) && current !== stop) {
+    try {
+      if (fs.existsSync(current) && fs.readdirSync(current).length === 0) {
+        fs.rmdirSync(current);
+        current = path.dirname(current);
+        continue;
+      }
+    } catch {
+      // Cleanup is best-effort only.
+    }
+    break;
+  }
+}
+
+function deleteXynapseRuntimeSession(cwd: string, sessionId?: string) {
+  const safeSessionId = safeRuntimeSessionId(sessionId);
+  if (!safeSessionId) {
+    return;
+  }
+
+  try {
+    const sessionsDir = runtimeSessionsDir(cwd);
+    fs.rmSync(path.join(sessionsDir, safeSessionId), {
+      recursive: true,
+      force: true,
+    });
+    fs.rmSync(path.join(runtimeCheckpointsDir(cwd), safeSessionId), {
+      recursive: true,
+      force: true,
+    });
+
+    if (fs.existsSync(sessionsDir)) {
+      const removeRuntimeTranscripts = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path.join(dir, entry.name);
+          if (!isSameOrInsidePath(sessionsDir, abs)) {
+            continue;
+          }
+          if (entry.isDirectory()) {
+            removeRuntimeTranscripts(abs);
+            removeEmptyDirsUpTo(abs, sessionsDir);
+            continue;
+          }
+          if (entry.isFile() && entry.name === `${safeSessionId}.jsonl`) {
+            fs.rmSync(abs, { force: true });
+            removeEmptyDirsUpTo(path.dirname(abs), sessionsDir);
+          }
+        }
+      };
+      removeRuntimeTranscripts(sessionsDir);
+    }
+  } catch {
+    // Runtime memory cleanup should never break chat deletion.
+  }
+}
+
+function clearXynapseRuntimeSessions(cwd: string) {
+  try {
+    fs.rmSync(runtimeSessionsDir(cwd), { recursive: true, force: true });
+    fs.rmSync(runtimeCheckpointsDir(cwd), { recursive: true, force: true });
+    fs.rmSync(path.join(cwd, ".xynapse", "runtime", "core-conversation.json"), {
+      force: true,
+    });
+  } catch {
+    // Runtime memory cleanup should never break chat deletion.
+  }
+}
+
+const RUNTIME_CHECKPOINT_EXCLUDED_DIRS = new Set([
+  ".git",
+  ".xynapse",
+  "node_modules",
+  ".venv",
+  "venv",
+  "dist",
+  "build",
+  "out",
+  ".next",
+  ".cache",
+  "coverage",
+  "target",
+]);
+const RUNTIME_CHECKPOINT_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const RUNTIME_CHECKPOINT_MAX_FILES = 1500;
+
+type RuntimeCheckpointFile = {
+  rel: string;
+  size: number;
+};
+
+type RuntimeCheckpointManifest = {
+  version: 1;
+  cwd: string;
+  sessionId: string;
+  runId: string;
+  createdAt: string;
+  files: RuntimeCheckpointFile[];
+  skipped: string[];
+};
+
+function runtimeCheckpointDir(cwd: string, sessionId?: string, runId?: string) {
+  const safeSessionId = safeRuntimeSessionId(sessionId);
+  const safeRunId = safeRuntimeSessionId(runId);
+  if (!safeSessionId || !safeRunId) {
+    return undefined;
+  }
+  return path.join(cwd, ".xynapse", "checkpoints", safeSessionId, safeRunId);
+}
+
+function shouldSkipCheckpointDir(dirname: string) {
+  return RUNTIME_CHECKPOINT_EXCLUDED_DIRS.has(dirname);
+}
+
+function normalizeCheckpointRelPath(absPath: string, cwd: string) {
+  return path.relative(cwd, absPath).replace(/\\/g, "/");
+}
+
+function collectCheckpointFiles(cwd: string) {
+  const files: RuntimeCheckpointFile[] = [];
+  const skipped: string[] = [];
+
+  const visit = (dir: string) => {
+    if (files.length >= RUNTIME_CHECKPOINT_MAX_FILES) {
+      return;
+    }
+
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name);
+      const rel = normalizeCheckpointRelPath(abs, cwd);
+
+      if (entry.isDirectory()) {
+        if (!shouldSkipCheckpointDir(entry.name)) {
+          visit(abs);
+        }
+        continue;
+      }
+
+      if (!entry.isFile()) {
+        skipped.push(rel);
+        continue;
+      }
+
+      const stat = fs.statSync(abs);
+      if (stat.size > RUNTIME_CHECKPOINT_MAX_FILE_BYTES) {
+        skipped.push(rel);
+        continue;
+      }
+
+      files.push({ rel, size: stat.size });
+      if (files.length >= RUNTIME_CHECKPOINT_MAX_FILES) {
+        skipped.push("[file limit reached]");
+        return;
+      }
+    }
+  };
+
+  visit(cwd);
+  return { files, skipped };
+}
+
+function checkpointFilePath(checkpointDir: string, rel: string) {
+  return path.join(checkpointDir, "files", ...rel.split("/"));
+}
+
+function createXynapseRuntimeCheckpoint(
+  cwd: string,
+  sessionId: string | undefined,
+  runId: string,
+) {
+  const checkpointDir = runtimeCheckpointDir(cwd, sessionId, runId);
+  if (!checkpointDir) {
+    return;
+  }
+
+  const manifestPath = path.join(checkpointDir, "manifest.json");
+  if (fs.existsSync(manifestPath)) {
+    return;
+  }
+
+  const { files, skipped } = collectCheckpointFiles(cwd);
+  fs.rmSync(checkpointDir, { recursive: true, force: true });
+  fs.mkdirSync(path.join(checkpointDir, "files"), { recursive: true });
+
+  for (const file of files) {
+    const source = path.resolve(cwd, file.rel);
+    const target = checkpointFilePath(checkpointDir, file.rel);
+    if (!isSameOrInsidePath(cwd, source)) {
+      continue;
+    }
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+  }
+
+  const manifest: RuntimeCheckpointManifest = {
+    version: 1,
+    cwd,
+    sessionId: safeRuntimeSessionId(sessionId) ?? "",
+    runId,
+    createdAt: new Date().toISOString(),
+    files,
+    skipped,
+  };
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+}
+
+function removeEmptyCheckpointDirs(dir: string, cwd: string) {
+  const isRoot = path.resolve(dir) === path.resolve(cwd);
+
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory() && !shouldSkipCheckpointDir(entry.name)) {
+      removeEmptyCheckpointDirs(abs, cwd);
+    }
+  }
+
+  if (
+    !isRoot &&
+    fs.readdirSync(dir).length === 0 &&
+    isSameOrInsidePath(cwd, dir)
+  ) {
+    fs.rmdirSync(dir);
+  }
+}
+
+function restoreXynapseRuntimeCheckpoint(
+  cwd: string,
+  sessionId: string | undefined,
+  runId: string | undefined,
+) {
+  const checkpointDir = runtimeCheckpointDir(cwd, sessionId, runId);
+  if (!checkpointDir) {
+    throw new Error("Missing checkpoint id.");
+  }
+
+  const manifestPath = path.join(checkpointDir, "manifest.json");
+  const manifest = JSON.parse(
+    fs.readFileSync(manifestPath, "utf8"),
+  ) as RuntimeCheckpointManifest;
+  const snapshotFiles = new Set(manifest.files.map((file) => file.rel));
+  const currentFiles = collectCheckpointFiles(cwd).files;
+
+  for (const current of currentFiles) {
+    if (!snapshotFiles.has(current.rel)) {
+      const abs = path.resolve(cwd, current.rel);
+      if (isSameOrInsidePath(cwd, abs)) {
+        fs.rmSync(abs, { force: true });
+      }
+    }
+  }
+
+  for (const file of manifest.files) {
+    const source = checkpointFilePath(checkpointDir, file.rel);
+    const target = path.resolve(cwd, file.rel);
+    if (!fs.existsSync(source) || !isSameOrInsidePath(cwd, target)) {
+      continue;
+    }
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+  }
+
+  removeEmptyCheckpointDirs(cwd, cwd);
+}
+
+async function confirmAndRestoreRuntimeCheckpoint(
+  cwd: string,
+  request?: RuntimeCheckpointRestoreRequest,
+): Promise<RuntimeCheckpointRestoreResult> {
+  const checkpointDir = runtimeCheckpointDir(cwd, request?.sessionId, request?.runId);
+  const manifestPath = checkpointDir
+    ? path.join(checkpointDir, "manifest.json")
+    : undefined;
+
+  if (!manifestPath || !fs.existsSync(manifestPath)) {
+    const selection = await vscode.window.showWarningMessage(
+      "No code checkpoint was found for that earlier message. Continue the chat branch without rolling files back?",
+      { modal: true },
+      "Continue chat only",
+      "Cancel",
+    );
+    return selection === "Continue chat only"
+      ? { action: "continue", message: "No checkpoint found." }
+      : { action: "cancel", message: "User cancelled checkpoint restore." };
+  }
+
+  const selection = await vscode.window.showWarningMessage(
+    "Roll workspace files back to the state before that earlier message, then continue the chat from there?",
+    { modal: true },
+    "Rollback code and continue",
+    "Continue chat only",
+    "Cancel",
+  );
+
+  if (selection === "Cancel" || !selection) {
+    return { action: "cancel", message: "User cancelled checkpoint restore." };
+  }
+
+  if (selection === "Continue chat only") {
+    return { action: "continue" };
+  }
+
+  restoreXynapseRuntimeCheckpoint(cwd, request?.sessionId, request?.runId);
+  void vscode.window.showInformationMessage("Workspace rolled back to the selected chat point.");
+  return { action: "restored" };
 }
 
 function trimConversationText(text: string, limit = 12_000) {
@@ -379,9 +1131,17 @@ function trimConversationText(text: string, limit = 12_000) {
   return `${text.slice(0, 2_000)}\n\n[...trimmed...]\n\n${text.slice(-limit + 2_000)}`;
 }
 
-function readXynapseCoreConversation(cwd: string): CoreConversationTurn[] {
+function readXynapseCoreConversation(
+  cwd: string,
+  sessionId?: string,
+): CoreConversationTurn[] {
+  const conversationPath = coreConversationPath(cwd, sessionId);
+  if (!conversationPath) {
+    return [];
+  }
+
   try {
-    const parsed = JSON.parse(fs.readFileSync(coreConversationPath(cwd), "utf8"));
+    const parsed = JSON.parse(fs.readFileSync(conversationPath, "utf8"));
     const turns = Array.isArray(parsed) ? parsed : parsed?.turns;
     if (!Array.isArray(turns)) {
       return [];
@@ -393,6 +1153,7 @@ function readXynapseCoreConversation(cwd: string): CoreConversationTurn[] {
           typeof turn?.assistant === "string" &&
           typeof turn?.timestamp === "string",
       )
+      .map(recoverToolOnlyConversationTurn)
       .slice(-8);
   } catch {
     return [];
@@ -401,20 +1162,26 @@ function readXynapseCoreConversation(cwd: string): CoreConversationTurn[] {
 
 function appendXynapseCoreConversationTurn(
   cwd: string,
+  sessionId: string | undefined,
   turn: Omit<CoreConversationTurn, "timestamp">,
 ) {
+  const conversationPath = coreConversationPath(cwd, sessionId);
+  if (!conversationPath) {
+    return;
+  }
+
   try {
-    const runtimeDir = path.dirname(coreConversationPath(cwd));
+    const runtimeDir = path.dirname(conversationPath);
     fs.mkdirSync(runtimeDir, { recursive: true });
-    const turns = readXynapseCoreConversation(cwd);
+    const turns = readXynapseCoreConversation(cwd, sessionId);
     turns.push({
       ...turn,
       user: trimConversationText(turn.user, 4_000),
-      assistant: trimConversationText(turn.assistant),
+      assistant: trimConversationText(cleanRuntimeOutputForChat(turn.assistant)),
       timestamp: new Date().toISOString(),
     });
     fs.writeFileSync(
-      coreConversationPath(cwd),
+      conversationPath,
       JSON.stringify({ version: 1, turns: turns.slice(-8) }, null, 2),
       "utf8",
     );
@@ -445,7 +1212,19 @@ function formatCoreConversationContext(turns: CoreConversationTurn[]) {
   ].join("\n\n");
 }
 
-function runClawInWebview(
+function formatUiConversationContext(previousDiscussion?: string) {
+  const trimmed = previousDiscussion?.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  return [
+    "Recent Xynapse chat discussion follows. Use it as additional context for references to what was discussed in the IDE chat.",
+    trimConversationText(trimmed, 8_000),
+  ].join("\n\n");
+}
+
+function runRuntimeInWebview(
   sidebar: XynapseGUIWebviewViewProvider,
   executable: string,
   args: string[],
@@ -458,7 +1237,7 @@ function runClawInWebview(
     route?: string;
     conversation?: {
       userPrompt: string;
-      permissionMode: ClawPermissionMode;
+      permissionMode: RuntimePermissionMode;
       planMode?: boolean;
     };
     sessionId?: string;
@@ -482,6 +1261,7 @@ function runClawInWebview(
     CLAW_SKIP_GIT_DIFF: "1",
     ...options.env,
   };
+  applyRuntimePathFixes(env);
   sendLabRunEvent(sidebar, {
     runId: options.runId,
     kind: "start",
@@ -489,7 +1269,7 @@ function runClawInWebview(
     title: options.title,
     cwd: options.cwd,
     model: options.model,
-    command: `xynapse-runtime ${args.join(" ")}`,
+    command: `xynapse ${args.join(" ")}`,
     text: [
       `Starting ${options.title} in ${options.cwd}`,
       options.route ? `Runtime route: ${options.route}` : undefined,
@@ -509,9 +1289,12 @@ function runClawInWebview(
   });
   labProcesses.set(options.runId, child);
   const outputChunks: string[] = [];
+  const deferredNoContentErrors: string[] = [];
 
   child.stdout?.on("data", (chunk: Buffer) => {
-    const text = sanitizeLabOutput(chunk.toString("utf8"));
+    const text = cleanRuntimeOutputForChat(
+      sanitizeLabOutput(chunk.toString("utf8")),
+    );
     outputChunks.push(text);
     sendLabRunEvent(sidebar, {
       runId: options.runId,
@@ -522,7 +1305,14 @@ function runClawInWebview(
   });
 
   child.stderr?.on("data", (chunk: Buffer) => {
-    const text = sanitizeLabOutput(chunk.toString("utf8"));
+    const text = cleanRuntimeOutputForChat(
+      sanitizeLabOutput(chunk.toString("utf8")),
+    );
+    if (isNoContentAssistantStreamError(text)) {
+      deferredNoContentErrors.push(text);
+      return;
+    }
+
     outputChunks.push(text);
     sendLabRunEvent(sidebar, {
       runId: options.runId,
@@ -544,11 +1334,39 @@ function runClawInWebview(
 
   child.on("close", (exitCode) => {
     labProcesses.delete(options.runId);
+    const outputText = outputChunks.join("");
+    const recoveredToolOnlyTurn =
+      exitCode !== 0 &&
+      deferredNoContentErrors.length > 0 &&
+      hasSuccessfulWorkspaceMutation(outputText);
+    const finalExitCode = recoveredToolOnlyTurn ? 0 : exitCode;
+
+    if (recoveredToolOnlyTurn) {
+      const completionMessage = buildToolOnlyCompletionMessage(outputText);
+      outputChunks.push(completionMessage);
+      sendLabRunEvent(sidebar, {
+        runId: options.runId,
+        kind: "chunk",
+        stream: "stdout",
+        text: completionMessage,
+      });
+    } else {
+      for (const text of deferredNoContentErrors) {
+        outputChunks.push(text);
+        sendLabRunEvent(sidebar, {
+          runId: options.runId,
+          kind: "chunk",
+          stream: "stderr",
+          text,
+        });
+      }
+    }
+
     if (options.conversation) {
-      appendXynapseCoreConversationTurn(options.cwd, {
+      appendXynapseCoreConversationTurn(options.cwd, options.sessionId, {
         user: options.conversation.userPrompt,
         assistant: outputChunks.join(""),
-        exitCode,
+        exitCode: finalExitCode,
         model: options.model,
         permissionMode: options.conversation.permissionMode,
         planMode: options.conversation.planMode,
@@ -558,13 +1376,13 @@ function runClawInWebview(
       runId: options.runId,
       kind: "end",
       stream: "system",
-      exitCode,
-      text: `\nProcess exited with code ${exitCode ?? "unknown"}\n`,
+      exitCode: finalExitCode,
+      text: `\nProcess exited with code ${finalExitCode ?? "unknown"}\n`,
     });
   });
 }
 
-function stopClawInWebview(
+function stopRuntimeInWebview(
   sidebar: XynapseGUIWebviewViewProvider,
   request?: { runId?: string },
 ) {
@@ -614,7 +1432,7 @@ function isUsableSecret(value: unknown): value is string {
   );
 }
 
-function setClawEnv(
+function setRuntimeEnv(
   env: Record<string, string>,
   key: string,
   value: unknown,
@@ -634,13 +1452,13 @@ function normalizeProviderName(value: unknown) {
 
 const YANDEX_OPENAI_BASE_URL = "https://llm.api.cloud.yandex.net/v1";
 
-function collectClawEnvFromObject(value: unknown, env: Record<string, string>) {
+function collectRuntimeEnvFromObject(value: unknown, env: Record<string, string>) {
   if (!value || typeof value !== "object") {
     return;
   }
 
   if (Array.isArray(value)) {
-    value.forEach((item) => collectClawEnvFromObject(item, env));
+    value.forEach((item) => collectRuntimeEnvFromObject(item, env));
     return;
   }
 
@@ -664,7 +1482,7 @@ function collectClawEnvFromObject(value: unknown, env: Record<string, string>) {
       "DASHSCOPE_API_KEY",
       "DASHSCOPE_BASE_URL",
     ]) {
-      setClawEnv(env, key, vars[key]);
+      setRuntimeEnv(env, key, vars[key]);
     }
   }
 
@@ -690,21 +1508,21 @@ function collectClawEnvFromObject(value: unknown, env: Record<string, string>) {
     (providerUnset && (model.startsWith("qwen") || model.startsWith("kimi")));
 
   if (isAnthropic) {
-    setClawEnv(env, "ANTHROPIC_API_KEY", record.apiKey);
-    setClawEnv(env, "ANTHROPIC_BASE_URL", record.apiBase ?? record.baseUrl);
+    setRuntimeEnv(env, "ANTHROPIC_API_KEY", record.apiKey);
+    setRuntimeEnv(env, "ANTHROPIC_BASE_URL", record.apiBase ?? record.baseUrl);
   } else if (isOpenAi) {
     if (isYandex) {
-      setClawEnv(env, "YANDEX_API_KEY", record.apiKey);
-      setClawEnv(env, "YANDEX_BASE_URL", record.apiBase ?? record.baseUrl ?? YANDEX_OPENAI_BASE_URL);
-      setClawEnv(env, "YANDEX_FOLDER_ID", record.folderId);
-      setClawEnv(
+      setRuntimeEnv(env, "YANDEX_API_KEY", record.apiKey);
+      setRuntimeEnv(env, "YANDEX_BASE_URL", record.apiBase ?? record.baseUrl ?? YANDEX_OPENAI_BASE_URL);
+      setRuntimeEnv(env, "YANDEX_FOLDER_ID", record.folderId);
+      setRuntimeEnv(
         env,
         "YANDEX_FOLDER_ID",
         (record.requestOptions as any)?.extraBodyProperties?.folderId,
       );
     } else {
-      setClawEnv(env, "OPENAI_API_KEY", record.apiKey);
-      setClawEnv(
+      setRuntimeEnv(env, "OPENAI_API_KEY", record.apiKey);
+      setRuntimeEnv(
         env,
         "OPENAI_BASE_URL",
         provider.includes("deepseek") || model.includes("deepseek")
@@ -713,21 +1531,22 @@ function collectClawEnvFromObject(value: unknown, env: Record<string, string>) {
       );
     }
   } else if (isXai) {
-    setClawEnv(env, "XAI_API_KEY", record.apiKey);
-    setClawEnv(env, "XAI_BASE_URL", record.apiBase ?? record.baseUrl);
+    setRuntimeEnv(env, "XAI_API_KEY", record.apiKey);
+    setRuntimeEnv(env, "XAI_BASE_URL", record.apiBase ?? record.baseUrl);
   } else if (isDashscope) {
-    setClawEnv(env, "DASHSCOPE_API_KEY", record.apiKey);
-    setClawEnv(env, "DASHSCOPE_BASE_URL", record.apiBase ?? record.baseUrl);
+    setRuntimeEnv(env, "DASHSCOPE_API_KEY", record.apiKey);
+    setRuntimeEnv(env, "DASHSCOPE_BASE_URL", record.apiBase ?? record.baseUrl);
   }
 
-  Object.values(record).forEach((item) => collectClawEnvFromObject(item, env));
+  Object.values(record).forEach((item) => collectRuntimeEnvFromObject(item, env));
 }
 
-function getConfiguredClawModelOverride() {
-  const configured = vscode.workspace
-    .getConfiguration("xynapse")
-    .get<string>("clawModel")
-    ?.trim();
+function getConfiguredRuntimeModelOverride() {
+  const configured =
+    vscode.workspace
+      .getConfiguration("xynapse")
+      .get<string>("runtimeModel")
+      ?.trim();
 
   if (!configured || configured.toLowerCase() === "auto") {
     return undefined;
@@ -819,7 +1638,7 @@ function loadRawConfigModels(): ILLM[] {
 
 function findRequestedModel(
   config: any,
-  request?: ClawPromptRequest,
+  request?: RuntimePromptRequest,
   rawModels: ILLM[] = [],
 ) {
   const data = typeof request === "object" ? request : undefined;
@@ -895,7 +1714,7 @@ function toYandexOpenAiModelUri(modelName: string, folderId: string) {
   return `gpt://${folderId}/${modelName}/latest`;
 }
 
-function toClawModel(model: ILLM | undefined) {
+function toRuntimeModelRoute(model: ILLM | undefined) {
   const identity = getModelIdentity(model);
   if (!identity) {
     return undefined;
@@ -939,14 +1758,54 @@ function toClawModel(model: ILLM | undefined) {
   return undefined;
 }
 
-async function collectClawEnv(configHandler: ConfigHandler, preferredModel?: ILLM) {
+function hasExplicitRuntimeModelRequest(request?: RuntimePromptRequest) {
+  const data = typeof request === "object" ? request : undefined;
+  return Boolean(
+    data?.modelTitle?.trim() ||
+      data?.model?.trim() ||
+      normalizeProviderName(data?.provider),
+  );
+}
+
+function findRuntimeSupportedModel(config: any, rawModels: ILLM[] = []) {
+  const candidates = [
+    config?.selectedModelByRole?.edit,
+    config?.selectedModelByRole?.apply,
+    config?.selectedModelByRole?.chat,
+    ...(Array.isArray(config?.modelsByRole?.edit) ? config.modelsByRole.edit : []),
+    ...(Array.isArray(config?.modelsByRole?.apply) ? config.modelsByRole.apply : []),
+    ...(Array.isArray(config?.modelsByRole?.chat) ? config.modelsByRole.chat : []),
+    ...rawModels,
+    ...flattenConfigModels(config),
+  ];
+
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    const identity = getModelIdentity(candidate);
+    if (!identity) {
+      continue;
+    }
+    const key = `${identity.provider}:${identity.title}:${identity.model}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    if (toRuntimeModelRoute(candidate as ILLM)) {
+      return candidate as ILLM;
+    }
+  }
+
+  return undefined;
+}
+
+async function collectRuntimeEnv(configHandler: ConfigHandler, preferredModel?: ILLM) {
   const env: Record<string, string> = {};
 
-  collectClawEnvFromObject(preferredModel, env);
+  collectRuntimeEnvFromObject(preferredModel, env);
 
   try {
     const { config } = await configHandler.loadConfig();
-    collectClawEnvFromObject(config, env);
+    collectRuntimeEnvFromObject(config, env);
   } catch (error) {
     console.warn("Failed to read Xynapse config for Xynapse runtime env", error);
   }
@@ -960,7 +1819,7 @@ async function collectClawEnv(configHandler: ConfigHandler, preferredModel?: ILL
       const parsed = configPath.endsWith(".json")
         ? JSON.parse(raw)
         : YAML.parse(raw);
-      collectClawEnvFromObject(parsed, env);
+      collectRuntimeEnvFromObject(parsed, env);
     } catch (error) {
       console.warn(`Failed to scan ${configPath} for Xynapse runtime env`, error);
     }
@@ -969,10 +1828,10 @@ async function collectClawEnv(configHandler: ConfigHandler, preferredModel?: ILL
   return env;
 }
 
-async function getClawRunPlan(
+async function getRuntimeRunPlan(
   configHandler: ConfigHandler,
-  request?: ClawPromptRequest,
-): Promise<ClawRunPlan | undefined> {
+  request?: RuntimePromptRequest,
+): Promise<RuntimeRunPlan | undefined> {
   let config: any;
   try {
     ({ config } = await configHandler.loadConfig());
@@ -981,9 +1840,13 @@ async function getClawRunPlan(
   }
 
   const rawModels = loadRawConfigModels();
-  const selectedModel = findRequestedModel(config, request, rawModels);
-  const override = getConfiguredClawModelOverride();
-  const selectedRoute = toClawModel(selectedModel);
+  let selectedModel = findRequestedModel(config, request, rawModels);
+  const override = getConfiguredRuntimeModelOverride();
+  let selectedRoute = toRuntimeModelRoute(selectedModel);
+  if (!selectedRoute && !override && !hasExplicitRuntimeModelRequest(request)) {
+    selectedModel = findRuntimeSupportedModel(config, rawModels);
+    selectedRoute = toRuntimeModelRoute(selectedModel);
+  }
   const model = selectedRoute ?? override;
 
   if (!model) {
@@ -997,33 +1860,33 @@ async function getClawRunPlan(
 
   return {
     model,
-    env: await collectClawEnv(configHandler, selectedModel),
+    env: await collectRuntimeEnv(configHandler, selectedModel),
     label: getModelIdentity(selectedModel)?.title ?? model,
   };
 }
 
-async function showClawNotFoundMessage() {
+async function showRuntimeNotFoundMessage() {
   const action = await vscode.window.showErrorMessage(
-    "Xynapse runtime was not found. Build or bundle the runtime, or set Xynapse: Lab Runtime Path if needed.",
+    "Xynapse runtime was not found. Build or bundle the runtime, or set Xynapse: Runtime Path if needed.",
     "Open Settings",
   );
 
   if (action === "Open Settings") {
     await vscode.commands.executeCommand(
       "workbench.action.openSettings",
-      "xynapse.clawPath",
+      "xynapse.runtimePath",
     );
   }
 }
 
-async function resolveClawExecutable(
+async function resolveRuntimeExecutable(
   ide: VsCodeIde,
   extensionContext: vscode.ExtensionContext,
   cwd: string,
 ) {
   const configured =
-    vscode.workspace.getConfiguration("xynapse").get<string>("clawPath")?.trim() ??
-    process.env.XYNAPSE_CLAW_PATH?.trim();
+    vscode.workspace.getConfiguration("xynapse").get<string>("runtimePath")?.trim() ??
+    process.env.XYNAPSE_RUNTIME_PATH?.trim();
   if (configured) {
     const isPathLike =
       path.isAbsolute(configured) ||
@@ -1044,13 +1907,13 @@ async function resolveClawExecutable(
     if (action === "Open Settings") {
       await vscode.commands.executeCommand(
         "workbench.action.openSettings",
-        "xynapse.clawPath",
+        "xynapse.runtimePath",
       );
     }
     return undefined;
   }
 
-  const binaryName = process.platform === "win32" ? "claw.exe" : "claw";
+  const binaryName = process.platform === "win32" ? "xynapse.exe" : "xynapse";
   const bundledCandidate = path.join(extensionContext.extensionPath, "bin", binaryName);
   if (fs.existsSync(bundledCandidate)) {
     return bundledCandidate;
@@ -1059,7 +1922,7 @@ async function resolveClawExecutable(
   const workspaceCandidate = path.join(
     cwd,
     ".external",
-    "claw-code",
+    "xynapse-runtime",
     "rust",
     "target",
     "debug",
@@ -1075,7 +1938,7 @@ async function resolveClawExecutable(
     "..",
     "..",
     ".external",
-    "claw-code",
+    "xynapse-runtime",
     "rust",
     "target",
     "debug",
@@ -1086,10 +1949,13 @@ async function resolveClawExecutable(
   }
 
   try {
-    await ide.subprocess(process.platform === "win32" ? "where claw" : "command -v claw", cwd);
-    return "claw";
+    await ide.subprocess(
+      process.platform === "win32" ? "where xynapse" : "command -v xynapse",
+      cwd,
+    );
+    return "xynapse";
   } catch {
-    await showClawNotFoundMessage();
+    await showRuntimeNotFoundMessage();
     return undefined;
   }
 }
@@ -1457,7 +2323,11 @@ const getCommandsMap: (
       void sidebar.webviewProtocol.request("applyCodeFromChat", undefined);
     },
     "xynapse.openConfigPage": () => {
-      vscode.commands.executeCommand("xynapse.navigateTo", "/config", false);
+      vscode.commands.executeCommand(
+        "xynapse.navigateTo",
+        "/config?tab=overview",
+        false,
+      );
     },
     "xynapse.openConfigFile": async () => {
       const configYamlPath = getConfigYamlPath("vscode");
@@ -1468,8 +2338,11 @@ const getCommandsMap: (
         false,
       );
     },
-    "xynapse.clawDoctor": async (request?: ClawDoctorRequest) => {
-      const runId = getClawRequestRunId(request) ?? createLabRunId();
+    "xynapse.config.import": async () => {
+      await importXynapseProfileBackup(ide, configHandler);
+    },
+    "xynapse.runtimeDoctor": async (request?: RuntimeDoctorRequest) => {
+      const runId = getRuntimeRequestRunId(request) ?? createLabRunId();
       const cwd = getRequestedWorkspaceDir(request);
       if (!cwd) {
         sendLabRunEvent(sidebar, {
@@ -1482,7 +2355,7 @@ const getCommandsMap: (
         return;
       }
 
-      const executable = await resolveClawExecutable(ide, extensionContext, cwd);
+      const executable = await resolveRuntimeExecutable(ide, extensionContext, cwd);
       if (!executable) {
         sendLabRunEvent(sidebar, {
           runId,
@@ -1495,21 +2368,59 @@ const getCommandsMap: (
         return;
       }
 
-      runClawInWebview(sidebar, executable, ["doctor"], {
+      runRuntimeInWebview(sidebar, executable, ["doctor"], {
         runId,
         cwd,
-        env: await collectClawEnv(configHandler),
+        env: await collectRuntimeEnv(configHandler),
         title: "Xynapse runtime diagnostics",
         route: "doctor runtime=embedded",
       });
     },
-    "xynapse.clawStop": async (request?: { runId?: string }) => {
-      stopClawInWebview(sidebar, request);
+    "xynapse.runtimeStop": async (request?: { runId?: string }) => {
+      stopRuntimeInWebview(sidebar, request);
     },
-    "xynapse.clawPrompt": async (request?: ClawPromptRequest) => {
-      const runId = getClawRequestRunId(request) ?? createLabRunId();
+    "xynapse.deleteRuntimeSession": async (request?: {
+      sessionId?: string;
+      workspaceDir?: string;
+    }) => {
+      const cwd = getRequestedWorkspaceDir(request);
+      if (cwd) {
+        deleteXynapseRuntimeSession(cwd, request?.sessionId);
+      }
+    },
+    "xynapse.clearRuntimeSessions": async (request?: {
+      workspaceDir?: string;
+    }) => {
+      const cwd = getRequestedWorkspaceDir(request);
+      if (cwd) {
+        clearXynapseRuntimeSessions(cwd);
+      }
+    },
+    "xynapse.confirmAndRestoreRuntimeCheckpoint": async (
+      request?: RuntimeCheckpointRestoreRequest,
+    ) => {
+      const cwd = getRequestedWorkspaceDir(request);
+      if (!cwd) {
+        return { action: "cancel", message: "No workspace folder is open." };
+      }
+      return await confirmAndRestoreRuntimeCheckpoint(cwd, request);
+    },
+    "xynapse.runtimePrompt": async (request?: RuntimePromptRequest) => {
+      const runId = getRuntimeRequestRunId(request) ?? createLabRunId();
       const isCoreRequest = isCoreRuntimeRequest(request);
       const title = isCoreRequest ? "Xynapse Core task" : "Xynapse Lab algorithm";
+      const cwd = getRequestedWorkspaceDir(request);
+      if (!cwd) {
+        sendLabRunEvent(sidebar, {
+          runId,
+          kind: "error",
+          stream: "system",
+          title,
+          text: "Open a project folder first. Xynapse will not run from a guessed folder because workspace context must be bound to a real project.\n",
+        });
+        return;
+      }
+
       const promptFromUi =
         typeof request === "string" ? request : request?.prompt;
       const prompt =
@@ -1526,20 +2437,8 @@ const getCommandsMap: (
         return;
       }
 
-      const cwd = getRequestedWorkspaceDir(request);
-      if (!cwd) {
-        sendLabRunEvent(sidebar, {
-          runId,
-          kind: "error",
-          stream: "system",
-          title,
-          text: "Open a project folder first. Xynapse will not run from a guessed folder because workspace context must be bound to a real project.\n",
-        });
-        return;
-      }
-
-      const permissionMode = getClawPermissionMode(request);
-      const executable = await resolveClawExecutable(ide, extensionContext, cwd);
+      const permissionMode = getRuntimePermissionMode(request);
+      const executable = await resolveRuntimeExecutable(ide, extensionContext, cwd);
       if (!executable) {
         sendLabRunEvent(sidebar, {
           runId,
@@ -1552,7 +2451,7 @@ const getCommandsMap: (
         return;
       }
 
-      const plan = await getClawRunPlan(configHandler, request);
+      const plan = await getRuntimeRunPlan(configHandler, request);
       if (!plan) {
         sendLabRunEvent(sidebar, {
           runId,
@@ -1565,10 +2464,48 @@ const getCommandsMap: (
         return;
       }
 
-      const previousTurns: CoreConversationTurn[] = [];
+      const requestSessionId =
+        typeof request === "object" ? request?.sessionId : undefined;
+      const runtimeSessionId = isCoreRequest ? requestSessionId : "xynapse-lab";
       const planMode = typeof request === "object" && !!request?.planMode;
+      const previousDiscussion =
+        typeof request === "object" ? request?.previousDiscussion : undefined;
+      const runtimeRules =
+        typeof request === "object" ? request?.runtimeRules : undefined;
+      const allowedTools =
+        typeof request === "object" ? request?.allowedTools : undefined;
+      const previousTurns =
+        isCoreRequest && runtimeSessionId && !previousDiscussion?.trim()
+          ? readXynapseCoreConversation(cwd, runtimeSessionId)
+          : [];
+      const resolvedAllowedTools = getLabAllowedTools(
+        permissionMode,
+        allowedTools,
+      );
+      if (
+        isCoreRequest &&
+        runtimeSessionId &&
+        permissionMode !== "read-only"
+      ) {
+        createXynapseRuntimeCheckpoint(cwd, runtimeSessionId, runId);
+      }
 
-      runClawInWebview(
+      const runtimePrompt = buildWorkspaceAwareLabPrompt(
+        prompt,
+        cwd,
+        permissionMode,
+        planMode,
+        previousTurns,
+        previousDiscussion,
+        runtimeRules,
+      );
+      const runtimePromptRelPath = writeRuntimePromptFile(
+        cwd,
+        runId,
+        runtimePrompt,
+      );
+
+      runRuntimeInWebview(
         sidebar,
         executable,
         [
@@ -1576,17 +2513,11 @@ const getCommandsMap: (
           plan.model,
           "--permission-mode",
           permissionMode,
-          ...(getLabAllowedTools(permissionMode)
-            ? ["--allowedTools", getLabAllowedTools(permissionMode)!]
+          ...(resolvedAllowedTools !== undefined
+            ? ["--allowedTools", resolvedAllowedTools]
             : []),
           "prompt",
-          buildWorkspaceAwareLabPrompt(
-            prompt,
-            cwd,
-            permissionMode,
-            planMode,
-            previousTurns,
-          ),
+          buildRuntimePromptFileBootstrap(runtimePromptRelPath),
         ],
         {
           runId,
@@ -1595,9 +2526,9 @@ const getCommandsMap: (
           title,
           model: plan.label,
           route: `model=${plan.model} label=${plan.label} permission=${permissionMode} runtime=embedded`,
+          sessionId: runtimeSessionId,
           ...(isCoreRequest
             ? {
-                sessionId: "xynapse-core",
                 conversation: {
                   userPrompt: prompt,
                   permissionMode,
@@ -1803,7 +2734,10 @@ const getCommandsMap: (
         } else if (selectedOption === "$(screen-full) Open full screen chat") {
           vscode.commands.executeCommand("xynapse.openInNewWindow");
         } else if (selectedOption === "$(gear) Open settings") {
-          vscode.commands.executeCommand("xynapse.navigateTo", "/config");
+          vscode.commands.executeCommand(
+            "xynapse.navigateTo",
+            "/config?tab=overview",
+          );
         }
 
         quickPick.dispose();

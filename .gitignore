@@ -27,6 +27,7 @@ VSCode-win32-x64/
 portable-build/
 .tmp-xynapse*/
 .openclaw/
+/data/
 
 # ===========================================
 # Source directories (not part of distribution)
