@@ -664,6 +664,14 @@ export function Chat() {
 
   return (
     <>
+      {shouldShowXynapseTabs ? (
+        <div className="shrink-0 px-3 pb-2 pt-2">
+          <XynapseModeSwitcher
+            mode={xynapsePaneMode}
+            onModeChange={setXynapsePaneMode}
+          />
+        </div>
+      ) : null}
       {!!showSessionTabs && !isInEdit && <TabBar ref={tabsRef} />}
       {widget}
 
@@ -672,17 +680,9 @@ export function Chat() {
         className={`min-h-0 flex-1 overflow-y-scroll pt-[8px] ${showScrollbar ? "thin-scrollbar" : "no-scrollbar"}`}
       >
         {highlights}
-        {shouldShowXynapseTabs ? (
+        {shouldShowXynapseTabs && xynapsePaneMode === "lab" ? (
           <div className="mx-2 mb-3">
-            <XynapseModeSwitcher
-              mode={xynapsePaneMode}
-              onModeChange={setXynapsePaneMode}
-            />
-            {xynapsePaneMode === "lab" ? (
-              <div className="mt-3">
-                <XynapseResearchCard showOpenFolderAction={!hasWorkspace} />
-              </div>
-            ) : null}
+            <XynapseResearchCard showOpenFolderAction={!hasWorkspace} />
           </div>
         ) : null}
         {history

@@ -16,7 +16,6 @@ import {
   startRuntimeChatTurn,
 } from "../../redux/slices/sessionSlice";
 import { saveCurrentSession } from "../../redux/thunks/session";
-import { setDialogMessage, setShowDialog } from "../../redux/slices/uiSlice";
 import CouncilDialog, { CouncilConfig } from "../council/CouncilDialog";
 
 export type XynapseMode = "core" | "lab";
@@ -371,6 +370,9 @@ export function XynapseResearchCard({
     [chatHistory],
   );
   const [labNotice, setLabNotice] = useState<LabNotice | null>(null);
+  const [activeCouncilMode, setActiveCouncilMode] = useState<
+    "council" | "bvc" | null
+  >(null);
   const [runState, setRunState] = useState<LabRunState>({
     status: "idle",
     title: "Ready for Lab run",
@@ -462,38 +464,28 @@ export function XynapseResearchCard({
   );
 
   const openCouncilDialog = (mode: "council" | "bvc") => {
-    const handleSubmit = (config: CouncilConfig) => {
-      dispatch(setShowDialog(false));
-      dispatch(setDialogMessage(undefined));
+    setLabNotice(null);
+    setActiveCouncilMode(mode);
+  };
 
-      setLabNotice({
-        title: mode === "bvc" ? "BVC verification prepared" : "Council run prepared",
-        body:
-          mode === "bvc"
-            ? "BVC is a non-coding verification mode. It checks a candidate answer against criteria, budget, and role outputs."
-            : "Council is a non-coding multi-role discussion mode. Use it for critique, alternatives, and a final decision.",
-        template: JSON.stringify(config, null, 2),
-        runLabel: mode === "bvc" ? "Run BVC check" : "Run Council review",
-        runPrompt:
-          mode === "bvc"
-            ? `Run BVC verification with this configuration. Do not edit files. Return criteria, checks, contradictions, confidence, and final verdict.\n\n${JSON.stringify(config, null, 2)}`
-            : `Run a Council review with this configuration. Do not edit files. Return role opinions, conflicts, synthesis, and final decision.\n\n${JSON.stringify(config, null, 2)}`,
-      });
-    };
-
-    dispatch(
-      setDialogMessage(
-        <CouncilDialog
-          mode={mode}
-          onClose={() => {
-            dispatch(setShowDialog(false));
-            dispatch(setDialogMessage(undefined));
-          }}
-          onSubmit={handleSubmit}
-        />,
-      ),
-    );
-    dispatch(setShowDialog(true));
+  const prepareCouncilRun = (
+    mode: "council" | "bvc",
+    config: CouncilConfig,
+  ) => {
+    setActiveCouncilMode(null);
+    setLabNotice({
+      title: mode === "bvc" ? "BVC verification prepared" : "Council run prepared",
+      body:
+        mode === "bvc"
+          ? "BVC is a non-coding verification mode. It checks a candidate answer against criteria, budget, and role outputs."
+          : "Council is a non-coding multi-role discussion mode. Use it for critique, alternatives, and a final decision.",
+      template: JSON.stringify(config, null, 2),
+      runLabel: mode === "bvc" ? "Run BVC check" : "Run Council review",
+      runPrompt:
+        mode === "bvc"
+          ? `Run BVC verification with this configuration. Do not edit files. Return criteria, checks, contradictions, confidence, and final verdict.\n\n${JSON.stringify(config, null, 2)}`
+          : `Run a Council review with this configuration. Do not edit files. Return role opinions, conflicts, synthesis, and final decision.\n\n${JSON.stringify(config, null, 2)}`,
+    });
   };
 
   const showAlgorithmGuide = (
@@ -610,6 +602,18 @@ export function XynapseResearchCard({
             }
           />
         </div>
+
+        {activeCouncilMode ? (
+          <div className="mt-4 rounded-xl border border-solid border-violet-300/15 bg-[#08080a] p-2">
+            <CouncilDialog
+              mode={activeCouncilMode}
+              onClose={() => setActiveCouncilMode(null)}
+              onSubmit={(config) =>
+                prepareCouncilRun(activeCouncilMode, config)
+              }
+            />
+          </div>
+        ) : null}
 
         {labNotice ? (
           <div className="mt-4 rounded-xl border border-solid border-violet-300/15 bg-[#08080a] p-3">
