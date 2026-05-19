@@ -269,6 +269,13 @@
         "group": "Xynapse"
       },
       {
+        "command": "xynapse.openXynapseSurface",
+        "category": "Xynapse",
+        "title": "Open Xynapse Core or Lab",
+        "icon": "$(add)",
+        "group": "Xynapse"
+      },
+      {
         "command": "xynapse.shareSession",
         "category": "Xynapse",
         "title": "Share Current Chat Session as Markdown",
@@ -588,7 +595,7 @@
       ],
       "view/title": [
         {
-          "command": "xynapse.newSession",
+          "command": "xynapse.openXynapseSurface",
           "group": "navigation@1",
           "when": "view == xynapse.xynapseGUIView"
         },
@@ -648,7 +655,7 @@
         {
           "type": "webview",
           "id": "xynapse.xynapseGUIView",
-          "name": "Xynapse",
+          "name": "Xynapse Core",
           "icon": "media/sidebar-icon.png",
           "visibility": "visible"
         }

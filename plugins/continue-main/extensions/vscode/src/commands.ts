@@ -38,7 +38,10 @@ import {
   StatusBarStatus,
 } from "./autocomplete/statusBar";
 import { XynapseConsoleWebviewViewProvider } from "./XynapseConsoleWebviewViewProvider";
-import { XynapseGUIWebviewViewProvider } from "./XynapseGUIWebviewViewProvider";
+import {
+  XynapseGUIWebviewViewProvider,
+  type XynapseSurface,
+} from "./XynapseGUIWebviewViewProvider";
 import { processDiff } from "./diff/processDiff";
 import { VerticalDiffManager } from "./diff/vertical/manager";
 import EditDecorationManager from "./quickEdit/EditDecorationManager";
@@ -2292,6 +2295,35 @@ const getCommandsMap: (
     },
     "xynapse.newSession": () => {
       sidebar.webviewProtocol?.request("newSession", undefined);
+    },
+    "xynapse.openXynapseSurface": async () => {
+      const choice = await vscode.window.showQuickPick<
+        vscode.QuickPickItem & { surface: XynapseSurface }
+      >(
+        [
+          {
+            label: "Xynapse Core",
+            description: "coding chat",
+            detail: "Open the workspace coding assistant.",
+            surface: "core",
+          },
+          {
+            label: "Xynapse Lab",
+            description: "algorithms",
+            detail: "Open Council, BVC, audit, and comparison tools.",
+            surface: "lab",
+          },
+        ],
+        {
+          placeHolder: "Open Xynapse Core or Xynapse Lab",
+          matchOnDescription: true,
+          matchOnDetail: true,
+        },
+      );
+
+      if (choice) {
+        await sidebar.openSurface(choice.surface);
+      }
     },
 
     "xynapse.shareSession": async (sessionId: string | undefined) => {

@@ -5,17 +5,11 @@ import {
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { renderChatMessage } from "core/util/messageContent";
-import { useContext, useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
-import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { useAppSelector } from "../../redux/hooks";
 import { selectSelectedChatModel } from "../../redux/slices/configSlice";
-import {
-  appendRuntimeChatChunk,
-  finishRuntimeChatTurn,
-  startRuntimeChatTurn,
-} from "../../redux/slices/sessionSlice";
-import { saveCurrentSession } from "../../redux/thunks/session";
 import CouncilDialog, { CouncilConfig } from "../council/CouncilDialog";
 
 export type XynapseMode = "core" | "lab";
@@ -362,8 +356,6 @@ export function XynapseResearchCard({
   showOpenFolderAction,
 }: XynapseModeTabsProps) {
   const ideMessenger = useContext(IdeMessengerContext);
-  const dispatch = useAppDispatch();
-  const loggedRunIdsRef = useRef(new Set<string>());
   const chatHistory = useAppSelector((state) => state.session.history);
   const previousDiscussion = useMemo(
     () => buildPreviousDiscussion(chatHistory),
@@ -382,32 +374,6 @@ export function XynapseResearchCard({
   useWebviewListener(
     "xynapse/labRunEvent",
     async (event) => {
-      if (loggedRunIdsRef.current.has(event.runId)) {
-        if (event.kind === "chunk" || event.kind === "error") {
-          dispatch(
-            appendRuntimeChatChunk({
-              runId: event.runId,
-              text: event.text ?? "",
-            }),
-          );
-        }
-        if (event.kind === "end" || event.kind === "error") {
-          dispatch(
-            finishRuntimeChatTurn({
-              runId: event.runId,
-              exitCode: event.exitCode,
-            }),
-          );
-          loggedRunIdsRef.current.delete(event.runId);
-          void dispatch(
-            saveCurrentSession({
-              openNewSession: false,
-              generateTitle: true,
-            }),
-          );
-        }
-      }
-
       setRunState((previous) => {
         if (event.kind === "start") {
           return {
@@ -502,14 +468,6 @@ export function XynapseResearchCard({
       return;
     }
     const runId = createClientRunId();
-    loggedRunIdsRef.current.add(runId);
-    dispatch(
-      startRuntimeChatTurn({
-        runId,
-        prompt,
-        surface: "lab",
-      }),
-    );
     ideMessenger.post("xynapse/runtimePrompt", {
       runId,
       prompt,

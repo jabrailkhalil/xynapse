@@ -70,8 +70,6 @@ import {
   buildPreviousDiscussion,
   createClientRunId,
   findCoreRuntimeModel,
-  type XynapseMode,
-  XynapseModeSwitcher,
   XynapseResearchCard,
 } from "../../components/claw/ClawSidecarCard";
 import { EmptyChatBody } from "./EmptyChatBody";
@@ -151,8 +149,8 @@ export function Chat() {
   const isStreaming = useAppSelector((state) => state.session.isStreaming);
   const [stepsOpen] = useState<(boolean | undefined)[]>([]);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
-  const [xynapsePaneMode, setXynapsePaneMode] =
-    useState<XynapseMode>("core");
+  const xynapseSurface =
+    ((window as any).xynapseSurface as "core" | "lab" | undefined) ?? "core";
   const mainTextInputRef = useRef<HTMLInputElement>(null);
   const stepsDivRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -648,9 +646,7 @@ export function Chat() {
   );
 
   const showScrollbar = showChatScrollbar ?? window.innerHeight > 5000;
-  const shouldShowMainInput = hasWorkspace;
-  const shouldShowXynapseTabs =
-    hasWorkspace && !isInEdit && mode !== "background";
+  const shouldShowMainInput = hasWorkspace && xynapseSurface === "core";
   const emptyStateBody =
     history.length > 0 ? null : mode === "background" ? (
       <BackgroundModeView isCreatingAgent={isCreatingAgent} />
@@ -662,16 +658,24 @@ export function Chat() {
       )
     );
 
+  if (xynapseSurface === "lab") {
+    return (
+      <>
+        <StepsDiv
+          ref={stepsDivRef}
+          className={`min-h-0 flex-1 overflow-y-scroll pt-[8px] ${showScrollbar ? "thin-scrollbar" : "no-scrollbar"}`}
+        >
+          {highlights}
+          <div className="mx-2 mb-3">
+            <XynapseResearchCard showOpenFolderAction={!hasWorkspace} />
+          </div>
+        </StepsDiv>
+      </>
+    );
+  }
+
   return (
     <>
-      {shouldShowXynapseTabs ? (
-        <div className="shrink-0 px-3 pb-2 pt-2">
-          <XynapseModeSwitcher
-            mode={xynapsePaneMode}
-            onModeChange={setXynapsePaneMode}
-          />
-        </div>
-      ) : null}
       {!!showSessionTabs && !isInEdit && <TabBar ref={tabsRef} />}
       {widget}
 
@@ -680,11 +684,6 @@ export function Chat() {
         className={`min-h-0 flex-1 overflow-y-scroll pt-[8px] ${showScrollbar ? "thin-scrollbar" : "no-scrollbar"}`}
       >
         {highlights}
-        {shouldShowXynapseTabs && xynapsePaneMode === "lab" ? (
-          <div className="mx-2 mb-3">
-            <XynapseResearchCard showOpenFolderAction={!hasWorkspace} />
-          </div>
-        ) : null}
         {history
           .filter((item) => item.message.role !== "system")
           .map((item, index: number) => (
@@ -705,9 +704,7 @@ export function Chat() {
               {index === history.length - 1 && <InlineErrorMessage />}
             </div>
           ))}
-        {shouldShowXynapseTabs && xynapsePaneMode === "lab"
-          ? null
-          : emptyStateBody}
+        {emptyStateBody}
       </StepsDiv>
       <div className={"relative"}>
         <div
