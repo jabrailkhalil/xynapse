@@ -3,59 +3,10 @@ version: 1.0.0
 schema: v1
 responseLanguage: ru
 models:
-  # ===== YandexGPT =====
-  - name: YandexGPT Pro
-    provider: yandex_gpt
-    model: yandexgpt
-    apiKey: YOUR_YANDEX_API_KEY
-    folderId: YOUR_YANDEX_FOLDER_ID
-    roles:
-      - chat
-      - edit
-      - apply
-    defaultCompletionOptions:
-      temperature: 0.3
-      maxTokens: 8192
-    requestOptions:
-      extraBodyProperties:
-        folderId: YOUR_YANDEX_FOLDER_ID
-
-  - name: YandexGPT Lite
-    provider: yandex_gpt
-    model: yandexgpt-lite
-    apiKey: YOUR_YANDEX_API_KEY
-    folderId: YOUR_YANDEX_FOLDER_ID
-    roles:
-      - chat
-      - autocomplete
-      - embed
-      - rerank
-    defaultCompletionOptions:
-      temperature: 0.1
-      maxTokens: 2048
-    requestOptions:
-      extraBodyProperties:
-        folderId: YOUR_YANDEX_FOLDER_ID
-
-  - name: YandexGPT 32K
-    provider: yandex_gpt
-    model: yandexgpt-32k
-    apiKey: YOUR_YANDEX_API_KEY
-    folderId: YOUR_YANDEX_FOLDER_ID
-    roles:
-      - chat
-      - summarize
-    defaultCompletionOptions:
-      temperature: 0.3
-      maxTokens: 16384
-    requestOptions:
-      extraBodyProperties:
-        folderId: YOUR_YANDEX_FOLDER_ID
-
   # ===== YandexGPT 5-е поколение =====
   - name: YandexGPT Pro 5
     provider: yandex_gpt
-    model: yandexgpt
+    model: yandexgpt-5-pro
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -70,7 +21,7 @@ models:
 
   - name: YandexGPT Pro 5.1
     provider: yandex_gpt
-    model: yandexgpt/rc
+    model: yandexgpt-5.1
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -85,7 +36,7 @@ models:
 
   - name: YandexGPT Lite 5
     provider: yandex_gpt
-    model: yandexgpt-lite
+    model: yandexgpt-5-lite
     apiKey: YOUR_YANDEX_API_KEY
     folderId: YOUR_YANDEX_FOLDER_ID
     roles:
@@ -180,20 +131,6 @@ models:
     defaultCompletionOptions:
       temperature: 0.1
       maxTokens: 4096
-    requestOptions:
-      extraBodyProperties:
-        folderId: YOUR_YANDEX_FOLDER_ID
-
-  - name: Gemma 3 27B
-    provider: yandex_gpt
-    model: gemma-3-27b-it
-    apiKey: YOUR_YANDEX_API_KEY
-    folderId: YOUR_YANDEX_FOLDER_ID
-    roles:
-      - chat
-    defaultCompletionOptions:
-      temperature: 0.3
-      maxTokens: 8192
     requestOptions:
       extraBodyProperties:
         folderId: YOUR_YANDEX_FOLDER_ID
