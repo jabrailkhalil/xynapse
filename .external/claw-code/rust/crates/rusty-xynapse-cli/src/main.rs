@@ -147,10 +147,15 @@ impl ModelProvenance {
     }
 }
 
-fn max_tokens_for_model(model: &str) -> u32 {
-    if model.starts_with("yandex/gpt://") || model.starts_with("gpt://") {
-        4_096
-    } else if model.contains("opus") {
+fn max_tokens_for_model(model: &str, plugin_override: Option<u32>) -> u32 {
+    if let Some(max_output_tokens) = plugin_override {
+        return max_output_tokens;
+    }
+
+    let canonical = model.trim().to_ascii_lowercase();
+    if canonical.starts_with("yandex/gpt://") || canonical.starts_with("gpt://") {
+        8_192
+    } else if canonical.contains("opus") {
         32_000
     } else {
         64_000
@@ -3710,6 +3715,7 @@ struct RuntimePluginState {
     tool_registry: GlobalToolRegistry,
     plugin_registry: PluginRegistry,
     mcp_state: Option<Arc<Mutex<RuntimeMcpState>>>,
+    max_output_tokens: Option<u32>,
 }
 
 struct RuntimeMcpState {
@@ -6951,6 +6957,7 @@ fn build_runtime_plugin_state_with_loader(
         tool_registry,
         plugin_registry,
         mcp_state,
+        max_output_tokens: runtime_config.plugins().max_output_tokens(),
     })
 }
 
@@ -7377,6 +7384,7 @@ fn build_runtime_with_plugin_state(
         tool_registry,
         plugin_registry,
         mcp_state,
+        max_output_tokens,
     } = runtime_plugin_state;
     plugin_registry.initialize()?;
     let policy = permission_policy(permission_mode, &feature_config, &tool_registry)
@@ -7390,6 +7398,7 @@ fn build_runtime_with_plugin_state(
             emit_output,
             allowed_tools.clone(),
             tool_registry.clone(),
+            max_output_tokens,
             progress_reporter,
         )?,
         CliToolExecutor::new(
@@ -7505,6 +7514,7 @@ struct AnthropicRuntimeClient {
     emit_output: bool,
     allowed_tools: Option<AllowedToolSet>,
     tool_registry: GlobalToolRegistry,
+    max_output_tokens: Option<u32>,
     progress_reporter: Option<InternalPromptProgressReporter>,
     reasoning_effort: Option<String>,
 }
@@ -7517,6 +7527,7 @@ impl AnthropicRuntimeClient {
         emit_output: bool,
         allowed_tools: Option<AllowedToolSet>,
         tool_registry: GlobalToolRegistry,
+        max_output_tokens: Option<u32>,
         progress_reporter: Option<InternalPromptProgressReporter>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Dispatch to the correct provider at construction time.
@@ -7570,6 +7581,7 @@ impl AnthropicRuntimeClient {
             emit_output,
             allowed_tools,
             tool_registry,
+            max_output_tokens,
             progress_reporter,
             reasoning_effort: None,
         })
@@ -7597,7 +7609,7 @@ impl ApiClient for AnthropicRuntimeClient {
         let is_post_tool = request_ends_with_tool_result(&request);
         let message_request = MessageRequest {
             model: self.model.clone(),
-            max_tokens: max_tokens_for_model(&self.model),
+            max_tokens: max_tokens_for_model(&self.model, self.max_output_tokens),
             messages: convert_messages(&request.messages),
             system: (!request.system_prompt.is_empty()).then(|| request.system_prompt.join("\n\n")),
             tools: self
@@ -9097,7 +9109,7 @@ mod tests {
         format_model_switch_report, format_permissions_report, format_permissions_switch_report,
         format_pr_report, format_resume_report, format_status_report, format_tool_call_start,
         format_tool_result, format_ultraplan_report, format_unknown_slash_command,
-        format_unknown_slash_command_message, format_user_visible_api_error,
+        format_unknown_slash_command_message, format_user_visible_api_error, max_tokens_for_model,
         merge_prompt_with_stdin, normalize_permission_mode, parse_args, parse_export_args,
         parse_git_status_branch, parse_git_status_metadata_for, parse_git_workspace_summary,
         parse_history_count, permission_policy, print_help_to, push_output_block,
@@ -9730,6 +9742,18 @@ mod tests {
         assert_eq!(resolve_model_alias("sonnet"), "xynapse-sonnet-4-6");
         assert_eq!(resolve_model_alias("haiku"), "xynapse-haiku-4-5-20251213");
         assert_eq!(resolve_model_alias("xynapse-opus"), "xynapse-opus");
+    }
+
+    #[test]
+    fn runtime_uses_release_yandex_output_limit_and_plugin_override() {
+        assert_eq!(
+            max_tokens_for_model("gpt://folder-id/qwen3.6-35b-a3b", None),
+            8_192
+        );
+        assert_eq!(
+            max_tokens_for_model("gpt://folder-id/qwen3.6-35b-a3b", Some(12_345)),
+            12_345
+        );
     }
 
     #[test]
