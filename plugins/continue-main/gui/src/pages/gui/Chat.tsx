@@ -422,7 +422,7 @@ export function Chat() {
               index,
               editorState,
               contextItems: selectedContextItems,
-              appliedRules,
+              appliedRules: [],
             }),
           );
           ideMessenger.post("xynapse/runtimePrompt", {

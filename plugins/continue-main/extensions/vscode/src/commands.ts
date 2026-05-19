@@ -504,6 +504,10 @@ function buildWorkspaceAwareLabPrompt(
     planMode || permissionMode === "read-only"
       ? ""
       : "When the user asks to create, fix, change, or improve files, use write_file/edit_file to complete the change before the final answer. If the user says a previous result is wrong, inspect the file and apply a concrete correction; do not merely defend the existing file unless there is a specific blocker.";
+  const launchInstruction =
+    planMode || permissionMode === "read-only"
+      ? ""
+      : "Do not open created files, browser windows, terminals, or external applications after writing files unless the user explicitly asks to run or open them.";
 
   return [
     `Workspace root: ${cwd}`,
@@ -512,6 +516,7 @@ function buildWorkspaceAwareLabPrompt(
       ? "Use file/search tools first. Shell/runtime tools are available only in full access mode after the user explicitly selected and confirmed this mode."
       : "Use the workspace file tools first: glob_search/grep_search/read_file for inspection, and edit_file/write_file only when edit mode is enabled. Do not use shell/bash in this embedded panel unless full access mode is selected.",
     actionInstruction,
+    launchInstruction,
     runtimeRules?.trim()
       ? `Active Xynapse rules:\n${runtimeRules.trim()}`
       : "",
@@ -519,6 +524,7 @@ function buildWorkspaceAwareLabPrompt(
     formatUiConversationContext(previousDiscussion),
     "User task:",
     prompt.trim(),
+    "End of Xynapse internal prompt.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -582,8 +588,28 @@ function sanitizeLabOutput(text: string) {
     .replace(new RegExp(`\\b${["cla", "ude"].join("")}\\b`, "gi"), "Xynapse");
 }
 
-function cleanRuntimeOutputForChat(text: string) {
+function stripRuntimePromptFileEcho(text: string) {
   return text
+    .replace(
+      /(?:^|\n)\s*read_file\s*\n\s*.*(?:Reading|Read)\s+.*\.xynapse[\\/]runtime[\\/]prompts[^\n]*(?:\n|$)/gim,
+      "\n",
+    )
+    .replace(
+      /^.*(?:Reading|Read)\s+.*\.xynapse[\\/]runtime[\\/]prompts[^\n]*(?:\n|$)/gim,
+      "",
+    )
+    .replace(
+      /(?:^|\n)Workspace root:[\s\S]*?\nEnd of Xynapse internal prompt\.\s*(?:\n|$)/g,
+      "\n",
+    )
+    .replace(
+      /(?:^|\n)Workspace root:[\s\S]*?\nUser task:\s*\n+[^\n]*(?:\n|$)/g,
+      "\n",
+    );
+}
+
+function cleanRuntimeOutputForChat(text: string) {
+  return stripRuntimePromptFileEcho(text)
     .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/gm, "")
     .replace(/^.*?\bXynapse thinking\.\.\.\s*/gm, "")
     .replace(/\s*╭─\s*([^─]+?)\s*─╮\s*/g, "\n$1\n")
