@@ -48,6 +48,68 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     void,
   ];
   "xynapse/runtimeStop": [{ runId?: string } | undefined, void];
+  "xynapse/openEnvironment": [
+    {
+      action?:
+        | "status"
+        | "update"
+        | "install"
+        | "startServer"
+        | "startClient"
+        | "sendInput"
+        | "stop";
+      runId?: string;
+      workspaceDir?: string;
+      input?: string;
+      permissionMode?:
+        | "default"
+        | "plan"
+        | "acceptEdits"
+        | "dontAsk"
+        | "bypassPermissions";
+    } | undefined,
+    {
+      ok: boolean;
+      message?: string;
+      cwd?: string;
+      permissionMode?: string;
+      runId?: string;
+      upstreamRoot?: string;
+      upstreamCommit?: string;
+      upstreamDirty?: boolean;
+      uvInstalled?: boolean;
+      python314Installed?: boolean;
+      fccInstalled?: boolean;
+      clientInstalled?: boolean;
+      adminUrl?: string;
+      supportedProviders?: string[];
+    },
+  ];
+  "xynapse/listLabHistory": [
+    { workspaceDir?: string } | undefined,
+    {
+      items: Array<{
+        id: string;
+        title: string;
+        kind: string;
+        task: string;
+        model?: string;
+        exitCode?: number | null;
+        route?: string;
+        createdAt?: string;
+        updatedAt?: string;
+        reportRelPath: string;
+        planRelPath?: string;
+        corePrompt?: string;
+        summary?: string;
+      }>;
+      error?: string;
+    },
+  ];
+  "xynapse/openLabArtifact": [
+    { workspaceDir?: string; relPath?: string } | undefined,
+    { ok: boolean; error?: string },
+  ];
   "xynapse/deleteRuntimeSession": [
     { sessionId?: string; workspaceDir?: string } | undefined,
     void,
@@ -169,6 +231,19 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
       title?: string;
       cwd?: string;
       model?: string;
+      command?: string;
+      exitCode?: number | null;
+    },
+    void,
+  ];
+  "xynapse/environmentEvent": [
+    {
+      runId: string;
+      kind: "start" | "chunk" | "end" | "error";
+      stream?: "stdout" | "stderr" | "system";
+      text?: string;
+      title?: string;
+      cwd?: string;
       command?: string;
       exitCode?: number | null;
     },

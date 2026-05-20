@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
+import * as http from "node:http";
 import * as path from "node:path";
 
 import { ContextMenuConfig, ILLM, ModelInstaller } from "core";
@@ -38,10 +39,7 @@ import {
   StatusBarStatus,
 } from "./autocomplete/statusBar";
 import { XynapseConsoleWebviewViewProvider } from "./XynapseConsoleWebviewViewProvider";
-import {
-  XynapseGUIWebviewViewProvider,
-  type XynapseSurface,
-} from "./XynapseGUIWebviewViewProvider";
+import { XynapseGUIWebviewViewProvider } from "./XynapseGUIWebviewViewProvider";
 import { processDiff } from "./diff/processDiff";
 import { VerticalDiffManager } from "./diff/vertical/manager";
 import EditDecorationManager from "./quickEdit/EditDecorationManager";
@@ -79,6 +77,57 @@ type RuntimePromptRequest =
     };
 
 type RuntimeDoctorRequest = { runId?: string; workspaceDir?: string } | undefined;
+type EnvironmentOpenRequest =
+  | {
+      action?:
+        | "status"
+        | "update"
+        | "install"
+        | "startServer"
+        | "startClient"
+        | "sendInput"
+        | "stopServer"
+        | "stop";
+      runId?: string;
+      workspaceDir?: string;
+      input?: string;
+      environmentProvider?: string;
+      environmentModel?: string;
+      environmentModelTitle?: string;
+      environmentApiKey?: string;
+      environmentBaseUrl?: string;
+      environmentFolderId?: string;
+      permissionMode?:
+        | "default"
+        | "plan"
+        | "acceptEdits"
+        | "dontAsk"
+        | "bypassPermissions";
+    }
+  | undefined;
+type EnvironmentOpenResponse = {
+  ok: boolean;
+  message?: string;
+  cwd?: string;
+  permissionMode?: string;
+  runId?: string;
+  upstreamRoot?: string;
+  upstreamCommit?: string;
+  upstreamDirty?: boolean;
+  uvInstalled?: boolean;
+  python314Installed?: boolean;
+  fccInstalled?: boolean;
+  clientInstalled?: boolean;
+  serverRunning?: boolean;
+  supportedProviders?: string[];
+  environmentProvider?: string;
+  environmentProviderLabel?: string;
+  environmentModel?: string;
+  environmentSourceLabel?: string;
+  environmentCredentialEnv?: string;
+  environmentApiKeyConfigured?: boolean;
+  environmentBaseUrl?: string;
+};
 
 type RuntimePermissionMode =
   | "read-only"
@@ -111,6 +160,34 @@ type RuntimeCheckpointRestoreResult = {
   action: "restored" | "continue" | "cancel";
   message?: string;
 };
+
+type LabHistoryRequest = { workspaceDir?: string } | undefined;
+
+type LabHistoryItem = {
+  id: string;
+  title: string;
+  kind: string;
+  task: string;
+  model?: string;
+  exitCode?: number | null;
+  route?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  reportRelPath: string;
+  planRelPath?: string;
+  corePrompt?: string;
+  summary?: string;
+};
+
+type LabHistoryResponse = {
+  items: LabHistoryItem[];
+  error?: string;
+};
+
+type LabArtifactRequest = {
+  workspaceDir?: string;
+  relPath?: string;
+} | undefined;
 
 const XYNAPSE_PROFILE_FILES = [
   "config.yaml",
@@ -511,6 +588,8 @@ function buildWorkspaceAwareLabPrompt(
     planMode || permissionMode === "read-only"
       ? ""
       : "Do not open created files, browser windows, terminals, or external applications after writing files unless the user explicitly asks to run or open them.";
+  const outputInstruction =
+    "Do not echo full file contents, large tool outputs, prompt files, or raw logs in the final answer. Summarize paths, changes, and checks briefly.";
 
   return [
     `Workspace root: ${cwd}`,
@@ -520,6 +599,7 @@ function buildWorkspaceAwareLabPrompt(
       : "Use the workspace file tools first: glob_search/grep_search/read_file for inspection, and edit_file/write_file only when edit mode is enabled. Do not use shell/bash in this embedded panel unless full access mode is selected.",
     actionInstruction,
     launchInstruction,
+    outputInstruction,
     runtimeRules?.trim()
       ? `Active Xynapse rules:\n${runtimeRules.trim()}`
       : "",
@@ -546,6 +626,461 @@ function isCoreRuntimeRequest(request?: RuntimePromptRequest) {
 
 function createLabRunId() {
   return `lab-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function timestampForArtifactName() {
+  return new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-")
+    .replace("T", "_")
+    .replace("Z", "");
+}
+
+function slugForArtifactName(value: string, fallback: string) {
+  const asciiValue = value.normalize("NFKD").replace(/[^\x00-\x7F]/g, "");
+  const slug = asciiValue
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  const fallbackSlug = fallback
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || fallbackSlug || "lab-run";
+}
+
+function extractLabTaskTitle(prompt: string) {
+  const jsonStart = prompt.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(prompt.slice(jsonStart));
+      if (typeof parsed?.task === "string" && parsed.task.trim()) {
+        return parsed.task.trim();
+      }
+    } catch {
+      // The prompt may contain prose before/after JSON. Fall back to text rules.
+    }
+  }
+
+  const taskLine = prompt
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => /^task\s*[:=]/i.test(line) || /^задача\s*[:=]/i.test(line));
+  if (taskLine) {
+    return taskLine.replace(/^[^:=]+[:=]\s*/, "").trim();
+  }
+
+  return prompt.split(/\r?\n/).find((line) => line.trim())?.trim() ?? "lab-run";
+}
+
+function relativizeWorkspacePath(cwd: string, absPath: string) {
+  return path.relative(cwd, absPath).replace(/\\/g, "/");
+}
+
+function buildCorePlanPrompt(planRelPath: string) {
+  return [
+    `Read the Core improvement plan at \`${planRelPath}\` and implement only the concrete items listed there.`,
+    "Inspect the current workspace files first, then apply the smallest useful code/UI changes.",
+    "Do not paste the Lab report into the answer, do not echo full files, and do not rewrite working code from scratch unless the plan explicitly requires it.",
+    "After editing, briefly list changed files and the checks you ran.",
+  ].join("\n");
+}
+
+function buildCoreRefinementPrompt(planRelPath: string) {
+  return [
+    `Read the rejected Lab verification plan at \`${planRelPath}\`.`,
+    "Do not edit project source files yet.",
+    "Convert the Lab findings into a concise implementation brief: a clarified goal, 2-3 concrete feature scopes, acceptance criteria, risks, and the exact next prompt to run once a scope is chosen.",
+    "Keep the answer short and actionable. Do not paste the Lab report, raw logs, prompt files, or full source files.",
+  ].join("\n");
+}
+
+function asciiSummary(value: string, fallback: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  return /^[\x00-\x7F]*$/.test(trimmed) ? trimmed : fallback;
+}
+
+function limitText(value: string, maxChars: number) {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxChars) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, maxChars)}\n\n[truncated: ${trimmed.length - maxChars} chars omitted]`;
+}
+
+function compactLabOutputForArtifact(output: string, maxChars: number) {
+  const htmlOmitted =
+    "[omitted HTML document dump; inspect the workspace file directly]";
+  const cleaned = output
+    .replace(/<!doctype html[\s\S]*?<\/html>/gi, htmlOmitted)
+    .replace(/\u2026 output truncated for display; full result preserved in session\./g, "[tool output truncated]")
+    .replace(/\.{3} output truncated for display; full result preserved in session\./g, "[tool output truncated]")
+    .replace(/\n{3,}/g, "\n\n");
+  return limitText(cleaned, maxChars);
+}
+
+function compactLabOutputForPlan(output: string) {
+  const compact = compactLabOutputForArtifact(output, 12000);
+  const finalMarkers = [
+    "---BVC Verification Report",
+    "BVC Verification Report",
+    "BVC Verification",
+    "Final Verdict",
+    "Verdict",
+    "Now I have the full workspace context",
+  ];
+  const markerIndexes = finalMarkers
+    .map((marker) => {
+      const index = compact.toLowerCase().indexOf(marker.toLowerCase());
+      return index >= 0 ? index : undefined;
+    })
+    .filter((index): index is number => index !== undefined);
+  const finalAnswer =
+    markerIndexes.length > 0
+      ? compact.slice(Math.min(...markerIndexes))
+      : compact;
+
+  const lines = finalAnswer
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return false;
+      }
+      if (/^(read_file|file_search|text_search|write_file|edit_file|bash)\b/i.test(trimmed)) {
+        return false;
+      }
+      if (/^(xynapse activity:|runtime route:|runtime env:|runtime state:)/i.test(trimmed)) {
+        return false;
+      }
+      if (/^(workspace root:|user task:|end of xynapse internal prompt)/i.test(trimmed)) {
+        return false;
+      }
+      if (/^(in \.|[{}"\[\]],?)/i.test(trimmed)) {
+        return false;
+      }
+      if (/[\\/]?\.xynapse[\\/]|xynapse-lab\.jsonl|lab-ui-\d+|last-run\.json/i.test(trimmed)) {
+        return false;
+      }
+      if (/^(<!doctype|<html|<head|<body|<style|<script|<\/)/i.test(trimmed)) {
+        return false;
+      }
+      if (/^[.#]?[a-z0-9_-]+\s*\{/i.test(trimmed)) {
+        return false;
+      }
+      return true;
+    });
+  return limitText(lines.join("\n"), 6000);
+}
+
+function detectLabRejected(output: string) {
+  return /\bREJECTED\b|insufficient specification|not a verifiable requirement|cannot proceed as defined/i.test(
+    output,
+  );
+}
+
+function buildRejectedFindingsSummary(output: string) {
+  const reasons = new Set<string>();
+  const lower = output.toLowerCase();
+
+  if (/vague|ambig|undefined|not a verifiable requirement|more powerful/i.test(output)) {
+    reasons.add("The Lab run rejected the request because the task is too vague to implement safely.");
+  }
+  if (/acceptance criteria|success metrics|testable|verifiability/i.test(output)) {
+    reasons.add("Acceptance criteria and measurable success conditions are missing.");
+  }
+  if (/same model|identical model|role diversity|uniform model/i.test(output)) {
+    reasons.add("The BVC role setup has weak diversity because multiple roles use the same model.");
+  }
+  if (/no existing user stories|traceability|baseline spec/i.test(output)) {
+    reasons.add("There is no baseline specification or user story to trace the requested improvement against.");
+  }
+
+  const examples: string[] = [];
+  for (const match of output.matchAll(/"([^"]{12,160})"/g)) {
+    const value = match[1].trim();
+    if (
+      /add|support|calculator|operation|history|theme|unit|matrix|graph|solver/i.test(
+        value,
+      ) &&
+      !examples.includes(value)
+    ) {
+      examples.push(value);
+    }
+    if (examples.length >= 3) {
+      break;
+    }
+  }
+
+  const lines = [
+    "Lab verdict: REJECTED - insufficient specification.",
+    "",
+    "High-signal findings:",
+    ...Array.from(reasons).map((reason) => `- ${reason}`),
+    "",
+    "Core should not implement code from this plan yet. It should first produce a concrete implementation brief.",
+  ];
+
+  if (examples.length > 0) {
+    lines.push("", "Possible concrete scopes mentioned by Lab:");
+    lines.push(...examples.map((example) => `- ${example}`));
+  }
+
+  return lines.join("\n");
+}
+
+function persistLabArtifacts(options: {
+  cwd: string;
+  runId: string;
+  title: string;
+  model?: string;
+  route?: string;
+  prompt: string;
+  output: string;
+  exitCode?: number | null;
+}) {
+  const taskTitle = extractLabTaskTitle(options.prompt);
+  const artifactBase = `${timestampForArtifactName()}-${slugForArtifactName(taskTitle, options.runId)}`;
+  const labDir = path.join(options.cwd, ".xynapse", "lab");
+  const reportsDir = path.join(labDir, "reports");
+  const plansDir = path.join(labDir, "core-plans");
+  fs.mkdirSync(reportsDir, { recursive: true });
+  fs.mkdirSync(plansDir, { recursive: true });
+
+  const reportPath = path.join(reportsDir, `${artifactBase}.md`);
+  const planPath = path.join(plansDir, `${artifactBase}-core-plan.md`);
+  const reportRelPath = relativizeWorkspacePath(options.cwd, reportPath);
+  const planRelPath = relativizeWorkspacePath(options.cwd, planPath);
+  const taskSummary = asciiSummary(taskTitle, "See the source Lab report for the original user task.");
+  const compactReportOutput = compactLabOutputForArtifact(options.output, 30000);
+  const rejected = detectLabRejected(options.output);
+  const corePrompt = rejected
+    ? buildCoreRefinementPrompt(planRelPath)
+    : buildCorePlanPrompt(planRelPath);
+  const planFindings = rejected
+    ? buildRejectedFindingsSummary(options.output)
+    : compactLabOutputForPlan(options.output);
+
+  const reportLines = [
+    `# ${options.title}`,
+    "",
+    `- Workspace: \`${options.cwd}\``,
+    `- Task: ${taskTitle}`,
+    `- Model: ${options.model ?? "unknown"}`,
+    `- Exit code: ${options.exitCode ?? "unknown"}`,
+    ...(options.route ? [`- Route: \`${options.route}\``] : []),
+    `- Created: ${new Date().toISOString()}`,
+    "",
+    "## User Request",
+    "",
+    "```text",
+    options.prompt.trim(),
+    "```",
+    "",
+    "## Lab Output",
+    "",
+    compactReportOutput || "_No output captured._",
+    "",
+  ];
+  const report = reportLines.join("\n");
+
+  const plan = [
+    rejected ? "# Core Refinement Plan" : "# Core Improvement Plan",
+    "",
+    `Source Lab report: \`${reportRelPath}\``,
+    `Task: ${taskSummary}`,
+    `Lab verdict: ${rejected ? "REJECTED - specification refinement required" : "Implementation candidate"}`,
+    "",
+    "## Prompt For Xynapse Core",
+    "",
+    "```text",
+    corePrompt,
+    "```",
+    "",
+    rejected ? "## Refinement Plan" : "## Implementation Plan",
+    "",
+    ...(rejected
+      ? [
+          "1. Do not edit project source files from this rejected BVC result.",
+          "2. Turn the vague request into a concrete implementation brief.",
+          "3. Propose 2-3 scoped options and acceptance criteria for each option.",
+          "4. Recommend one next prompt that can be sent back to Lab/Core after the user chooses a scope.",
+          "5. Keep the answer concise and avoid raw Lab logs or tool output.",
+        ]
+      : [
+          "1. Read this plan first. Open the source Lab report only if a finding is unclear.",
+          "2. Inspect the current workspace files mentioned by the findings before editing.",
+          "3. Apply the smallest set of code/UI changes that addresses the high-signal findings.",
+          "4. Preserve the user's existing project structure and do not replace working code without a reason.",
+          "5. Do not echo the Lab report, prompt file, full source files, or raw tool output in the final answer.",
+          "6. Verify the changed behavior with the available file/runtime tools and report what was checked.",
+        ]),
+    "",
+    "## Findings Summary",
+    "",
+    "```text",
+    planFindings || "No concise Lab findings captured. Open the source Lab report if needed.",
+    "```",
+    "",
+  ].join("\n");
+
+  fs.writeFileSync(reportPath, report, "utf8");
+  fs.writeFileSync(planPath, plan, "utf8");
+
+  return { reportRelPath, planRelPath, corePrompt, rejected };
+}
+
+function stripInlineMarkdownCode(text: string) {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("`") && trimmed.endsWith("`") && trimmed.length > 1) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function parseLabReportMetadata(raw: string) {
+  const metadata: Record<string, string> = {};
+  for (const line of raw.split(/\r?\n/)) {
+    const match = /^-\s+([^:]+):\s*(.*)$/.exec(line);
+    if (match) {
+      metadata[match[1].trim().toLowerCase()] = stripInlineMarkdownCode(
+        match[2],
+      );
+    }
+  }
+  return metadata;
+}
+
+function extractMarkdownSection(raw: string, heading: string) {
+  const lines = raw.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (start < 0) {
+    return "";
+  }
+
+  const sectionLines: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^##\s+/.test(line.trim())) {
+      break;
+    }
+    sectionLines.push(line);
+  }
+  return sectionLines.join("\n").trim();
+}
+
+function extractCorePromptFromPlan(plan: string) {
+  const section = extractMarkdownSection(plan, "Prompt For Xynapse Core");
+  const fenced = /```(?:text)?\s*([\s\S]*?)```/i.exec(section);
+  return (fenced?.[1] ?? section).trim();
+}
+
+function compactLabHistorySummary(raw: string) {
+  const output = extractMarkdownSection(raw, "Lab Output");
+  const fallback = raw.replace(/^#\s+.*$/m, "");
+  const cleaned = (output || fallback)
+    .replace(/```[\s\S]*?```/g, "[large block omitted]")
+    .replace(/\[[^\]]*omitted[^\]]*\]/gi, "[omitted]")
+    .replace(/^(read_file|file_search|text_search|write_file|edit_file|bash)\b.*$/gim, "")
+    .replace(/^(runtime route:|runtime env:|runtime state:|workspace root:).*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return limitText(cleaned || "No concise Lab summary captured.", 900);
+}
+
+function inferLabHistoryKind(task: string, raw: string) {
+  const text = `${task}\n${raw}`.toLowerCase();
+  if (text.includes("bvc")) {
+    return "bvc";
+  }
+  if (text.includes("council")) {
+    return "council";
+  }
+  if (text.includes("audit")) {
+    return "audit";
+  }
+  if (text.includes("compare")) {
+    return "compare";
+  }
+  return "research";
+}
+
+function listXynapseLabHistory(cwd: string): LabHistoryItem[] {
+  const reportsDir = path.join(cwd, ".xynapse", "lab", "reports");
+  const plansDir = path.join(cwd, ".xynapse", "lab", "core-plans");
+  if (!fs.existsSync(reportsDir)) {
+    return [];
+  }
+
+  const reportEntries = fs
+    .readdirSync(reportsDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"));
+
+  const items = reportEntries
+    .map((entry): LabHistoryItem | undefined => {
+      const reportPath = path.join(reportsDir, entry.name);
+      try {
+        const raw = fs.readFileSync(reportPath, "utf8");
+        const stat = fs.statSync(reportPath);
+        const metadata = parseLabReportMetadata(raw);
+        const artifactBase = path.basename(entry.name, ".md");
+        const planPath = path.join(plansDir, `${artifactBase}-core-plan.md`);
+        const hasPlan = fs.existsSync(planPath);
+        const plan = hasPlan ? fs.readFileSync(planPath, "utf8") : "";
+        const title = /^#\s+(.+)$/m.exec(raw)?.[1]?.trim() || "Xynapse Lab research";
+        const task = metadata.task || title;
+        const exitCode =
+          metadata["exit code"] && Number.isFinite(Number(metadata["exit code"]))
+            ? Number(metadata["exit code"])
+            : null;
+
+        return {
+          id: artifactBase,
+          title,
+          kind: inferLabHistoryKind(task, raw),
+          task,
+          model: metadata.model,
+          exitCode,
+          route: metadata.route,
+          createdAt: metadata.created || stat.birthtime.toISOString(),
+          updatedAt: stat.mtime.toISOString(),
+          reportRelPath: relativizeWorkspacePath(cwd, reportPath),
+          planRelPath: hasPlan ? relativizeWorkspacePath(cwd, planPath) : undefined,
+          corePrompt: plan ? extractCorePromptFromPlan(plan) : undefined,
+          summary: compactLabHistorySummary(raw),
+        };
+      } catch {
+        return undefined;
+      }
+    })
+    .filter((item): item is LabHistoryItem => item !== undefined);
+
+  return items
+    .sort((a, b) => {
+      const bTime = new Date(b.createdAt ?? b.updatedAt ?? 0).getTime();
+      const aTime = new Date(a.createdAt ?? a.updatedAt ?? 0).getTime();
+      return bTime - aTime;
+    })
+    .slice(0, 100);
+}
+
+function resolveXynapseLabArtifactPath(cwd: string, relPath?: string) {
+  if (!relPath || path.isAbsolute(relPath)) {
+    return undefined;
+  }
+
+  const normalizedRelPath = relPath.replace(/[\\/]+/g, path.sep);
+  const labRoot = path.join(cwd, ".xynapse", "lab");
+  const resolved = path.resolve(cwd, normalizedRelPath);
+  if (!isSameOrInsidePath(labRoot, resolved) || !fs.existsSync(resolved)) {
+    return undefined;
+  }
+  return resolved;
 }
 
 function sendLabRunEvent(
@@ -719,6 +1254,13 @@ function getWindowsRuntimePathPrefixes() {
   }
 
   return [
+    path.join(process.env.USERPROFILE ?? "", ".local", "bin"),
+    path.join(
+      process.env.APPDATA ?? "",
+      "uv",
+      "python",
+      "cpython-3.14-windows-x86_64-none",
+    ),
     path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "bin"),
     path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "usr", "bin"),
     path.join(
@@ -731,6 +1273,27 @@ function getWindowsRuntimePathPrefixes() {
       "Git",
       "usr",
       "bin",
+    ),
+  ].filter((candidate) => fs.existsSync(candidate));
+}
+
+function getWindowsCommandCandidatePaths(command: string) {
+  if (process.platform !== "win32") {
+    return [];
+  }
+
+  const executable = command.toLowerCase().endsWith(".exe")
+    ? command
+    : `${command}.exe`;
+
+  return [
+    path.join(process.env.USERPROFILE ?? "", ".local", "bin", executable),
+    path.join(
+      process.env.APPDATA ?? "",
+      "Python",
+      "Python314",
+      "Scripts",
+      executable,
     ),
   ].filter((candidate) => fs.existsSync(candidate));
 }
@@ -1264,6 +1827,8 @@ function runRuntimeInWebview(
     title: string;
     model?: string;
     route?: string;
+    prompt: string;
+    saveArtifacts?: boolean;
     conversation?: {
       userPrompt: string;
       permissionMode: RuntimePermissionMode;
@@ -1400,6 +1965,48 @@ function runRuntimeInWebview(
         permissionMode: options.conversation.permissionMode,
         planMode: options.conversation.planMode,
       });
+    } else if (options.saveArtifacts !== false) {
+      try {
+        const artifacts = persistLabArtifacts({
+          cwd: options.cwd,
+          runId: options.runId,
+          title: options.title,
+          model: options.model,
+          route: options.route,
+          prompt: options.prompt,
+          output: outputChunks.join(""),
+          exitCode: finalExitCode,
+        });
+        const artifactMessage = [
+          "",
+          "Saved readable Lab report:",
+          artifacts.reportRelPath,
+          "",
+          artifacts.rejected
+            ? "Saved Core refinement plan (Lab rejected implementation):"
+            : "Saved Core improvement plan:",
+          artifacts.planRelPath,
+          "",
+          "Paste this into Xynapse Core:",
+          artifacts.corePrompt,
+          "",
+        ].join("\n");
+        outputChunks.push(artifactMessage);
+        sendLabRunEvent(sidebar, {
+          runId: options.runId,
+          kind: "chunk",
+          stream: "system",
+          text: artifactMessage,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        sendLabRunEvent(sidebar, {
+          runId: options.runId,
+          kind: "chunk",
+          stream: "stderr",
+          text: `\nCould not save Lab artifacts: ${message}\n`,
+        });
+      }
     }
     sendLabRunEvent(sidebar, {
       runId: options.runId,
@@ -1857,6 +2464,29 @@ async function collectRuntimeEnv(configHandler: ConfigHandler, preferredModel?: 
   return env;
 }
 
+function collectRuntimeEnvFromLocalFiles(preferredModel?: ILLM) {
+  const env: Record<string, string> = {};
+
+  collectRuntimeEnvFromObject(preferredModel, env);
+
+  for (const configPath of [getConfigYamlPath("vscode"), getConfigJsonPath()]) {
+    try {
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
+      const raw = fs.readFileSync(configPath, "utf8");
+      const parsed = configPath.endsWith(".json")
+        ? JSON.parse(raw)
+        : YAML.parse(raw);
+      collectRuntimeEnvFromObject(parsed, env);
+    } catch (error) {
+      console.warn(`Failed to scan ${configPath} for Xynapse runtime env`, error);
+    }
+  }
+
+  return env;
+}
+
 async function getRuntimeRunPlan(
   configHandler: ConfigHandler,
   request?: RuntimePromptRequest,
@@ -1891,6 +2521,2161 @@ async function getRuntimeRunPlan(
     model,
     env: await collectRuntimeEnv(configHandler, selectedModel),
     label: getModelIdentity(selectedModel)?.title ?? model,
+  };
+}
+
+function getFastRuntimeRunPlan(
+  request?: RuntimePromptRequest,
+): RuntimeRunPlan | undefined {
+  const rawModels = loadRawConfigModels();
+  let selectedModel = findRequestedModel(undefined, request, rawModels);
+  const override = getConfiguredRuntimeModelOverride();
+  let selectedRoute = toRuntimeModelRoute(selectedModel);
+
+  if (!selectedRoute && !override && !hasExplicitRuntimeModelRequest(request)) {
+    selectedModel = findRuntimeSupportedModel(undefined, rawModels);
+    selectedRoute = toRuntimeModelRoute(selectedModel);
+  }
+
+  const model = selectedRoute ?? override;
+  if (!model) {
+    return undefined;
+  }
+
+  return {
+    model,
+    env: collectRuntimeEnvFromLocalFiles(selectedModel),
+    label: getModelIdentity(selectedModel)?.title ?? model,
+  };
+}
+
+function quotePowerShellArg(value: string) {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+function quotePosixShellArg(value: string) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function quoteTerminalArg(value: string) {
+  return process.platform === "win32"
+    ? quotePowerShellArg(value)
+    : quotePosixShellArg(value);
+}
+
+const ENVIRONMENT_REPO_URL =
+  "https://github.com/Alishahryar1/free-claude-code.git";
+const ENVIRONMENT_DIR_NAME = "environment";
+const ENVIRONMENT_SUPPORTED_PROVIDERS = [
+  "nvidia_nim",
+  "open_router",
+  "deepseek",
+  "lmstudio",
+  "llamacpp",
+  "ollama",
+  "kimi",
+  "wafer",
+  "opencode",
+  "zai",
+  "fireworks",
+];
+
+type EnvironmentProviderDescriptor = {
+  id: string;
+  label: string;
+  credentialEnv?: string;
+  baseUrlEnv?: string;
+  defaultModel: string;
+  defaultBaseUrl?: string;
+};
+
+const ENVIRONMENT_PROVIDER_DESCRIPTORS: EnvironmentProviderDescriptor[] = [
+  {
+    id: "nvidia_nim",
+    label: "NVIDIA NIM",
+    credentialEnv: "NVIDIA_NIM_API_KEY",
+    defaultModel: "nvidia_nim/z-ai/glm4.7",
+  },
+  {
+    id: "open_router",
+    label: "OpenRouter",
+    credentialEnv: "OPENROUTER_API_KEY",
+    defaultModel: "open_router/anthropic/claude-sonnet-4.5",
+  },
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    credentialEnv: "DEEPSEEK_API_KEY",
+    defaultModel: "deepseek/deepseek-chat",
+  },
+  {
+    id: "kimi",
+    label: "Kimi",
+    credentialEnv: "KIMI_API_KEY",
+    defaultModel: "kimi/moonshot-v1-128k",
+  },
+  {
+    id: "wafer",
+    label: "Wafer",
+    credentialEnv: "WAFER_API_KEY",
+    defaultModel: "wafer/DeepSeek-V4-Pro",
+  },
+  {
+    id: "opencode",
+    label: "OpenCode Zen",
+    credentialEnv: "OPENCODE_API_KEY",
+    defaultModel: "opencode/gpt-5.3-codex",
+  },
+  {
+    id: "zai",
+    label: "Z.ai",
+    credentialEnv: "ZAI_API_KEY",
+    defaultModel: "zai/glm-5.1",
+  },
+  {
+    id: "fireworks",
+    label: "Fireworks",
+    credentialEnv: "FIREWORKS_API_KEY",
+    defaultModel: "fireworks/accounts/fireworks/models/kimi-k2p6",
+  },
+  {
+    id: "lmstudio",
+    label: "LM Studio",
+    baseUrlEnv: "LM_STUDIO_BASE_URL",
+    defaultBaseUrl: "http://localhost:1234/v1",
+    defaultModel: "lmstudio/local-model",
+  },
+  {
+    id: "llamacpp",
+    label: "llama.cpp",
+    baseUrlEnv: "LLAMACPP_BASE_URL",
+    defaultBaseUrl: "http://localhost:8080/v1",
+    defaultModel: "llamacpp/local-model",
+  },
+  {
+    id: "ollama",
+    label: "Ollama",
+    baseUrlEnv: "OLLAMA_BASE_URL",
+    defaultBaseUrl: "http://localhost:11434",
+    defaultModel: "ollama/llama3.1",
+  },
+];
+
+type ExternalEnvironmentRootResolution = {
+  root?: string;
+  parent?: string;
+  error?: string;
+};
+
+type EnvironmentPtySession = {
+  cwd: string;
+  process: any;
+  role: "client" | "server" | "task";
+  runId: string;
+};
+
+const environmentPtySessions = new Map<string, EnvironmentPtySession>();
+const environmentIntegratedTerminalSessions = new Map<string, vscode.Terminal>();
+let environmentTerminalCloseListenerRegistered = false;
+
+type XynapseEnvironmentBridgeConfig = {
+  apiKey: string;
+  baseUrl: string;
+  folderId: string;
+  model: string;
+  modelUri: string;
+  sourceLabel: string;
+};
+
+let xynapseEnvironmentBridgeServer: http.Server | undefined;
+let xynapseEnvironmentBridgeBaseUrl: string | undefined;
+let xynapseEnvironmentBridgeConfig: XynapseEnvironmentBridgeConfig | undefined;
+
+function ensureEnvironmentTerminalCloseListener(
+  extensionContext: vscode.ExtensionContext,
+) {
+  if (environmentTerminalCloseListenerRegistered) {
+    return;
+  }
+
+  environmentTerminalCloseListenerRegistered = true;
+  extensionContext.subscriptions.push(
+    vscode.window.onDidCloseTerminal((terminal) => {
+      for (const [runId, candidate] of environmentIntegratedTerminalSessions) {
+        if (candidate === terminal) {
+          environmentIntegratedTerminalSessions.delete(runId);
+        }
+      }
+    }),
+  );
+}
+
+function loadEnvironmentNativeModule<T>(id: string): T | null {
+  try {
+    return require(`${vscode.env.appRoot}/node_modules.asar/${id}`);
+  } catch (_error) {
+    // The Windows build keeps native modules unpacked under node_modules.
+  }
+
+  try {
+    return require(`${vscode.env.appRoot}/node_modules/${id}`);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function findExternalEnvironmentParent(extensionContext: vscode.ExtensionContext) {
+  const startPoints = [
+    extensionContext.extensionPath,
+    process.cwd(),
+    process.execPath ? path.dirname(process.execPath) : undefined,
+    ...(vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
+  ].filter((value): value is string => Boolean(value));
+  const visited = new Set<string>();
+
+  for (const start of startPoints) {
+    let current = path.resolve(start);
+    while (!visited.has(current)) {
+      visited.add(current);
+      const externalDir = path.join(current, ".external");
+      if (fs.existsSync(externalDir) && fs.statSync(externalDir).isDirectory()) {
+        return externalDir;
+      }
+      const parent = path.dirname(current);
+      if (parent === current) {
+        break;
+      }
+      current = parent;
+    }
+  }
+
+  const executableDir = process.execPath ? path.dirname(process.execPath) : undefined;
+  return executableDir
+    ? path.join(executableDir, ".external")
+    : path.join(extensionContext.extensionPath, ".external");
+}
+
+function resolveExternalEnvironmentRoot(
+  extensionContext: vscode.ExtensionContext,
+): ExternalEnvironmentRootResolution {
+  const parent = findExternalEnvironmentParent(extensionContext);
+  if (!parent) {
+    return {
+      error:
+        "Environment storage was not found. Expected an .external directory next to the IDE.",
+    };
+  }
+
+  const root = path.join(parent, ENVIRONMENT_DIR_NAME);
+  if (!fs.existsSync(root)) {
+    return {
+      parent,
+      root,
+      error: "The upstream Environment checkout is not installed yet.",
+    };
+  }
+
+  if (!fs.existsSync(path.join(root, "pyproject.toml"))) {
+    return {
+      parent,
+      root,
+      error:
+        "The Environment directory exists, but it is not the upstream free-claude-code project.",
+    };
+  }
+
+  return { parent, root };
+}
+
+function normalizeEnvironmentClientPermissionMode(
+  request?: EnvironmentOpenRequest,
+): "default" | "plan" | "acceptEdits" | "dontAsk" | "bypassPermissions" {
+  const requested = request?.permissionMode;
+  if (
+    requested === "default" ||
+    requested === "plan" ||
+    requested === "acceptEdits" ||
+    requested === "dontAsk" ||
+    requested === "bypassPermissions"
+  ) {
+    return requested;
+  }
+
+  return "default";
+}
+
+function commandExists(command: string) {
+  if (getWindowsCommandCandidatePaths(command).length > 0) {
+    return true;
+  }
+
+  const checker = process.platform === "win32" ? "where.exe" : "which";
+  const env = { ...process.env };
+  applyRuntimePathFixes(env);
+  const result = spawnSync(checker, [command], {
+    encoding: "utf8",
+    env,
+    windowsHide: true,
+  });
+  return result.status === 0;
+}
+
+function getUvPython314Path() {
+  if (!commandExists("uv")) {
+    return undefined;
+  }
+
+  const env = { ...process.env };
+  applyRuntimePathFixes(env);
+  const result = spawnSync("uv", ["python", "find", "3.14"], {
+    encoding: "utf8",
+    env,
+    windowsHide: true,
+  });
+  if (result.status !== 0) {
+    return undefined;
+  }
+
+  const pythonPath = String(result.stdout ?? "").trim();
+  return pythonPath && fs.existsSync(pythonPath) ? pythonPath : undefined;
+}
+
+function executableReportsPython314(pythonPath: string) {
+  const result = spawnSync(pythonPath, ["--version"], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.status !== 0) {
+    return false;
+  }
+  return `${result.stdout ?? ""}${result.stderr ?? ""}`.includes("3.14");
+}
+
+function getEnvironmentToolPythonPath() {
+  const candidates =
+    process.platform === "win32"
+      ? [
+          path.join(
+            process.env.APPDATA ?? "",
+            "uv",
+            "tools",
+            "free-claude-code",
+            "Scripts",
+            "python.exe",
+          ),
+        ]
+      : [
+          path.join(
+            process.env.HOME ?? "",
+            ".local",
+            "share",
+            "uv",
+            "tools",
+            "free-claude-code",
+            "bin",
+            "python",
+          ),
+        ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
+function isFreeClaudeCodePackageImportable() {
+  const pythonPath = getEnvironmentToolPythonPath();
+  if (!pythonPath) {
+    return false;
+  }
+
+  const result = spawnSync(pythonPath, ["-c", "import cli.entrypoints"], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return result.status === 0;
+}
+
+function isEnvironmentClientInstalled() {
+  return commandExists("fcc-claude") && isFreeClaudeCodePackageImportable();
+}
+
+function isEnvironmentRuntimeInstalled() {
+  return (
+    commandExists("fcc-server") &&
+    commandExists("fcc-claude") &&
+    isFreeClaudeCodePackageImportable()
+  );
+}
+
+function runEnvironmentSync(
+  command: string,
+  args: string[],
+  cwd?: string,
+): string | undefined {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.status !== 0) {
+    return undefined;
+  }
+  return String(result.stdout ?? "").trim();
+}
+
+function getEnvironmentGitCommit(root: string) {
+  return runEnvironmentSync("git", ["-C", root, "rev-parse", "--short", "HEAD"]);
+}
+
+function isEnvironmentGitDirty(root: string) {
+  const status = runEnvironmentSync("git", ["-C", root, "status", "--short"]);
+  return Boolean(status);
+}
+
+function hasPython314() {
+  const env = { ...process.env };
+  applyRuntimePathFixes(env);
+  const uvPython = getUvPython314Path();
+  if (uvPython && executableReportsPython314(uvPython)) {
+    return true;
+  }
+
+  if (
+    spawnSync("py", ["-3.14", "--version"], {
+      encoding: "utf8",
+      env,
+      windowsHide: true,
+    }).status === 0
+  ) {
+    return true;
+  }
+
+  return commandExists(process.platform === "win32" ? "python3.14.exe" : "python3.14");
+}
+
+function setEnvironmentProviderEnv(
+  env: Record<string, string>,
+  key: string,
+  value: unknown,
+) {
+  if (process.env[key] || env[key] || !isUsableSecret(value)) {
+    return;
+  }
+  env[key] = value.trim();
+}
+
+function collectEnvironmentProviderEnvFromObject(
+  value: unknown,
+  env: Record<string, string>,
+) {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectEnvironmentProviderEnvFromObject(item, env));
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  const provider = normalizeProviderName(
+    record.provider ?? record.name ?? record.uses,
+  );
+  const model = String(record.model ?? record.title ?? "").toLowerCase();
+  const withEnv = record.with;
+
+  if (withEnv && typeof withEnv === "object" && !Array.isArray(withEnv)) {
+    const vars = withEnv as Record<string, unknown>;
+    for (const key of [
+      "NVIDIA_NIM_API_KEY",
+      "OPENROUTER_API_KEY",
+      "DEEPSEEK_API_KEY",
+      "KIMI_API_KEY",
+      "WAFER_API_KEY",
+      "OPENCODE_API_KEY",
+      "ZAI_API_KEY",
+      "FIREWORKS_API_KEY",
+      "LM_STUDIO_BASE_URL",
+      "LLAMACPP_BASE_URL",
+      "OLLAMA_BASE_URL",
+    ]) {
+      setEnvironmentProviderEnv(env, key, vars[key]);
+    }
+  }
+
+  if (provider.includes("openrouter") || provider.includes("open-router")) {
+    setEnvironmentProviderEnv(env, "OPENROUTER_API_KEY", record.apiKey);
+  } else if (provider.includes("deepseek") || model.includes("deepseek")) {
+    setEnvironmentProviderEnv(env, "DEEPSEEK_API_KEY", record.apiKey);
+  } else if (provider.includes("kimi") || provider.includes("moonshot")) {
+    setEnvironmentProviderEnv(env, "KIMI_API_KEY", record.apiKey);
+  } else if (provider.includes("fireworks")) {
+    setEnvironmentProviderEnv(env, "FIREWORKS_API_KEY", record.apiKey);
+  } else if (provider === "zai" || provider.includes("z.ai")) {
+    setEnvironmentProviderEnv(env, "ZAI_API_KEY", record.apiKey);
+  } else if (provider.includes("nvidia")) {
+    setEnvironmentProviderEnv(env, "NVIDIA_NIM_API_KEY", record.apiKey);
+  } else if (provider.includes("wafer")) {
+    setEnvironmentProviderEnv(env, "WAFER_API_KEY", record.apiKey);
+  } else if (provider.includes("opencode")) {
+    setEnvironmentProviderEnv(env, "OPENCODE_API_KEY", record.apiKey);
+  }
+
+  Object.values(record).forEach((item) =>
+    collectEnvironmentProviderEnvFromObject(item, env),
+  );
+}
+
+function collectEnvironmentProviderEnvFromLocalFiles() {
+  const env: Record<string, string> = {};
+
+  for (const configPath of [getConfigYamlPath("vscode"), getConfigJsonPath()]) {
+    try {
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
+      const raw = fs.readFileSync(configPath, "utf8");
+      const parsed = configPath.endsWith(".json")
+        ? JSON.parse(raw)
+        : YAML.parse(raw);
+      collectEnvironmentProviderEnvFromObject(parsed, env);
+    } catch (error) {
+      console.warn(`Failed to scan ${configPath} for Environment provider env`, error);
+    }
+  }
+
+  return env;
+}
+
+function getEnvironmentManagedEnvPath() {
+  return path.join(getXynapseGlobalPath(), "environment.env");
+}
+
+function parseDotEnvText(raw: string) {
+  const values: Record<string, string> = {};
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) {
+      continue;
+    }
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    values[key] = value;
+  }
+  return values;
+}
+
+function readEnvironmentManagedEnv() {
+  const envPath = getEnvironmentManagedEnvPath();
+  if (!fs.existsSync(envPath)) {
+    return {};
+  }
+  try {
+    return parseDotEnvText(fs.readFileSync(envPath, "utf8"));
+  } catch (_error) {
+    return {};
+  }
+}
+
+function quoteDotEnvValue(value: string) {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function getEnvironmentProviderDescriptor(providerId?: string) {
+  return (
+    ENVIRONMENT_PROVIDER_DESCRIPTORS.find(
+      (provider) => provider.id === providerId,
+    ) ?? ENVIRONMENT_PROVIDER_DESCRIPTORS[0]
+  );
+}
+
+function getSavedEnvironmentProviderId(values = readEnvironmentManagedEnv()) {
+  const savedProvider = values.FCC_PROVIDER?.trim();
+  if (
+    savedProvider &&
+    ENVIRONMENT_PROVIDER_DESCRIPTORS.some(
+      (provider) => provider.id === savedProvider,
+    )
+  ) {
+    return savedProvider;
+  }
+
+  const modelProvider = values.MODEL?.split("/", 1)[0]?.trim();
+  if (
+    modelProvider &&
+    ENVIRONMENT_PROVIDER_DESCRIPTORS.some(
+      (provider) => provider.id === modelProvider,
+    )
+  ) {
+    return modelProvider;
+  }
+
+  return ENVIRONMENT_PROVIDER_DESCRIPTORS[0].id;
+}
+
+function getEnvironmentConfigStatus(values = readEnvironmentManagedEnv()) {
+  const provider = getEnvironmentProviderDescriptor(
+    getSavedEnvironmentProviderId(values),
+  );
+  const model = values.MODEL?.trim() || provider.defaultModel;
+  const configuredCredential = provider.credentialEnv
+    ? Boolean(values[provider.credentialEnv]?.trim() || process.env[provider.credentialEnv]?.trim())
+    : true;
+  const baseUrl = provider.baseUrlEnv
+    ? values[provider.baseUrlEnv]?.trim() || provider.defaultBaseUrl
+    : undefined;
+
+  return {
+    environmentProvider: provider.id,
+    environmentProviderLabel: provider.label,
+    environmentModel: model,
+    environmentSourceLabel: values.XYNAPSE_SOURCE_MODEL?.trim() || undefined,
+    environmentCredentialEnv: provider.credentialEnv,
+    environmentApiKeyConfigured: configuredCredential,
+    environmentBaseUrl: baseUrl,
+  };
+}
+
+function writeEnvironmentManagedEnv(
+  provider: EnvironmentProviderDescriptor,
+  values: {
+    model: string;
+    apiKey?: string;
+    baseUrl?: string;
+    sourceLabel?: string;
+  },
+) {
+  const existing = readEnvironmentManagedEnv();
+  const next: Record<string, string> = {
+    ...existing,
+    FCC_PROVIDER: provider.id,
+    MODEL: values.model,
+    MODEL_OPUS: values.model,
+    MODEL_SONNET: values.model,
+    MODEL_HAIKU: values.model,
+    XYNAPSE_SOURCE_MODEL: values.sourceLabel || values.model,
+    FCC_OPEN_BROWSER: "false",
+    MESSAGING_PLATFORM: "none",
+    VOICE_NOTE_ENABLED: "false",
+    WHISPER_DEVICE: "cpu",
+    ENABLE_WEB_SERVER_TOOLS: "false",
+    ENABLE_MODEL_THINKING: "false",
+    ENABLE_OPUS_THINKING: "false",
+    ENABLE_SONNET_THINKING: "false",
+    ENABLE_HAIKU_THINKING: "false",
+    HTTP_READ_TIMEOUT: "600",
+    HTTP_WRITE_TIMEOUT: "120",
+    HTTP_CONNECT_TIMEOUT: "60",
+    ANTHROPIC_AUTH_TOKEN: existing.ANTHROPIC_AUTH_TOKEN || "freecc",
+  };
+
+  if (provider.credentialEnv && values.apiKey?.trim()) {
+    next[provider.credentialEnv] = values.apiKey.trim();
+  }
+  if (provider.baseUrlEnv) {
+    next[provider.baseUrlEnv] =
+      values.baseUrl?.trim() || provider.defaultBaseUrl || "";
+  }
+
+  const preferredOrder = [
+    "FCC_PROVIDER",
+    "MODEL",
+    "MODEL_OPUS",
+    "MODEL_SONNET",
+    "MODEL_HAIKU",
+    "XYNAPSE_SOURCE_MODEL",
+    "NVIDIA_NIM_API_KEY",
+    "OPENROUTER_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "KIMI_API_KEY",
+    "WAFER_API_KEY",
+    "OPENCODE_API_KEY",
+    "ZAI_API_KEY",
+    "FIREWORKS_API_KEY",
+    "LM_STUDIO_BASE_URL",
+    "LLAMACPP_BASE_URL",
+    "OLLAMA_BASE_URL",
+    "FCC_OPEN_BROWSER",
+    "MESSAGING_PLATFORM",
+    "VOICE_NOTE_ENABLED",
+    "WHISPER_DEVICE",
+    "ENABLE_WEB_SERVER_TOOLS",
+    "ENABLE_MODEL_THINKING",
+    "ENABLE_OPUS_THINKING",
+    "ENABLE_SONNET_THINKING",
+    "ENABLE_HAIKU_THINKING",
+    "HTTP_READ_TIMEOUT",
+    "HTTP_WRITE_TIMEOUT",
+    "HTTP_CONNECT_TIMEOUT",
+    "ANTHROPIC_AUTH_TOKEN",
+  ];
+  const keys = [
+    ...preferredOrder.filter((key) => key in next),
+    ...Object.keys(next)
+      .filter((key) => !preferredOrder.includes(key))
+      .sort(),
+  ];
+  const lines = [
+    "# Managed by Xynapse Environment. This file is global for all Xynapse IDE windows.",
+    ...keys.map((key) => `${key}=${quoteDotEnvValue(next[key] ?? "")}`),
+    "",
+  ];
+  fs.mkdirSync(path.dirname(getEnvironmentManagedEnvPath()), { recursive: true });
+  fs.writeFileSync(getEnvironmentManagedEnvPath(), lines.join("\n"), "utf8");
+}
+
+function applyEnvironmentManagedEnv(env: Record<string, string | undefined>) {
+  const managedEnvPath = getEnvironmentManagedEnvPath();
+  const managed = readEnvironmentManagedEnv();
+  for (const [key, value] of Object.entries(managed)) {
+    env[key] = value;
+  }
+  env.FCC_ENV_FILE = managedEnvPath;
+  env.FCC_OPEN_BROWSER = "false";
+  env.MESSAGING_PLATFORM = env.MESSAGING_PLATFORM || "none";
+  env.VOICE_NOTE_ENABLED = env.VOICE_NOTE_ENABLED || "false";
+  env.WHISPER_DEVICE = env.WHISPER_DEVICE || "cpu";
+  return env;
+}
+
+function buildExternalEnvironmentEnv() {
+  const env: Record<string, string | undefined> = {
+    ...process.env,
+    FCC_OPEN_BROWSER: "false",
+    ...collectEnvironmentProviderEnvFromLocalFiles(),
+  };
+  applyEnvironmentManagedEnv(env);
+  applyRuntimePathFixes(env);
+  return env;
+}
+
+function stripAnsiForEnvironment(text: string) {
+  return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, "");
+}
+
+function sendEnvironmentEvent(
+  sidebar: XynapseGUIWebviewViewProvider,
+  event: {
+    runId: string;
+    kind: "start" | "chunk" | "end" | "error";
+    stream?: "stdout" | "stderr" | "system";
+    text?: string;
+    title?: string;
+    cwd?: string;
+    command?: string;
+    exitCode?: number | null;
+  },
+) {
+  sidebar.webviewProtocol?.send("xynapse/environmentEvent", event);
+}
+
+function buildEnvironmentInstallCommand() {
+  if (process.platform === "win32") {
+    return [
+      "$ErrorActionPreference = 'Stop'",
+      "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { irm https://astral.sh/uv/install.ps1 | iex }",
+      "$env:Path = \"$env:USERPROFILE\\.local\\bin;$env:USERPROFILE\\AppData\\Roaming\\Python\\Python314\\Scripts;$env:Path\"",
+      "uv python install 3.14",
+      "$toolPython = Join-Path $env:APPDATA 'uv\\tools\\free-claude-code\\Scripts\\python.exe'",
+      "$hasCommands = (Get-Command fcc-server -ErrorAction SilentlyContinue) -and (Get-Command fcc-claude -ErrorAction SilentlyContinue)",
+      "$hasPackage = $false",
+      "if (Test-Path $toolPython) { & $toolPython -c 'import cli.entrypoints' 2>$null; $hasPackage = ($LASTEXITCODE -eq 0) }",
+      `if ($hasCommands -and $hasPackage) { Write-Output 'Environment runtime already installed.' } else { uv tool install --force git+${ENVIRONMENT_REPO_URL} }`,
+    ].join("; ");
+  }
+
+  return [
+    "set -e",
+    "command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh",
+    'export PATH="$HOME/.local/bin:$PATH"',
+    "uv python install 3.14",
+    `if command -v fcc-server >/dev/null 2>&1 && command -v fcc-claude >/dev/null 2>&1 && "$HOME/.local/share/uv/tools/free-claude-code/bin/python" -c 'import cli.entrypoints' >/dev/null 2>&1; then echo 'Environment runtime already installed.'; else uv tool install --force git+${ENVIRONMENT_REPO_URL}; fi`,
+  ].join("; ");
+}
+
+function buildEnvironmentUpdateCommand(root: string) {
+  const pull = `git -C ${quoteTerminalArg(root)} pull --ff-only`;
+  const reinstall =
+    process.platform === "win32"
+      ? `if (Get-Command uv -ErrorAction SilentlyContinue) { uv tool install --force git+${ENVIRONMENT_REPO_URL} }`
+      : `command -v uv >/dev/null 2>&1 && uv tool install --force git+${ENVIRONMENT_REPO_URL}`;
+  return `${pull}; ${reinstall}`;
+}
+
+function buildEnvironmentServerCommand(root: string) {
+  if (process.platform === "win32") {
+    return [
+      `$env:FCC_OPEN_BROWSER = 'false'`,
+      `Set-Location ${quoteTerminalArg(root)}`,
+      "fcc-server",
+    ].join("; ");
+  }
+  return `export FCC_OPEN_BROWSER=false; cd ${quoteTerminalArg(root)}; fcc-server`;
+}
+
+function buildEnvironmentClientCommand(request?: EnvironmentOpenRequest) {
+  const permissionMode = normalizeEnvironmentClientPermissionMode(request);
+  return `fcc-claude --permission-mode ${quoteTerminalArg(permissionMode)}`;
+}
+
+function startEnvironmentPty(
+  sidebar: XynapseGUIWebviewViewProvider,
+  options: {
+    command: string;
+    cwd: string;
+    role?: "client" | "server" | "task";
+    runId: string;
+    title: string;
+    visible?: boolean;
+  },
+): EnvironmentOpenResponse {
+  const pty = loadEnvironmentNativeModule<any>("node-pty");
+  if (!pty?.spawn) {
+    return {
+      ok: false,
+      message: "Embedded terminal support is not available in this IDE build.",
+      cwd: options.cwd,
+      runId: options.runId,
+    };
+  }
+
+  const existing = environmentPtySessions.get(options.runId);
+  if (existing) {
+    return {
+      ok: true,
+      message: "Environment session is already running.",
+      cwd: existing.cwd,
+      runId: existing.runId,
+    };
+  }
+
+  const shellPath =
+    process.platform === "win32"
+      ? "powershell.exe"
+      : process.env.SHELL || "/bin/bash";
+  const shellArgs = process.platform === "win32" ? ["-NoLogo"] : ["-l"];
+
+  let ptyProcess: any;
+  try {
+    ptyProcess = pty.spawn(shellPath, shellArgs, {
+      name: "xterm-256color",
+      cols: 140,
+      rows: 32,
+      cwd: options.cwd,
+      env: buildExternalEnvironmentEnv(),
+      useConpty: process.platform === "win32",
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Could not start embedded Environment terminal.",
+      cwd: options.cwd,
+      runId: options.runId,
+    };
+  }
+
+  environmentPtySessions.set(options.runId, {
+    cwd: options.cwd,
+    process: ptyProcess,
+    role: options.role ?? "task",
+    runId: options.runId,
+  });
+
+  const visible = options.visible ?? true;
+
+  if (visible) {
+    sendEnvironmentEvent(sidebar, {
+      runId: options.runId,
+      kind: "start",
+      stream: "system",
+      title: options.title,
+      cwd: options.cwd,
+      command: options.command,
+      text: `${options.title}\n> ${options.command}\n`,
+    });
+  }
+
+  ptyProcess.onData((data: string) => {
+    if (visible) {
+      sendEnvironmentEvent(sidebar, {
+        runId: options.runId,
+        kind: "chunk",
+        stream: "stdout",
+        text: stripAnsiForEnvironment(data),
+      });
+    }
+  });
+
+  ptyProcess.onExit((event: { exitCode?: number }) => {
+    environmentPtySessions.delete(options.runId);
+    if (visible) {
+      sendEnvironmentEvent(sidebar, {
+        runId: options.runId,
+        kind: "end",
+        stream: "system",
+        exitCode: event.exitCode ?? null,
+        text: `\nEnvironment process exited with code ${event.exitCode ?? "unknown"}\n`,
+      });
+    }
+  });
+
+  ptyProcess.write(`${options.command}\r`);
+
+  return {
+    ok: true,
+    message: visible
+      ? "Environment coding session started in this tab."
+      : "Environment proxy server started in the background.",
+    cwd: options.cwd,
+    runId: options.runId,
+  };
+}
+
+function getEnvironmentServerSession(root?: string) {
+  if (!root) {
+    return undefined;
+  }
+  return Array.from(environmentPtySessions.values()).find(
+    (session) => session.role === "server" && session.cwd === root,
+  );
+}
+
+function startEnvironmentServerIfNeeded(
+  sidebar: XynapseGUIWebviewViewProvider,
+  root: string,
+  runId: string,
+) {
+  const existing = getEnvironmentServerSession(root);
+  if (existing) {
+    return {
+      ok: true,
+      message: "Environment proxy server is already running in the background.",
+      cwd: existing.cwd,
+      runId: existing.runId,
+      serverRunning: true,
+    };
+  }
+
+  const started = startEnvironmentPty(sidebar, {
+    runId,
+    cwd: root,
+    role: "server",
+    visible: false,
+    title: "Start upstream proxy server",
+    command: buildEnvironmentServerCommand(root),
+  });
+
+  return {
+    ...started,
+    serverRunning: started.ok,
+  };
+}
+
+function startEnvironmentIntegratedTerminal(
+  request: EnvironmentOpenRequest,
+  options: {
+    cwd: string;
+    runId: string;
+  },
+): EnvironmentOpenResponse {
+  const existing = environmentIntegratedTerminalSessions.get(options.runId);
+  if (existing) {
+    existing.show(false);
+    return {
+      ok: true,
+      message: "Environment coding terminal is already open.",
+      cwd: options.cwd,
+      runId: options.runId,
+    };
+  }
+
+  const command = buildEnvironmentClientCommand(request);
+  const terminal = vscode.window.createTerminal({
+    name: "Environment",
+    cwd: options.cwd,
+    env: buildExternalEnvironmentEnv(),
+    iconPath: new vscode.ThemeIcon("terminal"),
+  });
+
+  environmentIntegratedTerminalSessions.set(options.runId, terminal);
+  terminal.show(false);
+  terminal.sendText(command, true);
+
+  return {
+    ok: true,
+    message:
+      "Environment coding session opened in the IDE Terminal. Use the terminal panel for prompts and interactive confirmations.",
+    cwd: options.cwd,
+    runId: options.runId,
+  };
+}
+
+function mapXynapseModelToEnvironmentProvider(request?: EnvironmentOpenRequest) {
+  const provider = normalizeProviderName(request?.environmentProvider);
+  const model = String(request?.environmentModel ?? "").toLowerCase().trim();
+  const prefix = model.split("/", 1)[0];
+
+  if (
+    provider.includes("yandex") ||
+    provider.includes("gigachat") ||
+    provider.includes("sber")
+  ) {
+    return undefined;
+  }
+
+  if (provider.includes("openrouter") || provider.includes("open-router") || prefix === "openrouter" || prefix === "open_router") {
+    return "open_router";
+  }
+  if (provider.includes("deepseek") || prefix === "deepseek") {
+    return "deepseek";
+  }
+  if (provider.includes("kimi") || provider.includes("moonshot") || prefix === "kimi") {
+    return "kimi";
+  }
+  if (provider.includes("fireworks") || prefix === "fireworks") {
+    return "fireworks";
+  }
+  if (provider === "zai" || provider.includes("z.ai") || prefix === "zai") {
+    return "zai";
+  }
+  if (provider.includes("nvidia") || prefix === "nvidia_nim" || prefix === "nvidia") {
+    return "nvidia_nim";
+  }
+  if (provider.includes("wafer") || prefix === "wafer") {
+    return "wafer";
+  }
+  if (provider.includes("opencode") || prefix === "opencode") {
+    return "opencode";
+  }
+  if (provider.includes("lmstudio") || provider.includes("lm-studio") || prefix === "lmstudio") {
+    return "lmstudio";
+  }
+  if (provider.includes("llamacpp") || provider.includes("llama.cpp") || prefix === "llamacpp") {
+    return "llamacpp";
+  }
+  if (provider.includes("ollama") || prefix === "ollama") {
+    return "ollama";
+  }
+
+  return undefined;
+}
+
+function formatEnvironmentModelRef(providerId: string, model: string) {
+  const trimmed = model.trim();
+  if (!trimmed) {
+    return getEnvironmentProviderDescriptor(providerId).defaultModel;
+  }
+
+  const aliases: Record<string, string[]> = {
+    open_router: ["openrouter", "open-router", "open_router"],
+    nvidia_nim: ["nvidia", "nvidia-nim", "nvidia_nim"],
+  };
+  const providerAliases = aliases[providerId] ?? [providerId];
+
+  for (const alias of providerAliases) {
+    if (trimmed.toLowerCase().startsWith(`${alias.toLowerCase()}/`)) {
+      return `${providerId}/${trimmed.slice(alias.length + 1)}`;
+    }
+  }
+
+  if (trimmed.toLowerCase().startsWith(`${providerId.toLowerCase()}/`)) {
+    return trimmed;
+  }
+
+  return `${providerId}/${trimmed.replace(/^\/+/, "")}`;
+}
+
+function getEnvironmentValueForKey(
+  key: string | undefined,
+  requestValue: unknown,
+  scannedEnv: Record<string, string>,
+  savedEnv: Record<string, string>,
+) {
+  if (!key) {
+    return undefined;
+  }
+
+  for (const value of [
+    requestValue,
+    scannedEnv[key],
+    savedEnv[key],
+    process.env[key],
+  ]) {
+    const resolved = resolveEnvironmentValue(value);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return undefined;
+}
+
+function resolveEnvironmentValue(value: unknown) {
+  if (!isUsableSecret(value)) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  const envMatch =
+    /^\$([A-Z_][A-Z0-9_]*)$/i.exec(trimmed) ||
+    /^\$\{([A-Z_][A-Z0-9_]*)\}$/i.exec(trimmed);
+
+  if (envMatch) {
+    const fromProcess = process.env[envMatch[1]];
+    return isUsableSecret(fromProcess) ? fromProcess.trim() : undefined;
+  }
+
+  return trimmed;
+}
+
+function getEnvironmentSourceLabel(request?: EnvironmentOpenRequest) {
+  return (
+    request?.environmentModelTitle?.trim() ||
+    request?.environmentModel?.trim() ||
+    request?.environmentProvider?.trim() ||
+    "Xynapse model"
+  );
+}
+
+function isYandexEnvironmentRequest(request?: EnvironmentOpenRequest) {
+  const provider = normalizeProviderName(request?.environmentProvider);
+  const model = String(request?.environmentModel ?? "").toLowerCase().trim();
+  return (
+    provider.includes("yandex") ||
+    model.startsWith("gpt://") ||
+    Boolean(request?.environmentFolderId?.trim())
+  );
+}
+
+function normalizeYandexOpenAiBaseUrl(value?: string) {
+  const trimmed = value?.trim();
+  if (!trimmed || /foundationmodels/i.test(trimmed)) {
+    return YANDEX_OPENAI_BASE_URL;
+  }
+  return trimmed
+    .replace(/\/chat\/completions\/?$/i, "")
+    .replace(/\/+$/, "");
+}
+
+function extractAnthropicText(content: any): string {
+  if (content == null) {
+    return "";
+  }
+  if (typeof content === "string") {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map((block) => {
+        if (typeof block === "string") {
+          return block;
+        }
+        if (block?.type === "text") {
+          return String(block.text ?? "");
+        }
+        if (block?.type === "tool_result") {
+          return extractAnthropicText(block.content);
+        }
+        if (block?.type === "image" || block?.type === "image_url") {
+          return "[image]";
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (typeof content?.text === "string") {
+    return content.text;
+  }
+  try {
+    return JSON.stringify(content);
+  } catch (_error) {
+    return String(content);
+  }
+}
+
+function toOpenAiMessagesFromAnthropic(body: any) {
+  const messages: any[] = [];
+  const systemText = extractAnthropicText(body?.system);
+  if (systemText) {
+    messages.push({ role: "system", content: systemText });
+  }
+
+  for (const raw of Array.isArray(body?.messages) ? body.messages : []) {
+    const role = raw?.role === "assistant" ? "assistant" : "user";
+    const blocks = Array.isArray(raw?.content) ? raw.content : undefined;
+
+    if (role === "assistant" && blocks) {
+      const toolCalls = blocks
+        .filter((block: any) => block?.type === "tool_use")
+        .map((block: any) => ({
+          id: block.id || `toolu_${Date.now()}`,
+          type: "function",
+          function: {
+            name: block.name || "tool",
+            arguments:
+              typeof block.input === "string"
+                ? block.input
+                : JSON.stringify(block.input ?? {}),
+          },
+        }));
+      const text = extractAnthropicText(
+        blocks.filter((block: any) => block?.type !== "tool_use"),
+      );
+      messages.push({
+        role: "assistant",
+        content: text || null,
+        ...(toolCalls.length ? { tool_calls: toolCalls } : {}),
+      });
+      continue;
+    }
+
+    if (role === "user" && blocks?.some((block: any) => block?.type === "tool_result")) {
+      const userText = extractAnthropicText(
+        blocks.filter((block: any) => block?.type !== "tool_result"),
+      );
+      if (userText) {
+        messages.push({ role: "user", content: userText });
+      }
+      for (const block of blocks.filter((item: any) => item?.type === "tool_result")) {
+        messages.push({
+          role: "tool",
+          tool_call_id: block.tool_use_id || block.id || "toolu_unknown",
+          content: extractAnthropicText(block.content),
+        });
+      }
+      continue;
+    }
+
+    messages.push({
+      role,
+      content: extractAnthropicText(raw?.content),
+    });
+  }
+
+  return messages;
+}
+
+function toOpenAiToolsFromAnthropic(tools: any) {
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return undefined;
+  }
+
+  return tools.map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description ?? "",
+      parameters: tool.input_schema ?? {
+        type: "object",
+        properties: {},
+      },
+    },
+  }));
+}
+
+function toOpenAiToolChoiceFromAnthropic(toolChoice: any) {
+  if (!toolChoice || toolChoice.type === "auto" || toolChoice.type === "any") {
+    return undefined;
+  }
+  if (toolChoice.type === "none") {
+    return "none";
+  }
+  if (toolChoice.type === "tool" && toolChoice.name) {
+    return {
+      type: "function",
+      function: { name: toolChoice.name },
+    };
+  }
+  return undefined;
+}
+
+async function readBridgeJsonBody(req: http.IncomingMessage) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  }
+  const raw = Buffer.concat(chunks).toString("utf8");
+  return raw.trim() ? JSON.parse(raw) : {};
+}
+
+function sendBridgeJson(
+  res: http.ServerResponse,
+  status: number,
+  body: Record<string, unknown>,
+) {
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+  });
+  res.end(JSON.stringify(body));
+}
+
+function writeBridgeSse(
+  res: http.ServerResponse,
+  event: string,
+  data: Record<string, unknown>,
+) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+async function callYandexOpenAiBridge(
+  config: XynapseEnvironmentBridgeConfig,
+  body: any,
+) {
+  const tools = toOpenAiToolsFromAnthropic(body?.tools);
+  const toolChoice = toOpenAiToolChoiceFromAnthropic(body?.tool_choice);
+  const requestedMaxTokens = Number(body?.max_tokens);
+  const maxTokens = Number.isFinite(requestedMaxTokens)
+    ? Math.max(1, Math.min(requestedMaxTokens, 8192))
+    : 8192;
+  const requestBody: Record<string, unknown> = {
+    model: config.modelUri,
+    messages: toOpenAiMessagesFromAnthropic(body),
+    max_tokens: maxTokens,
+    temperature: Number.isFinite(Number(body?.temperature))
+      ? Number(body.temperature)
+      : 0.3,
+    stream: false,
+  };
+
+  if (tools) {
+    requestBody.tools = tools;
+  }
+  if (toolChoice) {
+    requestBody.tool_choice = toolChoice;
+  }
+  if (Number.isFinite(Number(body?.top_p))) {
+    requestBody.top_p = Number(body.top_p);
+  }
+  if (Array.isArray(body?.stop_sequences) && body.stop_sequences.length > 0) {
+    requestBody.stop = body.stop_sequences;
+  }
+
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Api-Key ${config.apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Yandex Cloud API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
+function sendAnthropicBridgeSse(
+  res: http.ServerResponse,
+  model: string,
+  response: any,
+) {
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+  writeAnthropicBridgeSseBody(res, model, response);
+  res.end();
+}
+
+function writeAnthropicBridgeSseBody(
+  res: http.ServerResponse,
+  model: string,
+  response: any,
+) {
+  const choice = response?.choices?.[0] ?? {};
+  const message = choice.message ?? {};
+  const primaryContent =
+    typeof message.content === "string"
+      ? message.content
+      : extractAnthropicText(message.content);
+  const reasoningContent =
+    typeof message.reasoning_content === "string"
+      ? message.reasoning_content
+      : "";
+  const content = primaryContent || reasoningContent;
+  const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  const usage = response?.usage ?? {};
+  const messageId = response?.id || `msg_${Date.now()}`;
+  let blockIndex = 0;
+
+  writeBridgeSse(res, "message_start", {
+    type: "message_start",
+    message: {
+      id: messageId,
+      type: "message",
+      role: "assistant",
+      model,
+      content: [],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: {
+        input_tokens: usage.prompt_tokens ?? 0,
+        output_tokens: 0,
+      },
+    },
+  });
+
+  if (content) {
+    writeBridgeSse(res, "content_block_start", {
+      type: "content_block_start",
+      index: blockIndex,
+      content_block: { type: "text", text: "" },
+    });
+    writeBridgeSse(res, "content_block_delta", {
+      type: "content_block_delta",
+      index: blockIndex,
+      delta: { type: "text_delta", text: content },
+    });
+    writeBridgeSse(res, "content_block_stop", {
+      type: "content_block_stop",
+      index: blockIndex,
+    });
+    blockIndex += 1;
+  }
+
+  for (const toolCall of toolCalls) {
+    writeBridgeSse(res, "content_block_start", {
+      type: "content_block_start",
+      index: blockIndex,
+      content_block: {
+        type: "tool_use",
+        id: toolCall.id || `toolu_${Date.now()}_${blockIndex}`,
+        name: toolCall.function?.name || "tool",
+        input: {},
+      },
+    });
+    writeBridgeSse(res, "content_block_delta", {
+      type: "content_block_delta",
+      index: blockIndex,
+      delta: {
+        type: "input_json_delta",
+        partial_json: toolCall.function?.arguments || "{}",
+      },
+    });
+    writeBridgeSse(res, "content_block_stop", {
+      type: "content_block_stop",
+      index: blockIndex,
+    });
+    blockIndex += 1;
+  }
+
+  writeBridgeSse(res, "message_delta", {
+    type: "message_delta",
+    delta: {
+      stop_reason:
+        toolCalls.length > 0
+          ? "tool_use"
+          : !content && choice.finish_reason === "length"
+            ? "max_tokens"
+            : "end_turn",
+      stop_sequence: null,
+    },
+    usage: {
+      output_tokens: usage.completion_tokens ?? 0,
+    },
+  });
+  writeBridgeSse(res, "message_stop", { type: "message_stop" });
+}
+
+function writeAnthropicBridgeErrorSseBody(
+  res: http.ServerResponse,
+  model: string,
+  error: unknown,
+) {
+  const messageId = `msg_${Date.now()}`;
+  const text = `Xynapse Environment provider error: ${
+    error instanceof Error ? error.message : String(error)
+  }`;
+
+  writeBridgeSse(res, "message_start", {
+    type: "message_start",
+    message: {
+      id: messageId,
+      type: "message",
+      role: "assistant",
+      model,
+      content: [],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    },
+  });
+  writeBridgeSse(res, "content_block_start", {
+    type: "content_block_start",
+    index: 0,
+    content_block: { type: "text", text: "" },
+  });
+  writeBridgeSse(res, "content_block_delta", {
+    type: "content_block_delta",
+    index: 0,
+    delta: { type: "text_delta", text },
+  });
+  writeBridgeSse(res, "content_block_stop", {
+    type: "content_block_stop",
+    index: 0,
+  });
+  writeBridgeSse(res, "message_delta", {
+    type: "message_delta",
+    delta: { stop_reason: "end_turn", stop_sequence: null },
+    usage: { output_tokens: Math.max(1, Math.ceil(text.length / 4)) },
+  });
+  writeBridgeSse(res, "message_stop", { type: "message_stop" });
+}
+
+async function sendAnthropicBridgeSseWithKeepalive(
+  res: http.ServerResponse,
+  model: string,
+  completion: Promise<any>,
+) {
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+  res.write(": xynapse-bridge-start\n\n");
+  const keepAlive = setInterval(() => {
+    if (!res.destroyed) {
+      res.write(": xynapse-bridge-keepalive\n\n");
+    }
+  }, 15_000);
+  try {
+    writeAnthropicBridgeSseBody(res, model, await completion);
+  } catch (error) {
+    writeAnthropicBridgeErrorSseBody(res, model, error);
+  } finally {
+    clearInterval(keepAlive);
+    res.end();
+  }
+}
+
+async function handleXynapseEnvironmentBridgeRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  const config = xynapseEnvironmentBridgeConfig;
+  if (!config) {
+    sendBridgeJson(res, 503, { error: "Xynapse Environment bridge is not configured." });
+    return;
+  }
+
+  const url = new URL(req.url || "/", "http://127.0.0.1");
+  const pathname = url.pathname.replace(/\/+$/, "");
+
+  try {
+    if (req.method === "GET" && (pathname === "/health" || pathname === "/v1/health")) {
+      sendBridgeJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "GET" && (pathname === "/models" || pathname === "/v1/models")) {
+      sendBridgeJson(res, 200, {
+        object: "list",
+        data: [
+          {
+            id: config.model,
+            object: "model",
+            owned_by: "xynapse",
+          },
+        ],
+      });
+      return;
+    }
+
+    if (
+      req.method === "POST" &&
+      (pathname === "/v1/messages/count_tokens" ||
+        pathname === "/messages/count_tokens" ||
+        pathname === "/v1/count_tokens" ||
+        pathname === "/count_tokens")
+    ) {
+      const body = await readBridgeJsonBody(req);
+      const roughText = JSON.stringify(body?.messages ?? body ?? "");
+      sendBridgeJson(res, 200, {
+        input_tokens: Math.max(1, Math.ceil(roughText.length / 4)),
+      });
+      return;
+    }
+
+    if (req.method === "POST" && (pathname === "/v1/messages" || pathname === "/messages")) {
+      const body = await readBridgeJsonBody(req);
+      if (body?.stream !== false) {
+        await sendAnthropicBridgeSseWithKeepalive(
+          res,
+          config.model,
+          callYandexOpenAiBridge(config, body),
+        );
+        return;
+      }
+      const completion = await callYandexOpenAiBridge(config, body);
+      sendAnthropicBridgeSse(res, config.model, completion);
+      return;
+    }
+
+    sendBridgeJson(res, 404, { error: `Unsupported bridge route: ${req.method} ${pathname}` });
+  } catch (error) {
+    sendBridgeJson(res, 500, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function ensureXynapseEnvironmentBridge(config: XynapseEnvironmentBridgeConfig) {
+  xynapseEnvironmentBridgeConfig = config;
+  if (xynapseEnvironmentBridgeServer && xynapseEnvironmentBridgeBaseUrl) {
+    return xynapseEnvironmentBridgeBaseUrl;
+  }
+
+  const preferredPort = Number(process.env.XYNAPSE_ENVIRONMENT_BRIDGE_PORT) || 53518;
+  const listen = (port: number) =>
+    new Promise<void>((resolve, reject) => {
+      const server = http.createServer((req, res) => {
+        void handleXynapseEnvironmentBridgeRequest(req, res);
+      });
+      server.once("error", reject);
+      server.listen(port, "127.0.0.1", () => {
+        const address = server.address();
+        if (!address || typeof address === "string") {
+          server.close();
+          reject(new Error("Could not allocate Xynapse Environment bridge port."));
+          return;
+        }
+        xynapseEnvironmentBridgeServer = server;
+        xynapseEnvironmentBridgeBaseUrl = `http://127.0.0.1:${address.port}/v1`;
+        resolve();
+      });
+    });
+
+  try {
+    await listen(preferredPort);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== "EADDRINUSE") {
+      throw error;
+    }
+    await listen(0);
+  }
+
+  return xynapseEnvironmentBridgeBaseUrl!;
+}
+
+async function configureYandexEnvironmentBridge(
+  request?: EnvironmentOpenRequest,
+):
+  Promise<
+    | { ok: true; provider: EnvironmentProviderDescriptor }
+    | { ok: false; message: string }
+  > {
+  const sourceLabel = getEnvironmentSourceLabel(request);
+  const scannedEnv = {
+    ...collectRuntimeEnvFromLocalFiles(),
+    ...collectEnvironmentProviderEnvFromLocalFiles(),
+  };
+  const savedEnv = readEnvironmentManagedEnv();
+  const apiKey = getEnvironmentValueForKey(
+    "YANDEX_API_KEY",
+    request?.environmentApiKey,
+    scannedEnv,
+    savedEnv,
+  );
+  const folderId = getEnvironmentValueForKey(
+    "YANDEX_FOLDER_ID",
+    request?.environmentFolderId,
+    scannedEnv,
+    savedEnv,
+  );
+  const model = request?.environmentModel?.trim();
+
+  if (!apiKey) {
+    return {
+      ok: false,
+      message: `The selected Xynapse model "${sourceLabel}" uses Yandex, but YANDEX_API_KEY is not configured in Xynapse settings.`,
+    };
+  }
+  if (!folderId) {
+    return {
+      ok: false,
+      message: `The selected Xynapse model "${sourceLabel}" uses Yandex, but YANDEX_FOLDER_ID is not configured in Xynapse settings.`,
+    };
+  }
+  if (!model) {
+    return {
+      ok: false,
+      message: `The selected Xynapse model "${sourceLabel}" does not expose a Yandex model id.`,
+    };
+  }
+
+  const modelUri = toYandexOpenAiModelUri(model, folderId);
+  if (!modelUri) {
+    return {
+      ok: false,
+      message: `Could not build a Yandex model URI for "${sourceLabel}".`,
+    };
+  }
+
+  const provider = getEnvironmentProviderDescriptor("lmstudio");
+  const bridgeBaseUrl = await ensureXynapseEnvironmentBridge({
+    apiKey,
+    baseUrl: normalizeYandexOpenAiBaseUrl(request?.environmentBaseUrl),
+    folderId,
+    model,
+    modelUri,
+    sourceLabel,
+  });
+
+  writeEnvironmentManagedEnv(provider, {
+    model: formatEnvironmentModelRef(provider.id, model),
+    baseUrl: bridgeBaseUrl,
+    sourceLabel: `${sourceLabel} via Xynapse Bridge`,
+  });
+
+  return { ok: true, provider };
+}
+
+async function configureEnvironmentFromXynapseRequest(
+  request?: EnvironmentOpenRequest,
+): Promise<
+  | { ok: true; provider: EnvironmentProviderDescriptor }
+  | { ok: false; message: string }
+> {
+  if (isYandexEnvironmentRequest(request)) {
+    return configureYandexEnvironmentBridge(request);
+  }
+
+  const providerId = mapXynapseModelToEnvironmentProvider(request);
+  const sourceLabel = getEnvironmentSourceLabel(request);
+
+  if (!providerId) {
+    return {
+      ok: false,
+      message: `Environment uses upstream free-claude-code providers. The selected Xynapse model "${sourceLabel}" is not supported by that upstream runtime. Choose a Xynapse model backed by OpenRouter, DeepSeek, Kimi, Fireworks, Z.ai, NVIDIA NIM, Wafer, OpenCode, LM Studio, llama.cpp, or Ollama.`,
+    };
+  }
+
+  const provider = getEnvironmentProviderDescriptor(providerId);
+  const scannedEnv = collectEnvironmentProviderEnvFromLocalFiles();
+  const savedEnv = readEnvironmentManagedEnv();
+  const apiKey = getEnvironmentValueForKey(
+    provider.credentialEnv,
+    request?.environmentApiKey,
+    scannedEnv,
+    savedEnv,
+  );
+
+  if (provider.credentialEnv && !apiKey) {
+    return {
+      ok: false,
+      message: `The selected Xynapse model "${sourceLabel}" maps to ${provider.label}, but ${provider.credentialEnv} is not configured in Xynapse settings.`,
+    };
+  }
+
+  const baseUrl =
+    getEnvironmentValueForKey(
+      provider.baseUrlEnv,
+      request?.environmentBaseUrl,
+      scannedEnv,
+      savedEnv,
+    ) ||
+    request?.environmentBaseUrl?.trim() ||
+    provider.defaultBaseUrl;
+
+  writeEnvironmentManagedEnv(provider, {
+    model: formatEnvironmentModelRef(
+      provider.id,
+      request?.environmentModel ?? provider.defaultModel,
+    ),
+    apiKey,
+    baseUrl,
+    sourceLabel,
+  });
+
+  return { ok: true, provider };
+}
+
+async function ensureSavedXynapseEnvironmentBridge() {
+  const savedEnv = readEnvironmentManagedEnv();
+  const modelRef = savedEnv.MODEL?.trim() ?? "";
+  const sourceLabel = savedEnv.XYNAPSE_SOURCE_MODEL?.trim() ?? "";
+
+  if (
+    savedEnv.FCC_PROVIDER !== "lmstudio" ||
+    !modelRef.startsWith("lmstudio/") ||
+    !sourceLabel.includes("Xynapse Bridge")
+  ) {
+    return;
+  }
+
+  const model = modelRef.replace(/^lmstudio\//, "").trim();
+  if (!model) {
+    return;
+  }
+
+  const scannedEnv = {
+    ...collectRuntimeEnvFromLocalFiles(),
+    ...collectEnvironmentProviderEnvFromLocalFiles(),
+  };
+  const apiKey = getEnvironmentValueForKey(
+    "YANDEX_API_KEY",
+    undefined,
+    scannedEnv,
+    savedEnv,
+  );
+  const folderId = getEnvironmentValueForKey(
+    "YANDEX_FOLDER_ID",
+    undefined,
+    scannedEnv,
+    savedEnv,
+  );
+  if (!apiKey || !folderId) {
+    return;
+  }
+
+  const modelUri = toYandexOpenAiModelUri(model, folderId);
+  if (!modelUri) {
+    return;
+  }
+
+  const bridgeBaseUrl = await ensureXynapseEnvironmentBridge({
+    apiKey,
+    baseUrl: normalizeYandexOpenAiBaseUrl(
+      getEnvironmentValueForKey("YANDEX_BASE_URL", undefined, scannedEnv, savedEnv),
+    ),
+    folderId,
+    model,
+    modelUri,
+    sourceLabel,
+  });
+
+  writeEnvironmentManagedEnv(getEnvironmentProviderDescriptor("lmstudio"), {
+    model: modelRef,
+    baseUrl: bridgeBaseUrl,
+    sourceLabel,
+  });
+}
+
+function stopEnvironmentServer(root?: string) {
+  const session = getEnvironmentServerSession(root);
+  if (!session) {
+    return false;
+  }
+  session.process.kill();
+  environmentPtySessions.delete(session.runId);
+  return true;
+}
+
+async function openExternalEnvironmentTerminal(
+  extensionContext: vscode.ExtensionContext,
+  sidebar: XynapseGUIWebviewViewProvider,
+  request?: EnvironmentOpenRequest,
+): Promise<EnvironmentOpenResponse> {
+  ensureEnvironmentTerminalCloseListener(extensionContext);
+
+  const cwd = getRequestedWorkspaceDir(request);
+  const action = request?.action ?? "status";
+  const runId = request?.runId ?? createLabRunId();
+  const rootResolution = resolveExternalEnvironmentRoot(extensionContext);
+  const root = rootResolution.root;
+
+  if (action === "sendInput") {
+    const session = request?.runId
+      ? environmentPtySessions.get(request.runId)
+      : undefined;
+    if (!session) {
+      return {
+        ok: false,
+        message: "No active Environment session was found.",
+        runId: request?.runId,
+      };
+    }
+    session.process.write(request?.input ?? "");
+    return {
+      ok: true,
+      message: "Input sent.",
+      cwd: session.cwd,
+      runId: session.runId,
+    };
+  }
+
+  if (action === "stop") {
+    const integratedTerminal = request?.runId
+      ? environmentIntegratedTerminalSessions.get(request.runId)
+      : Array.from(environmentIntegratedTerminalSessions.values()).slice(-1)[0];
+    if (integratedTerminal) {
+      const integratedRunId =
+        request?.runId ??
+        Array.from(environmentIntegratedTerminalSessions.entries()).find(
+          ([, terminal]) => terminal === integratedTerminal,
+        )?.[0];
+      integratedTerminal.dispose();
+      if (integratedRunId) {
+        environmentIntegratedTerminalSessions.delete(integratedRunId);
+      }
+      return {
+        ok: true,
+        message: "Environment coding terminal closed.",
+        cwd,
+        runId: integratedRunId,
+      };
+    }
+
+    const sessions = Array.from(environmentPtySessions.values()).filter(
+      (candidate) => candidate.role !== "server",
+    );
+    const session = request?.runId
+      ? environmentPtySessions.get(request.runId)
+      : sessions[sessions.length - 1];
+    if (!session) {
+      return {
+        ok: false,
+        message: "No active Environment session was found.",
+        runId: request?.runId,
+      };
+    }
+    session.process.kill();
+    environmentPtySessions.delete(session.runId);
+    return {
+      ok: true,
+      message: "Environment session stopped.",
+      cwd: session.cwd,
+      runId: session.runId,
+    };
+  }
+
+  if (action === "stopServer") {
+    const session = getEnvironmentServerSession(root);
+    if (!session) {
+      return {
+        ok: true,
+        message: "Environment proxy server is not running.",
+        cwd: root,
+        runId,
+        serverRunning: false,
+      };
+    }
+    session.process.kill();
+    environmentPtySessions.delete(session.runId);
+    return {
+      ok: true,
+      message: "Environment proxy server stopped.",
+      cwd: session.cwd,
+      runId: session.runId,
+      serverRunning: false,
+    };
+  }
+
+  if (action === "update" && rootResolution.parent && root) {
+    if (!fs.existsSync(root)) {
+      fs.mkdirSync(rootResolution.parent, { recursive: true });
+      return startEnvironmentPty(sidebar, {
+        runId,
+        cwd: rootResolution.parent,
+        role: "task",
+        title: "Install upstream Environment checkout",
+        command: `git clone ${ENVIRONMENT_REPO_URL} ${quoteTerminalArg(root)}`,
+      });
+    }
+    if (rootResolution.error) {
+      return {
+        ok: false,
+        message: rootResolution.error,
+        upstreamRoot: root,
+        runId,
+      };
+    }
+    stopEnvironmentServer(root);
+    return startEnvironmentPty(sidebar, {
+      runId,
+      cwd: root,
+      role: "task",
+      title: "Update upstream Environment checkout",
+      command: buildEnvironmentUpdateCommand(root),
+    });
+  }
+
+  if (action === "install") {
+    const installCwd = root && fs.existsSync(root) ? root : process.cwd();
+    if (root) {
+      stopEnvironmentServer(root);
+    }
+    return startEnvironmentPty(sidebar, {
+      runId,
+      cwd: installCwd,
+      role: "task",
+      title: "Install or update upstream Environment runtime",
+      command: buildEnvironmentInstallCommand(),
+    });
+  }
+
+  if (rootResolution.error) {
+    return {
+      ok: false,
+      message: rootResolution.error,
+      cwd,
+      upstreamRoot: root,
+      runId,
+      supportedProviders: ENVIRONMENT_SUPPORTED_PROVIDERS,
+      ...getEnvironmentConfigStatus(),
+    };
+  }
+
+  if (!root) {
+    return {
+      ok: false,
+      message: "Environment root was not resolved.",
+      runId,
+    };
+  }
+
+  if (action === "startServer") {
+    const configuredProvider = await configureEnvironmentFromXynapseRequest(request);
+    if (!configuredProvider.ok) {
+      return {
+        ok: false,
+        message: configuredProvider.message,
+        cwd: root,
+        upstreamRoot: root,
+        runId,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    stopEnvironmentServer(root);
+    if (!isEnvironmentRuntimeInstalled()) {
+      return {
+        ok: false,
+        message:
+          "Environment runtime is not installed or is incomplete. Run Install runtime first, then start the server.",
+        cwd: root,
+        upstreamRoot: root,
+        runId,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    return {
+      ...startEnvironmentServerIfNeeded(sidebar, root, runId),
+      ...getEnvironmentConfigStatus(),
+    };
+  }
+
+  if (action === "startClient") {
+    if (!cwd) {
+      return {
+        ok: false,
+        message: "Open a project folder first.",
+        upstreamRoot: root,
+        runId,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    if (!isEnvironmentClientInstalled()) {
+      return {
+        ok: false,
+        message:
+          "Environment client is not installed or is incomplete. Run Install runtime first, then start a session.",
+        cwd,
+        upstreamRoot: root,
+        runId,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    if (!isEnvironmentRuntimeInstalled()) {
+      return {
+        ok: false,
+        message:
+          "Environment runtime is not installed or is incomplete. Run Install runtime first, then start a session.",
+        cwd,
+        upstreamRoot: root,
+        runId,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    const configuredProvider = await configureEnvironmentFromXynapseRequest(request);
+    if (!configuredProvider.ok) {
+      return {
+        ok: false,
+        message: configuredProvider.message,
+        cwd,
+        upstreamRoot: root,
+        runId,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    stopEnvironmentServer(root);
+    const server = startEnvironmentServerIfNeeded(
+      sidebar,
+      root,
+      `${runId}-server`,
+    );
+    if (!server.ok) {
+      return {
+        ...server,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    return {
+      ...startEnvironmentIntegratedTerminal(request, { runId, cwd }),
+      ...getEnvironmentConfigStatus(),
+    };
+  }
+
+  if (!cwd) {
+    return {
+      ok: false,
+      message: "Open a project folder first.",
+      upstreamRoot: root,
+      runId,
+    };
+  }
+
+  let statusMessage =
+    "Environment is linked to the clean upstream checkout. Use Install runtime, then Start coding session.";
+  if (isYandexEnvironmentRequest(request)) {
+    const configuredProvider = await configureEnvironmentFromXynapseRequest(request);
+    if (!configuredProvider.ok) {
+      return {
+        ok: false,
+        message: configuredProvider.message,
+        cwd,
+        upstreamRoot: root,
+        runId,
+        supportedProviders: ENVIRONMENT_SUPPORTED_PROVIDERS,
+        ...getEnvironmentConfigStatus(),
+      };
+    }
+    statusMessage =
+      "Environment is linked to the clean upstream checkout. Xynapse Bridge is ready; start a coding session in the IDE terminal.";
+  }
+
+  return {
+    ok: true,
+    message: statusMessage,
+    cwd,
+    permissionMode: normalizeEnvironmentClientPermissionMode(request),
+    runId,
+    upstreamRoot: root,
+    upstreamCommit: getEnvironmentGitCommit(root),
+    upstreamDirty: isEnvironmentGitDirty(root),
+    uvInstalled: commandExists("uv"),
+    python314Installed: hasPython314(),
+    fccInstalled: isEnvironmentRuntimeInstalled(),
+    clientInstalled: isEnvironmentClientInstalled(),
+    serverRunning: Boolean(getEnvironmentServerSession(root)),
+    supportedProviders: ENVIRONMENT_SUPPORTED_PROVIDERS,
+    ...getEnvironmentConfigStatus(),
   };
 }
 
@@ -2293,37 +5078,9 @@ const getCommandsMap: (
       vscode.commands.executeCommand("xynapse.xynapseGUIView.focus");
       sidebar.webviewProtocol?.request("addModel", undefined);
     },
-    "xynapse.newSession": () => {
+    "xynapse.newSession": async () => {
+      await vscode.commands.executeCommand("xynapse.xynapseGUIView.focus");
       sidebar.webviewProtocol?.request("newSession", undefined);
-    },
-    "xynapse.openXynapseSurface": async () => {
-      const choice = await vscode.window.showQuickPick<
-        vscode.QuickPickItem & { surface: XynapseSurface }
-      >(
-        [
-          {
-            label: "Xynapse Core",
-            description: "coding chat",
-            detail: "Open the workspace coding assistant.",
-            surface: "core",
-          },
-          {
-            label: "Xynapse Lab",
-            description: "algorithms",
-            detail: "Open Council, BVC, audit, and comparison tools.",
-            surface: "lab",
-          },
-        ],
-        {
-          placeHolder: "Open Xynapse Core or Xynapse Lab",
-          matchOnDescription: true,
-          matchOnDetail: true,
-        },
-      );
-
-      if (choice) {
-        await sidebar.openSurface(choice.surface);
-      }
     },
 
     "xynapse.shareSession": async (sessionId: string | undefined) => {
@@ -2365,6 +5122,13 @@ const getCommandsMap: (
     "xynapse.viewHistory": () => {
       vscode.commands.executeCommand("xynapse.navigateTo", "/history", true);
     },
+    "xynapse.viewLabHistory": async () => {
+      await vscode.commands.executeCommand("xynapse.xynapseLabView.focus");
+      sidebar.webviewProtocol?.request("navigateTo", {
+        path: "/history",
+        toggle: true,
+      });
+    },
     "xynapse.focusXynapseSessionId": async (
       sessionId: string | undefined,
     ) => {
@@ -2399,6 +5163,15 @@ const getCommandsMap: (
     "xynapse.config.import": async () => {
       await importXynapseProfileBackup(ide, configHandler);
     },
+    "xynapse.openEnvironment": async (
+      request?: EnvironmentOpenRequest,
+    ): Promise<EnvironmentOpenResponse> => {
+      return await openExternalEnvironmentTerminal(
+        extensionContext,
+        sidebar,
+        request,
+      );
+    },
     "xynapse.runtimeDoctor": async (request?: RuntimeDoctorRequest) => {
       const runId = getRuntimeRequestRunId(request) ?? createLabRunId();
       const cwd = getRequestedWorkspaceDir(request);
@@ -2432,10 +5205,53 @@ const getCommandsMap: (
         env: await collectRuntimeEnv(configHandler),
         title: "Xynapse runtime diagnostics",
         route: "doctor runtime=embedded",
+        prompt: "Run Xynapse runtime diagnostics.",
+        saveArtifacts: false,
       });
     },
     "xynapse.runtimeStop": async (request?: { runId?: string }) => {
       stopRuntimeInWebview(sidebar, request);
+    },
+    "xynapse.listLabHistory": async (
+      request?: LabHistoryRequest,
+    ): Promise<LabHistoryResponse> => {
+      const cwd = getRequestedWorkspaceDir(request);
+      if (!cwd) {
+        return {
+          items: [],
+          error: "Open a project folder first. Lab history is stored per workspace.",
+        };
+      }
+
+      try {
+        return { items: listXynapseLabHistory(cwd) };
+      } catch (error) {
+        return {
+          items: [],
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not read Xynapse Lab history.",
+        };
+      }
+    },
+    "xynapse.openLabArtifact": async (
+      request?: LabArtifactRequest,
+    ): Promise<{ ok: boolean; error?: string }> => {
+      const cwd = getRequestedWorkspaceDir(request);
+      if (!cwd) {
+        return { ok: false, error: "No workspace folder is open." };
+      }
+
+      const artifactPath = resolveXynapseLabArtifactPath(cwd, request?.relPath);
+      if (!artifactPath) {
+        return { ok: false, error: "Lab artifact was not found." };
+      }
+
+      await vscode.window.showTextDocument(vscode.Uri.file(artifactPath), {
+        preview: true,
+      });
+      return { ok: true };
     },
     "xynapse.deleteRuntimeSession": async (request?: {
       sessionId?: string;
@@ -2584,6 +5400,7 @@ const getCommandsMap: (
           title,
           model: plan.label,
           route: `model=${plan.model} label=${plan.label} permission=${permissionMode} runtime=embedded`,
+          prompt,
           sessionId: runtimeSessionId,
           ...(isCoreRequest
             ? {
@@ -3098,4 +5915,8 @@ export async function registerAllCommands(
     );
     existingCommands.add(command);
   }
+
+  void ensureSavedXynapseEnvironmentBridge().catch((error) => {
+    console.warn("Failed to restore Xynapse Environment bridge", error);
+  });
 }

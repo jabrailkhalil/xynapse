@@ -49,7 +49,7 @@ const parityFiles = [
   path.join("gui", "assets", "index.js"),
 ];
 
-const connectorProviders = new Set(["yandex_gpt", "gigachat"]);
+const connectorProviders = new Set(["yandex_gpt", "gigachat", "fireworks"]);
 
 function fail(message) {
   failures.push(message);
@@ -371,7 +371,8 @@ if (chatRuntimeModels.length === 0) {
 }
 
 console.log("\nConnector matrix:");
-console.log("- IDE chat providers: yandex_gpt OK, gigachat OK");
+console.log("- IDE chat providers: yandex_gpt OK, gigachat OK, fireworks OK");
+console.log("- Environment upstream providers: fireworks OK");
 console.log(`- Core runtime models: ${runtimeModels.length} supported`);
 console.log(
   `- Core runtime unsupported by design: ${

@@ -70,6 +70,7 @@ import {
   buildPreviousDiscussion,
   createClientRunId,
   findCoreRuntimeModel,
+  XynapseEnvironmentCard,
   XynapseResearchCard,
 } from "../../components/claw/ClawSidecarCard";
 import { EmptyChatBody } from "./EmptyChatBody";
@@ -150,7 +151,11 @@ export function Chat() {
   const [stepsOpen] = useState<(boolean | undefined)[]>([]);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
   const xynapseSurface =
-    ((window as any).xynapseSurface as "core" | "lab" | undefined) ?? "core";
+    ((window as any).xynapseSurface as
+      | "core"
+      | "lab"
+      | "environment"
+      | undefined) ?? "core";
   const mainTextInputRef = useRef<HTMLInputElement>(null);
   const stepsDivRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -668,6 +673,21 @@ export function Chat() {
           {highlights}
           <div className="mx-2 mb-3">
             <XynapseResearchCard showOpenFolderAction={!hasWorkspace} />
+          </div>
+        </StepsDiv>
+      </>
+    );
+  }
+
+  if (xynapseSurface === "environment") {
+    return (
+      <>
+        <StepsDiv
+          ref={stepsDivRef}
+          className={`min-h-0 flex-1 overflow-y-scroll pt-[8px] ${showScrollbar ? "thin-scrollbar" : "no-scrollbar"}`}
+        >
+          <div className="mx-2 mb-3">
+            <XynapseEnvironmentCard showOpenFolderAction={!hasWorkspace} />
           </div>
         </StepsDiv>
       </>

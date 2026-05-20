@@ -174,13 +174,12 @@ async def call_model(api_key: str, model_id: str, prompt: str) -> str:
 def analysis_prompt(role: str, task: str) -> str:
     return f"""{AGENT_PROMPTS[role]}
 
-Задача: {task}
+Task: {task}
 
-Ты работаешь в строгом BVC-режиме. Верни только эти четыре оси.
-Если ось неприменима, используй "NA". Если значение невозможно получить, используй "[PARSE_FAILURE]".
+You are working in strict BVC mode. Return only these four decision axes.
+Use "NA" when an axis is not applicable. Use "[PARSE_FAILURE]" when the value cannot be determined.
 
-Ответь strict JSON:
-```json
+Reply with strict JSON matching this shape:
 {{
   "bvc_decisions": {{
     "root_cause_location": "value or NA",
@@ -188,20 +187,17 @@ def analysis_prompt(role: str, task: str) -> str:
     "dependencies_to_update": "value or NA",
     "test_coverage": "value or NA"
   }}
-}}
-```"""
-
+}}"""
 
 def critique_prompt(role: str, task: str, snapshot: str, round_number: int) -> str:
     return f"""{AGENT_PROMPTS[role]}
 
-Задача: {task}
+Task: {task}
 
-BVC critique round {round_number}. Ниже snapshot решений всех ролей:
+BVC critique round {round_number}. The current decisions from all roles are below:
 {snapshot}
 
-Обнови свои решения по тем же четырем осям. Верни strict JSON:
-```json
+Update your decisions on the same four axes. Reply with strict JSON matching this shape:
 {{
   "bvc_decisions": {{
     "root_cause_location": "value, NA, or [PARSE_FAILURE]",
@@ -209,24 +205,22 @@ BVC critique round {round_number}. Ниже snapshot решений всех р�
     "dependencies_to_update": "value, NA, or [PARSE_FAILURE]",
     "test_coverage": "value, NA, or [PARSE_FAILURE]"
   }}
-}}
-```"""
-
+}}"""
 
 def synthesis_prompt(task: str, history: str, metrics: dict[str, Any]) -> str:
-    return f"""Ты - синтезатор BVC. Составь финальный план по результатам строгого BVC.
+    return f"""You are the BVC synthesizer. Produce the final plan from the strict BVC results.
 
-Задача: {task}
+Task: {task}
 
-История:
+History:
 {history}
 
-Метрики:
+Metrics:
 - D_vote: {metrics["D_vote"]}
 - D_cov: {metrics["D_cov"]}
 - T_ge2: {metrics["T_ge2"]}
 
-Формат:
+Format:
 # BVC Project Plan
 
 ## Description
@@ -241,7 +235,6 @@ def synthesis_prompt(task: str, history: str, metrics: dict[str, Any]) -> str:
 
 ## Technologies
 """
-
 
 def snapshot(decisions_by_role: dict[str, dict[str, str | None]], roles: list[str]) -> str:
     lines = []

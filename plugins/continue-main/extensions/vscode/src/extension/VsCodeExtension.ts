@@ -126,22 +126,10 @@ export class VsCodeExtension {
   }
 
   private async restoreLastWorkspaceFolderIfEmpty(): Promise<void> {
-    if (vscode.workspace.workspaceFolders?.length) {
-      return;
-    }
-
-    const lastFolder = this.extensionContext.globalState.get<string>(
-      "xynapse.lastWorkspaceFolder",
-    );
-    if (!lastFolder || !fs.existsSync(lastFolder)) {
-      return;
-    }
-
-    await vscode.commands.executeCommand(
-      "vscode.openFolder",
-      vscode.Uri.file(lastFolder),
-      false,
-    );
+    // Opening a previous folder from extension activation makes the IDE feel
+    // pinned to an old project. Folder selection must stay an explicit user
+    // action through File -> Open Folder or the Xynapse open-folder UI.
+    return;
   }
 
   /**
@@ -323,7 +311,25 @@ export class VsCodeExtension {
     // Sidebar
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(
-        "xynapse.xynapseGUIView",
+        XynapseGUIWebviewViewProvider.viewType,
+        this.sidebar,
+        {
+          webviewOptions: { retainContextWhenHidden: true },
+        },
+      ),
+    );
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(
+        XynapseGUIWebviewViewProvider.labViewType,
+        this.sidebar,
+        {
+          webviewOptions: { retainContextWhenHidden: true },
+        },
+      ),
+    );
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(
+        XynapseGUIWebviewViewProvider.environmentViewType,
         this.sidebar,
         {
           webviewOptions: { retainContextWhenHidden: true },
@@ -445,138 +451,6 @@ export class VsCodeExtension {
     this.battery = new Battery();
     context.subscriptions.push(this.battery);
     context.subscriptions.push(monitorBatteryChanges(this.battery));
-
-    // Xynapse language controls the assistant panel and response language.
-    // Workbench display language is a separate VS Code NLS/language-pack layer.
-    {
-      const configYamlPath = getConfigYamlPath("vscode");
-      const languageItems = [
-        { label: "en", description: "English" },
-        { label: "ru", description: "Russian" },
-        { label: "de", description: "German" },
-        { label: "fr", description: "French" },
-        { label: "es", description: "Spanish" },
-        { label: "zh", description: "Chinese" },
-        { label: "zh-cn", description: "Chinese Simplified" },
-        { label: "zh-tw", description: "Chinese Traditional" },
-        { label: "ja", description: "Japanese" },
-        { label: "ko", description: "Korean" },
-        { label: "uk", description: "Ukrainian" },
-        { label: "tr", description: "Turkish" },
-        { label: "pt-br", description: "Portuguese Brazil" },
-        { label: "pt", description: "Portuguese" },
-        { label: "it", description: "Italiano" },
-        { label: "nl", description: "Nederlands" },
-        { label: "cs", description: "Czech" },
-        { label: "hu", description: "Magyar" },
-      ];
-
-      const normalizeLocale = (locale?: string): string => {
-        const raw = (locale || "en").trim().toLowerCase();
-        if (languageItems.some((item) => item.label === raw)) {
-          return raw;
-        }
-
-        const base = raw.split("-")[0];
-        return languageItems.some((item) => item.label === base) ? base : "en";
-      };
-
-      const readXynapseLanguage = (): string => {
-        try {
-          const raw = fs.readFileSync(configYamlPath, "utf8");
-          const m = raw.match(/^responseLanguage:\s*(\S+)/m);
-          return normalizeLocale(m ? m[1] : "en");
-        } catch {
-          return "en";
-        }
-      };
-
-      const writeResponseLanguage = (locale: string): void => {
-        locale = normalizeLocale(locale);
-        let raw = "";
-
-        try {
-          raw = fs.readFileSync(configYamlPath, "utf8");
-        } catch {
-          raw = "";
-        }
-
-        if (/^responseLanguage:\s*\S+/m.test(raw)) {
-          raw = raw.replace(
-            /^responseLanguage:\s*\S+/m,
-            `responseLanguage: ${locale}`,
-          );
-        } else if (raw.includes("\nmodels:")) {
-          const idx = raw.indexOf("\nmodels:");
-          raw =
-            raw.slice(0, idx) + `\nresponseLanguage: ${locale}` + raw.slice(idx);
-        } else {
-          raw = `responseLanguage: ${locale}\n${raw}`;
-        }
-
-        fs.mkdirSync(path.dirname(configYamlPath), { recursive: true });
-        fs.writeFileSync(configYamlPath, raw, "utf8");
-      };
-
-      const selectXynapseLanguage = async () => {
-        const current = readXynapseLanguage();
-        const sorted = [
-          ...languageItems.filter((i) => i.label === current),
-          ...languageItems.filter((i) => i.label !== current),
-        ];
-        const picked = await vscode.window.showQuickPick(sorted, {
-          placeHolder:
-            "Changes the Xynapse panel and assistant response language.",
-          title: "Select Xynapse Language",
-        });
-        if (!picked || picked.label === current) {
-          return;
-        }
-
-        try {
-          writeResponseLanguage(picked.label);
-          updateLangItem();
-          this.sidebar.reloadWebview();
-          vscode.window.showInformationMessage(
-            `Xynapse panel language set to ${picked.label.toUpperCase()}.`,
-          );
-        } catch (err: any) {
-          vscode.window.showErrorMessage(
-            `Failed to update Xynapse language: ${err.message}`,
-          );
-        }
-      };
-
-      const langItem = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        48,
-      );
-      const updateLangItem = () => {
-        const lang = readXynapseLanguage();
-        langItem.text = `$(globe) ${lang.toUpperCase()}`;
-        langItem.tooltip =
-          `Xynapse language: ${lang}. Workbench UI translation requires a language pack.`;
-      };
-      updateLangItem();
-      langItem.command = "xynapse.ideLanguage";
-      langItem.show();
-      context.subscriptions.push(langItem);
-
-      // Command aliases kept for compatibility with older command palette entries.
-      context.subscriptions.push(
-        vscode.commands.registerCommand(
-          "xynapse.assistantLanguage",
-          selectXynapseLanguage,
-        ),
-      );
-
-      context.subscriptions.push(
-        vscode.commands.registerCommand(
-          "xynapse.ideLanguage",
-          selectXynapseLanguage,
-        ),
-      );
-    }
 
     // FileSearch
     this.fileSearch = new FileSearch(this.ide);

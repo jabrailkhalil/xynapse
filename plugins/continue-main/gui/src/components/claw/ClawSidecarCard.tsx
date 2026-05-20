@@ -1,11 +1,24 @@
 import {
+  ArrowPathIcon,
   BeakerIcon,
   ChevronDownIcon,
+  CheckIcon,
+  CommandLineIcon,
+  ClipboardDocumentIcon,
+  DocumentTextIcon,
   FolderOpenIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { renderChatMessage } from "core/util/messageContent";
-import { useContext, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useNavigate } from "react-router-dom";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppSelector } from "../../redux/hooks";
@@ -49,10 +62,35 @@ export type LabRunState = {
   output: LabOutputChunk[];
 };
 
+type LabHistoryItem = {
+  id: string;
+  title: string;
+  kind: string;
+  task: string;
+  model?: string;
+  exitCode?: number | null;
+  route?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  reportRelPath: string;
+  planRelPath?: string;
+  corePrompt?: string;
+  summary?: string;
+};
+
 export type LabModelLike = {
   model?: string;
   title?: string;
   provider?: string;
+  apiKey?: string;
+  apiBase?: string;
+  baseUrl?: string;
+  folderId?: string;
+  requestOptions?: {
+    extraBodyProperties?: {
+      folderId?: string;
+    };
+  };
 };
 
 type LabNotice = {
@@ -206,6 +244,152 @@ export function collectLabModels(
   return models;
 }
 
+type EnvironmentOpenResult = {
+  ok: boolean;
+  message?: string;
+  cwd?: string;
+  permissionMode?: string;
+  runId?: string;
+  upstreamRoot?: string;
+  upstreamCommit?: string;
+  upstreamDirty?: boolean;
+  uvInstalled?: boolean;
+  python314Installed?: boolean;
+  fccInstalled?: boolean;
+  clientInstalled?: boolean;
+  serverRunning?: boolean;
+  supportedProviders?: string[];
+  environmentProvider?: string;
+  environmentProviderLabel?: string;
+  environmentModel?: string;
+  environmentSourceLabel?: string;
+  environmentCredentialEnv?: string;
+  environmentApiKeyConfigured?: boolean;
+  environmentBaseUrl?: string;
+};
+
+type EnvironmentPermissionChoice =
+  | "default"
+  | "plan"
+  | "acceptEdits"
+  | "dontAsk"
+  | "bypassPermissions";
+
+const ENVIRONMENT_PERMISSION_OPTIONS: Array<{
+  value: EnvironmentPermissionChoice;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "default",
+    label: "Default",
+    description: "Use the upstream client's normal permission prompts",
+  },
+  {
+    value: "plan",
+    label: "Plan",
+    description: "Plan first, do not edit until approved",
+  },
+  {
+    value: "acceptEdits",
+    label: "Accept edits",
+    description: "Allow file edits after the client's own checks",
+  },
+  {
+    value: "dontAsk",
+    label: "Don't ask",
+    description: "Let the upstream client avoid repeated prompts",
+  },
+  {
+    value: "bypassPermissions",
+    label: "Bypass",
+    description: "Bypass upstream permission checks",
+  },
+];
+
+function EnvironmentActionButton({
+  icon,
+  label,
+  title,
+  disabled,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  title: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="inline-flex min-h-[34px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-description transition hover:bg-white/10 hover:text-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function getEnvironmentProviderId(model: LabModelLike | null | undefined) {
+  if (!model) {
+    return undefined;
+  }
+
+  const provider = (model.provider ?? "").toLowerCase().replace(/_/g, "-");
+  const modelName = (model.model ?? model.title ?? "").toLowerCase().trim();
+  const prefix = modelName.split("/", 1)[0];
+
+  if (provider.includes("yandex") || modelName.startsWith("gpt://")) {
+    return "Xynapse Bridge";
+  }
+  if (provider.includes("gigachat") || provider.includes("sber")) {
+    return undefined;
+  }
+  if (provider.includes("openrouter") || provider.includes("open-router") || prefix === "openrouter" || prefix === "open_router") {
+    return "OpenRouter";
+  }
+  if (provider.includes("deepseek") || prefix === "deepseek") {
+    return "DeepSeek";
+  }
+  if (provider.includes("kimi") || provider.includes("moonshot") || prefix === "kimi") {
+    return "Kimi";
+  }
+  if (provider.includes("fireworks") || prefix === "fireworks") {
+    return "Fireworks";
+  }
+  if (provider === "zai" || provider.includes("z.ai") || prefix === "zai") {
+    return "Z.ai";
+  }
+  if (provider.includes("nvidia") || prefix === "nvidia_nim" || prefix === "nvidia") {
+    return "NVIDIA NIM";
+  }
+  if (provider.includes("wafer") || prefix === "wafer") {
+    return "Wafer";
+  }
+  if (provider.includes("opencode") || prefix === "opencode") {
+    return "OpenCode";
+  }
+  if (provider.includes("lmstudio") || provider.includes("lm-studio") || prefix === "lmstudio") {
+    return "LM Studio";
+  }
+  if (provider.includes("llamacpp") || provider.includes("llama.cpp") || prefix === "llamacpp") {
+    return "llama.cpp";
+  }
+  if (provider.includes("ollama") || prefix === "ollama") {
+    return "Ollama";
+  }
+
+  return undefined;
+}
+
+function isEnvironmentCompatibleModel(model: LabModelLike | null | undefined) {
+  return Boolean(getEnvironmentProviderId(model));
+}
+
 function ModeTabButton({
   active,
   label,
@@ -349,6 +533,801 @@ function AlgorithmButton({
         {description}
       </div>
     </button>
+  );
+}
+
+function getLabHistoryKindLabel(kind: string) {
+  switch (kind) {
+    case "bvc":
+      return "BVC";
+    case "council":
+      return "Council";
+    case "audit":
+      return "Audit";
+    case "compare":
+      return "Compare";
+    default:
+      return "Research";
+  }
+}
+
+function getLabHistoryStatusLabel(item: LabHistoryItem) {
+  if (item.exitCode === 0) {
+    return "done";
+  }
+  if (item.exitCode === null || item.exitCode === undefined) {
+    return "saved";
+  }
+  return "error";
+}
+
+function formatLabHistoryDate(value?: string) {
+  if (!value) {
+    return "Unknown date";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function LabHistoryPanel({
+  items,
+  loading,
+  error,
+  search,
+  onSearchChange,
+  onRefresh,
+  onOpenArtifact,
+  onCopyCorePrompt,
+  copiedPromptId,
+}: {
+  items: LabHistoryItem[];
+  loading: boolean;
+  error: string | null;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onRefresh: () => void;
+  onOpenArtifact: (relPath: string) => void;
+  onCopyCorePrompt: (item: LabHistoryItem) => void;
+  copiedPromptId: string | null;
+}) {
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      return items;
+    }
+    return items.filter((item) =>
+      [
+        item.title,
+        item.task,
+        item.kind,
+        item.model,
+        item.summary,
+        item.reportRelPath,
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [items, search]);
+
+  return (
+    <div className="mt-4 rounded-xl border border-solid border-violet-300/15 bg-[#08080a] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-100">
+            Research history
+          </div>
+          <div className="mt-0.5 text-[10px] text-description">
+            Saved Lab reports and Core-ready plans from this workspace.
+          </div>
+        </div>
+        <button
+          type="button"
+          className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-description transition hover:bg-white/10 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+          disabled={loading}
+          onClick={onRefresh}
+          title="Refresh saved Lab research reports."
+        >
+          <ArrowPathIcon className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
+
+      <input
+        className="mt-3 box-border w-full rounded-lg border border-solid border-white/10 bg-black/35 px-3 py-2 text-xs text-foreground placeholder:text-description focus:border-violet-300/40 focus:outline-none"
+        value={search}
+        onChange={(event) => onSearchChange(event.target.value)}
+        placeholder="Search research, task, model, report..."
+        title="Filter Lab research history."
+      />
+
+      {error ? (
+        <div className="mt-3 rounded-lg border border-solid border-red-300/20 bg-red-300/10 p-2 text-xs leading-5 text-red-100">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-3 max-h-80 space-y-2 overflow-auto pr-1">
+        {loading && items.length === 0 ? (
+          <div className="rounded-lg border border-solid border-white/10 bg-black/25 p-3 text-xs text-description">
+            Loading Lab history...
+          </div>
+        ) : null}
+
+        {!loading && filteredItems.length === 0 ? (
+          <div className="rounded-lg border border-solid border-white/10 bg-black/25 p-3 text-xs leading-5 text-description">
+            No saved Lab research yet. Run Council, BVC, Audit, or Compare; the
+            report will appear here after completion.
+          </div>
+        ) : null}
+
+        {filteredItems.map((item) => {
+          const status = getLabHistoryStatusLabel(item);
+          const copied = copiedPromptId === item.id;
+
+          return (
+            <article
+              key={item.id}
+              className="rounded-lg border border-solid border-white/10 bg-black/25 p-3"
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="rounded-full border border-solid border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-violet-100">
+                  {getLabHistoryKindLabel(item.kind)}
+                </span>
+                <span
+                  className={`rounded-full border border-solid px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${
+                    status === "error"
+                      ? "border-red-300/20 bg-red-300/10 text-red-100"
+                      : "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+                  }`}
+                >
+                  {status}
+                </span>
+                <span className="min-w-0 truncate text-[10px] text-description">
+                  {formatLabHistoryDate(item.createdAt ?? item.updatedAt)}
+                </span>
+              </div>
+
+              <div className="mt-2 min-w-0 truncate text-sm font-semibold text-foreground">
+                {item.task || item.title}
+              </div>
+              {item.model ? (
+                <div className="mt-1 truncate text-[10px] text-description">
+                  {item.model}
+                </div>
+              ) : null}
+              {item.summary ? (
+                <p className="m-0 mt-2 line-clamp-3 text-xs leading-5 text-description">
+                  {item.summary}
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-description transition hover:bg-white/10 hover:text-foreground"
+                  onClick={() => onOpenArtifact(item.reportRelPath)}
+                  title={item.reportRelPath}
+                >
+                  <DocumentTextIcon className="h-3.5 w-3.5" />
+                  Report
+                </button>
+                {item.planRelPath ? (
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-description transition hover:bg-white/10 hover:text-foreground"
+                    onClick={() => onOpenArtifact(item.planRelPath!)}
+                    title={item.planRelPath}
+                  >
+                    <DocumentTextIcon className="h-3.5 w-3.5" />
+                    Core plan
+                  </button>
+                ) : null}
+                {item.corePrompt ? (
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-2 py-1 text-[10px] font-medium text-violet-50 transition hover:bg-violet-300/16"
+                    onClick={() => onCopyCorePrompt(item)}
+                    title="Copy the prepared prompt for Xynapse Core."
+                  >
+                    {copied ? (
+                      <CheckIcon className="h-3.5 w-3.5" />
+                    ) : (
+                      <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                    )}
+                    {copied ? "Copied" : "Copy Core prompt"}
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function XynapseLabHistoryView() {
+  const navigate = useNavigate();
+  const ideMessenger = useContext(IdeMessengerContext);
+  const [historyItems, setHistoryItems] = useState<LabHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+
+  const workspaceDir = useMemo(() => {
+    const workspacePaths = (window as any).workspacePaths;
+    return Array.isArray(workspacePaths) ? workspacePaths[0] : undefined;
+  }, []);
+
+  const refreshLabHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const response = await ideMessenger.request("xynapse/listLabHistory", {
+        workspaceDir,
+      });
+      if (response.status === "success") {
+        setHistoryItems(response.content?.items ?? []);
+        setHistoryError(response.content?.error ?? null);
+      } else {
+        setHistoryError(response.error);
+      }
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error ? error.message : "Could not load Lab history.",
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [ideMessenger, workspaceDir]);
+
+  const openLabArtifact = useCallback(
+    async (relPath: string) => {
+      setHistoryError(null);
+      const response = await ideMessenger.request("xynapse/openLabArtifact", {
+        workspaceDir,
+        relPath,
+      });
+      if (response.status === "success") {
+        if (!response.content?.ok) {
+          setHistoryError(response.content?.error ?? "Could not open Lab artifact.");
+        }
+      } else {
+        setHistoryError(response.error);
+      }
+    },
+    [ideMessenger, workspaceDir],
+  );
+
+  const copyCorePrompt = useCallback(
+    (item: LabHistoryItem) => {
+      if (!item.corePrompt) {
+        return;
+      }
+      ideMessenger.post("copyText", { text: item.corePrompt });
+      setCopiedPromptId(item.id);
+      setTimeout(() => setCopiedPromptId(null), 1400);
+    },
+    [ideMessenger],
+  );
+
+  useEffect(() => {
+    void refreshLabHistory();
+  }, [refreshLabHistory]);
+
+  return (
+    <div className="flex flex-1 flex-col overflow-auto overflow-x-hidden px-2 pb-3">
+      <div className="my-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-100">
+            Xynapse Lab
+          </div>
+          <h2 className="m-0 mt-1 text-base font-semibold text-foreground">
+            Research history
+          </h2>
+          <p className="m-0 mt-1 text-xs leading-5 text-description">
+            Saved research reports and Core-ready plans for the current workspace.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="inline-flex cursor-pointer items-center rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-description transition hover:bg-white/10 hover:text-foreground"
+          onClick={() => navigate("/")}
+          title="Return to Xynapse Lab."
+        >
+          Back
+        </button>
+      </div>
+      <LabHistoryPanel
+        items={historyItems}
+        loading={historyLoading}
+        error={historyError}
+        search={historySearch}
+        onSearchChange={setHistorySearch}
+        onRefresh={refreshLabHistory}
+        onOpenArtifact={openLabArtifact}
+        onCopyCorePrompt={copyCorePrompt}
+        copiedPromptId={copiedPromptId}
+      />
+    </div>
+  );
+}
+
+export function XynapseEnvironmentCard({
+  showOpenFolderAction,
+}: {
+  showOpenFolderAction?: boolean;
+}) {
+  const ideMessenger = useContext(IdeMessengerContext);
+  const selectedChatModel = useAppSelector(selectSelectedChatModel);
+  const config = useAppSelector((state) => state.config.config);
+  const [permissionChoice, setPermissionChoice] =
+    useState<EnvironmentPermissionChoice>("default");
+  const [environmentModelKey, setEnvironmentModelKey] = useState(() =>
+    localStorage.getItem("xynapse.environmentModelKey") ?? "",
+  );
+  const [status, setStatus] = useState<EnvironmentOpenResult | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [terminalRunId, setTerminalRunId] = useState<string | null>(null);
+  const [runState, setRunState] = useState<LabRunState>({
+    status: "idle",
+    title: "Environment task output",
+    output: [],
+  });
+  const workspaceDir =
+    ((window as any).workspacePaths?.[0] as string | undefined) ?? undefined;
+
+  const environmentModels = useMemo(
+    () => collectLabModels(config, selectedChatModel),
+    [config, selectedChatModel],
+  );
+  const selectedEnvironmentModel =
+    environmentModels.find((model) => getLabModelKey(model) === environmentModelKey) ??
+    environmentModels.find(isEnvironmentCompatibleModel) ??
+    environmentModels[0] ??
+    null;
+  const selectedEnvironmentProvider = getEnvironmentProviderId(
+    selectedEnvironmentModel,
+  );
+  const isSelectedEnvironmentCompatible = isEnvironmentCompatibleModel(
+    selectedEnvironmentModel,
+  );
+
+  useEffect(() => {
+    if (!selectedEnvironmentModel) {
+      return;
+    }
+    const key = getLabModelKey(selectedEnvironmentModel);
+    if (key && key !== environmentModelKey) {
+      setEnvironmentModelKey(key);
+      localStorage.setItem("xynapse.environmentModelKey", key);
+    }
+  }, [environmentModelKey, selectedEnvironmentModel]);
+
+  const selectedPermission = ENVIRONMENT_PERMISSION_OPTIONS.find(
+    (option) => option.value === permissionChoice,
+  );
+
+  const requestEnvironment = useCallback(async (
+    action:
+      | "status"
+      | "update"
+      | "install"
+      | "startServer"
+      | "startClient"
+      | "stop",
+    extra?: { runId?: string },
+  ) => {
+    if (showOpenFolderAction && action !== "status") {
+      setStatus({ ok: false, message: "Open a project folder first." });
+      return null;
+    }
+
+    if (
+      (action === "startServer" || action === "startClient") &&
+      !isSelectedEnvironmentCompatible
+    ) {
+      setStatus({
+        ok: false,
+        message:
+          "The selected Xynapse model is not supported by Environment. Choose a Yandex-backed Xynapse model or a model backed by OpenRouter, DeepSeek, Kimi, Fireworks, Z.ai, NVIDIA NIM, Wafer, OpenCode, LM Studio, llama.cpp, or Ollama.",
+      });
+      return null;
+    }
+
+    const runId =
+      extra?.runId ??
+      (action === "stop"
+        ? runState.runId
+        : createClientRunId());
+    setBusyAction(action);
+    try {
+      const response = await Promise.race([
+        ideMessenger.request("xynapse/openEnvironment", {
+          action,
+          runId,
+          workspaceDir,
+          permissionMode: permissionChoice,
+          environmentProvider: selectedEnvironmentModel?.provider,
+          environmentModel: selectedEnvironmentModel?.model,
+          environmentModelTitle: selectedEnvironmentModel?.title,
+          environmentApiKey: selectedEnvironmentModel?.apiKey,
+          environmentBaseUrl:
+            selectedEnvironmentModel?.apiBase ??
+            selectedEnvironmentModel?.baseUrl,
+          environmentFolderId:
+            selectedEnvironmentModel?.folderId ??
+            selectedEnvironmentModel?.requestOptions?.extraBodyProperties?.folderId,
+        }),
+        new Promise<{
+          status: "error";
+          error: string;
+        }>((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                status: "error",
+                error:
+                  "Environment did not respond. Try Reload Window and open it again.",
+              }),
+            8000,
+          ),
+        ),
+      ]);
+      if (response.status === "success") {
+        setStatus(response.content);
+        return response.content;
+      } else {
+        setStatus({
+          ok: false,
+          message: response.error,
+        });
+      }
+    } catch (error) {
+      setStatus({
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not open Environment.",
+      });
+    } finally {
+      setBusyAction(null);
+    }
+    return null;
+  }, [
+    ideMessenger,
+    isSelectedEnvironmentCompatible,
+    permissionChoice,
+    runState.runId,
+    selectedEnvironmentModel,
+    showOpenFolderAction,
+    workspaceDir,
+  ]);
+
+  useEffect(() => {
+    void requestEnvironment("status");
+  }, [requestEnvironment]);
+
+  useWebviewListener(
+    "xynapse/environmentEvent",
+    async (event) => {
+      setRunState((previous) => {
+        const output =
+          event.text && event.text.length > 0
+            ? [
+                ...previous.output,
+                {
+                  id: `${event.runId}-${previous.output.length}-${Date.now()}`,
+                  stream: event.stream ?? "system",
+                  text: event.text,
+                },
+              ]
+            : previous.output;
+
+        if (event.kind === "start") {
+          return {
+            runId: event.runId,
+            status: "running",
+            title: event.title ?? "Environment task output",
+            cwd: event.cwd,
+            output,
+          };
+        }
+
+        if (previous.runId && event.runId !== previous.runId) {
+          return previous;
+        }
+
+        if (event.kind === "chunk") {
+          return { ...previous, status: "running", output };
+        }
+
+        if (event.kind === "error") {
+          return { ...previous, status: "error", output };
+        }
+
+        return {
+          ...previous,
+          status: event.exitCode === 0 ? "done" : "error",
+          exitCode: event.exitCode,
+          output,
+        };
+      });
+    },
+    [],
+  );
+
+  const outputText =
+    runState.output.length > 0
+      ? runState.output.map((chunk) => chunk.text).join("")
+      : "No Environment task output yet. Install/update logs appear here. Coding sessions open in the IDE Terminal panel.";
+
+  const startCodingSession = async () => {
+    const response = await requestEnvironment("startClient");
+    if (response?.ok && response.runId) {
+      setTerminalRunId(response.runId);
+    }
+  };
+
+  const stopActiveEnvironment = async () => {
+    const runId =
+      terminalRunId ??
+      (runState.status === "running" ? runState.runId : undefined);
+    if (!runId) {
+      return;
+    }
+    const response = await requestEnvironment("stop", { runId });
+    if (response?.ok && runId === terminalRunId) {
+      setTerminalRunId(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col overflow-auto overflow-x-hidden px-2 pb-3">
+      <section className="my-3 rounded-2xl border border-solid border-violet-300/15 bg-[#0b0a0d] p-4 shadow-[0_18px_48px_rgba(0,0,0,0.24)]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <CommandLineIcon className="h-5 w-5 text-violet-100" />
+              <h2 className="m-0 text-base font-semibold text-foreground">
+                Environment
+              </h2>
+              <span className="rounded-full border border-solid border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-100">
+                Upstream
+              </span>
+            </div>
+            <p className="m-0 mt-2 text-sm leading-6 text-description">
+              Uses a clean checkout of the upstream project in
+              .external/environment. The proxy runs in the background; the
+              coding session opens in the IDE integrated terminal for the
+              opened project.
+            </p>
+          </div>
+        </div>
+
+        {showOpenFolderAction ? (
+          <div className="mt-4 rounded-xl border border-solid border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+            Open a project folder before starting Environment.
+          </div>
+        ) : null}
+
+        <div className="mt-4 grid grid-cols-1 gap-3">
+          <div className="rounded-xl border border-solid border-white/10 bg-[#08080a] p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-description">
+              Xynapse model
+            </div>
+            <select
+              className="mt-2 w-full rounded-lg border border-solid border-white/10 bg-[#08080a] px-3 py-2 text-sm text-foreground outline-none"
+              value={getLabModelKey(selectedEnvironmentModel)}
+              disabled={busyAction !== null || environmentModels.length === 0}
+              onChange={(event) => {
+                setEnvironmentModelKey(event.target.value);
+                localStorage.setItem("xynapse.environmentModelKey", event.target.value);
+              }}
+            >
+              {environmentModels.map((model) => {
+                const key = getLabModelKey(model);
+                const provider = getEnvironmentProviderId(model);
+                return (
+                  <option key={key} value={key}>
+                    {getLabModelLabel(model)}
+                    {provider ? ` - ${provider}` : " - Core/Lab only"}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="mt-2 grid grid-cols-1 gap-1 text-xs leading-5 text-description">
+              <div>
+                Selected:{" "}
+                {selectedEnvironmentModel
+                  ? getLabModelLabel(selectedEnvironmentModel)
+                  : "no Xynapse model"}
+              </div>
+              <div>
+                Environment route:{" "}
+                {selectedEnvironmentProvider ??
+                  "not supported by Environment"}
+              </div>
+              <div>
+                Active upstream model:{" "}
+                {status?.environmentModel ?? "will be prepared on start"}
+              </div>
+            </div>
+            {!isSelectedEnvironmentCompatible ? (
+              <div className="mt-2 rounded-lg border border-solid border-amber-300/20 bg-amber-300/10 p-2 text-[11px] leading-5 text-amber-100">
+                This model remains available in Core/Lab. Environment can only
+                run Yandex models through Xynapse Bridge or providers supported
+                directly by the upstream free-claude-code runtime.
+              </div>
+            ) : (
+              <div className="mt-2 text-[11px] leading-5 text-description">
+                The upstream session will use this Xynapse model and its saved
+                Xynapse key; there is no separate Environment key picker.
+              </div>
+            )}
+          </div>
+
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-description">
+              Client permission mode
+            </span>
+            <select
+              className="mt-1 w-full rounded-lg border border-solid border-white/10 bg-[#08080a] px-3 py-2 text-sm text-foreground outline-none"
+              value={permissionChoice}
+              disabled={busyAction !== null}
+              onChange={(event) =>
+                setPermissionChoice(event.target.value as EnvironmentPermissionChoice)
+              }
+            >
+              {ENVIRONMENT_PERMISSION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {selectedPermission ? (
+              <span className="mt-1 block text-xs text-description">
+                {selectedPermission.description}
+              </span>
+            ) : null}
+          </label>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-solid border-white/10 bg-[#08080a] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-100">
+                Upstream status
+              </div>
+              <p className="m-0 mt-2 text-xs leading-5 text-description">
+                {status?.message ??
+                  (busyAction
+                    ? "Working..."
+                    : "Checking upstream Environment status.")}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <EnvironmentActionButton
+                icon={<ArrowPathIcon className="h-3.5 w-3.5" />}
+                label="Refresh"
+                title="Refresh Environment status."
+                disabled={busyAction !== null}
+                onClick={() => void requestEnvironment("status")}
+              />
+              <EnvironmentActionButton
+                icon={<ArrowPathIcon className="h-3.5 w-3.5" />}
+                label="Update upstream"
+                title="Pull the clean upstream checkout and reinstall the tool when uv is available."
+                disabled={busyAction !== null}
+                onClick={() => void requestEnvironment("update")}
+              />
+              <EnvironmentActionButton
+                icon={<WrenchScrewdriverIcon className="h-3.5 w-3.5" />}
+                label="Install runtime"
+                title="Install uv/Python 3.14 and the upstream commands."
+                disabled={busyAction !== null}
+                onClick={() => void requestEnvironment("install")}
+              />
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-description">
+            {status?.upstreamRoot ? (
+              <div className="truncate">Checkout: {status.upstreamRoot}</div>
+            ) : null}
+            {status?.upstreamCommit ? (
+              <div>
+                Commit: {status.upstreamCommit}
+                {status.upstreamDirty ? " (local changes)" : ""}
+              </div>
+            ) : null}
+            <div>
+              uv: {status?.uvInstalled ? "installed" : "missing"} | Python
+              3.14: {status?.python314Installed ? "installed" : "missing"} |
+              upstream commands: {status?.fccInstalled ? "installed" : "missing"}
+            </div>
+            <div>
+              Client command: {status?.clientInstalled ? "installed" : "missing"}
+            </div>
+            {status?.supportedProviders?.length ? (
+              <div>
+                Providers from upstream: {status.supportedProviders.join(", ")}.
+                Core-only providers stay in Core/Lab unless upstream adds them.
+              </div>
+            ) : null}
+            <div>
+              Proxy server: {status?.serverRunning ? "running" : "stopped"}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-solid border-white/10 bg-[#08080a] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-100">
+                Coding session
+              </div>
+              <p className="m-0 mt-1 text-xs leading-5 text-description">
+                Start a coding session in the real IDE terminal. The proxy
+                server starts in the background automatically.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <EnvironmentActionButton
+                icon={<CommandLineIcon className="h-3.5 w-3.5" />}
+                label="Start proxy"
+                title="Start the upstream local proxy server in the background."
+                disabled={busyAction !== null || !isSelectedEnvironmentCompatible}
+                onClick={() => void requestEnvironment("startServer")}
+              />
+              <EnvironmentActionButton
+                icon={<CommandLineIcon className="h-3.5 w-3.5" />}
+                label="Open terminal session"
+                title="Start an interactive upstream code session in the IDE terminal."
+                disabled={
+                  busyAction !== null ||
+                  showOpenFolderAction ||
+                  !isSelectedEnvironmentCompatible
+                }
+                onClick={() => void startCodingSession()}
+              />
+              <EnvironmentActionButton
+                icon={<CheckIcon className="h-3.5 w-3.5" />}
+                label={terminalRunId ? "Stop terminal" : "Stop task"}
+                title="Stop the active Environment terminal or task process."
+                disabled={
+                  busyAction !== null ||
+                  (!terminalRunId && (!runState.runId || runState.status !== "running"))
+                }
+                onClick={() => void stopActiveEnvironment()}
+              />
+            </div>
+          </div>
+          <pre
+            aria-label="Environment task output"
+            className="mt-3 max-h-64 min-h-[120px] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-solid border-white/10 bg-black/45 p-3 font-mono text-[11px] leading-5 text-zinc-200"
+          >
+            {outputText}
+          </pre>
+          <div className="mt-2 text-[11px] leading-5 text-description">
+            This panel only shows setup/update output. The coding session uses
+            the native Terminal panel, so prompts, arrows, Backspace, Esc, and
+            Ctrl+C work normally.
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -497,14 +1476,16 @@ export function XynapseResearchCard({
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(139,92,246,0.18),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.05),transparent_48%)]" />
       <div className="relative">
-        <div className="flex flex-wrap items-center gap-2">
-          <BeakerIcon className="h-4 w-4 text-violet-200" />
-          <h3 className="m-0 text-base font-semibold text-foreground">
-            Xynapse Lab
-          </h3>
-          <span className="rounded-full border border-solid border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-violet-100">
-            algorithms
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <BeakerIcon className="h-4 w-4 text-violet-200" />
+            <h3 className="m-0 text-base font-semibold text-foreground">
+              Xynapse Lab
+            </h3>
+            <span className="rounded-full border border-solid border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-violet-100">
+              algorithms
+            </span>
+          </div>
         </div>
 
         <p className="m-0 mt-2 text-sm leading-5 text-description">

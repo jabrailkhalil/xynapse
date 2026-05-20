@@ -42,6 +42,7 @@
 	"builtInExtensions": [],
 	"configurationDefaults": {
 		"window.openFilesInNewWindow": "off",
+		"window.restoreWindows": "none",
 		"editor.tabSize": 2,
 		"editor.insertSpaces": false,
 		"editor.smoothScrolling": true,

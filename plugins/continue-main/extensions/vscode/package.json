@@ -52,7 +52,10 @@
     "onCommand:xynapse.openConfigFile",
     "onCommand:xynapse.runtimeDoctor",
     "onCommand:xynapse.runtimePrompt",
-    "onView:xynapse.xynapseGUIView"
+    "onCommand:xynapse.viewLabHistory",
+    "onView:xynapse.xynapseGUIView",
+    "onView:xynapse.xynapseLabView",
+    "onView:xynapse.xynapseEnvironmentView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -274,13 +277,6 @@
         "group": "Xynapse"
       },
       {
-        "command": "xynapse.openXynapseSurface",
-        "category": "Xynapse",
-        "title": "Open Xynapse Core or Lab",
-        "icon": "$(add)",
-        "group": "Xynapse"
-      },
-      {
         "command": "xynapse.shareSession",
         "category": "Xynapse",
         "title": "Share Current Chat Session as Markdown",
@@ -288,6 +284,13 @@
       },
       {
         "command": "xynapse.viewHistory",
+        "category": "Xynapse",
+        "title": "View History",
+        "icon": "$(history)",
+        "group": "Xynapse"
+      },
+      {
+        "command": "xynapse.viewLabHistory",
         "category": "Xynapse",
         "title": "View History",
         "icon": "$(history)",
@@ -600,7 +603,7 @@
       ],
       "view/title": [
         {
-          "command": "xynapse.openXynapseSurface",
+          "command": "xynapse.newSession",
           "group": "navigation@1",
           "when": "view == xynapse.xynapseGUIView"
         },
@@ -613,6 +616,21 @@
           "command": "xynapse.openConfigPage",
           "group": "navigation@4",
           "when": "view == xynapse.xynapseGUIView"
+        },
+        {
+          "command": "xynapse.openConfigPage",
+          "group": "navigation@4",
+          "when": "view == xynapse.xynapseLabView"
+        },
+        {
+          "command": "xynapse.viewLabHistory",
+          "group": "navigation@2",
+          "when": "view == xynapse.xynapseLabView"
+        },
+        {
+          "command": "xynapse.openConfigPage",
+          "group": "navigation@4",
+          "when": "view == xynapse.xynapseEnvironmentView"
         },
         {
           "command": "xynapse.clearConsole",
@@ -642,8 +660,18 @@
     "viewsContainers": {
       "secondarySidebar": [
         {
-          "id": "xynapse",
-          "title": "Xynapse",
+          "id": "xynapseCore",
+          "title": "Xynapse Core",
+          "icon": "media/sidebar-icon.png"
+        },
+        {
+          "id": "xynapseLab",
+          "title": "Xynapse Lab",
+          "icon": "media/sidebar-icon.png"
+        },
+        {
+          "id": "xynapseEnvironment",
+          "title": "Environment",
           "icon": "media/sidebar-icon.png"
         }
       ],
@@ -656,11 +684,29 @@
       ]
     },
     "views": {
-      "xynapse": [
+      "xynapseCore": [
         {
           "type": "webview",
           "id": "xynapse.xynapseGUIView",
-          "name": "Xynapse Core",
+          "name": "Chats",
+          "icon": "media/sidebar-icon.png",
+          "visibility": "visible"
+        }
+      ],
+      "xynapseLab": [
+        {
+          "type": "webview",
+          "id": "xynapse.xynapseLabView",
+          "name": "Lab",
+          "icon": "media/sidebar-icon.png",
+          "visibility": "visible"
+        }
+      ],
+      "xynapseEnvironment": [
+        {
+          "type": "webview",
+          "id": "xynapse.xynapseEnvironmentView",
+          "name": "Environment",
           "icon": "media/sidebar-icon.png",
           "visibility": "visible"
         }

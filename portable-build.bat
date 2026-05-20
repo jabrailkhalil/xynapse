@@ -13,6 +13,7 @@ set "PORTABLE_NAME=xynapse-portable"
 set "OUTPUT_DIR=%OUTPUT_ROOT%\%PORTABLE_NAME%"
 set "PRESERVED_DATA_DIR=%OUTPUT_ROOT%\%PORTABLE_NAME%-data-preserve"
 set "HAS_PRESERVED_DATA="
+set "PRESERVE_DATA_FLAG=%~3"
 
 set "SOURCE_EXE=%SOURCE_DIR%\Xynapse.exe"
 if not exist "%SOURCE_EXE%" (
@@ -23,7 +24,7 @@ if not exist "%SOURCE_EXE%" (
 	exit /b 1
 )
 
-if exist "%OUTPUT_DIR%\data" (
+if /i "%PRESERVE_DATA_FLAG%"=="--preserve-data" if exist "%OUTPUT_DIR%\data" (
 	set "HAS_PRESERVED_DATA=1"
 	if exist "%PRESERVED_DATA_DIR%" rmdir /s /q "%PRESERVED_DATA_DIR%"
 	echo Preserving existing portable data...
@@ -32,6 +33,10 @@ if exist "%OUTPUT_DIR%\data" (
 		echo [ERROR] Failed to preserve existing portable data.
 		exit /b 1
 	)
+)
+if not /i "%PRESERVE_DATA_FLAG%"=="--preserve-data" if exist "%OUTPUT_DIR%\data" (
+	echo Existing portable data will not be copied into this build.
+	echo Pass --preserve-data as the third argument only for local debugging.
 )
 
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
@@ -84,5 +89,9 @@ echo   "%OUTPUT_DIR%\Xynapse.exe"
 echo.
 echo It will keep user data in:
 echo   %OUTPUT_DIR%\data
+echo.
+echo Note:
+echo   Fresh builds do not copy previous portable user data.
+echo   Use --preserve-data only for local debugging builds.
 
 exit /b 0

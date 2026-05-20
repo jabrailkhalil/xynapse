@@ -2,7 +2,7 @@
 """Council runner - AutoGen SelectorGroupChat for free-form project planning.
 
 Usage:
-    python council_runner.py --task "описание проекта" --api-key "sk-..." \
+    python council_runner.py --task "project description" --api-key "sk-..." \
         [--models '{"PM":"..."}'] [--max-messages 20]
 
 Output: NDJSON lines to stdout:
@@ -22,20 +22,20 @@ from agents import create_agents
 from config import create_openrouter_client
 
 
-SELECTOR_PROMPT = """Ты модератор мульти-агентной дискуссии по планированию проекта.
-Участники: {participants}
+SELECTOR_PROMPT = """You moderate a multi-agent project-planning discussion.
+Participants: {participants}
 
-Правила выбора следующего спикера:
-1. PM начинает обсуждение, уточняя требования.
-2. Architect предлагает архитектуру после уточнения требований.
-3. Developer комментирует реализуемость архитектуры.
-4. Reviewer критикует и предлагает улучшения.
-5. После критики PM суммирует и направляет обсуждение.
-6. Не давай одному агенту говорить два раза подряд.
-7. Когда дискуссия сходится, дай слово PM для финализации плана.
+Speaker selection rules:
+1. PM starts by clarifying requirements.
+2. Architect proposes architecture after requirements are clear.
+3. Developer comments on feasibility and implementation details.
+4. Reviewer critiques risks, edge cases, and quality gaps.
+5. After critique, PM summarizes and guides the discussion.
+6. Do not let one agent speak twice in a row.
+7. When the discussion converges, give PM the turn to finalize the plan.
 
-На основе истории сообщений выбери, кто должен говорить следующим.
-Ответь ТОЛЬКО именем агента: PM, Architect, Developer или Reviewer."""
+Based on the message history, choose the next speaker.
+Reply ONLY with the agent name: PM, Architect, Developer, or Reviewer."""
 
 
 def emit(agent: str, content: str, phase: str = "discussion") -> None:
@@ -59,7 +59,7 @@ async def run_council(
     try:
         agents = create_agents(api_key, models)
     except Exception as exc:
-        emit("system", f"Ошибка создания агентов: {exc}", "error")
+        emit("system", f"Agent creation failed: {exc}", "error")
         return
 
     selector_model = create_openrouter_client(api_key, "openai/gpt-4o-mini")
@@ -74,10 +74,10 @@ async def run_council(
         selector_prompt=SELECTOR_PROMPT,
     )
 
-    emit("system", f"Council запущен. Задача: {task}", "discussion")
+    emit("system", f"Council started. Task: {task}", "discussion")
 
     try:
-        stream = team.run_stream(task=f"Задача от пользователя: {task}")
+        stream = team.run_stream(task=f"User task: {task}")
         async for message in stream:
             if hasattr(message, "messages"):
                 continue
@@ -91,10 +91,10 @@ async def run_council(
             emit(agent_name, content, phase)
 
     except Exception as exc:
-        emit("system", f"Ошибка выполнения: {exc}", "error")
+        emit("system", f"Execution failed: {exc}", "error")
         return
 
-    emit("system", "Дискуссия завершена.", "complete")
+    emit("system", "Discussion complete.", "complete")
 
 
 def main() -> None:
@@ -117,7 +117,7 @@ def main() -> None:
     try:
         models = json.loads(args.models)
     except json.JSONDecodeError:
-        emit("system", "Невалидный JSON в --models", "error")
+        emit("system", "Invalid JSON in --models", "error")
         sys.exit(1)
 
     asyncio.run(
