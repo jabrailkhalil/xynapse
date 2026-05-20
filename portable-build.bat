@@ -24,19 +24,22 @@ if not exist "%SOURCE_EXE%" (
 	exit /b 1
 )
 
-if /i "%PRESERVE_DATA_FLAG%"=="--preserve-data" if exist "%OUTPUT_DIR%\data" (
-	set "HAS_PRESERVED_DATA=1"
-	if exist "%PRESERVED_DATA_DIR%" rmdir /s /q "%PRESERVED_DATA_DIR%"
-	echo Preserving existing portable data...
-	robocopy "%OUTPUT_DIR%\data" "%PRESERVED_DATA_DIR%" /E /NFL /NDL /NJH /NJS /NP
-	if errorlevel 8 (
-		echo [ERROR] Failed to preserve existing portable data.
-		exit /b 1
+if /i "%PRESERVE_DATA_FLAG%"=="--preserve-data" (
+	if exist "%OUTPUT_DIR%\data" (
+		set "HAS_PRESERVED_DATA=1"
+		if exist "%PRESERVED_DATA_DIR%" rmdir /s /q "%PRESERVED_DATA_DIR%"
+		echo Preserving existing portable data...
+		robocopy "%OUTPUT_DIR%\data" "%PRESERVED_DATA_DIR%" /E /NFL /NDL /NJH /NJS /NP
+		if errorlevel 8 (
+			echo [ERROR] Failed to preserve existing portable data.
+			exit /b 1
+		)
 	)
-)
-if not /i "%PRESERVE_DATA_FLAG%"=="--preserve-data" if exist "%OUTPUT_DIR%\data" (
-	echo Existing portable data will not be copied into this build.
-	echo Pass --preserve-data as the third argument only for local debugging.
+) else (
+	if exist "%OUTPUT_DIR%\data" (
+		echo Existing portable data will not be copied into this build.
+		echo Pass --preserve-data as the third argument only for local debugging.
+	)
 )
 
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
