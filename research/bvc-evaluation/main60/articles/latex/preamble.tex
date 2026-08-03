@@ -1,0 +1,154 @@
+\usepackage[a4paper,top=22mm,bottom=22mm,left=22mm,right=22mm,headheight=22pt]{geometry}
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\setmainfont{times.ttf}[
+  Path=C:/Windows/Fonts/,
+  BoldFont=timesbd.ttf,
+  ItalicFont=timesi.ttf,
+  BoldItalicFont=timesbi.ttf
+]
+\setsansfont{arial.ttf}[
+  Path=C:/Windows/Fonts/,
+  BoldFont=arialbd.ttf,
+  ItalicFont=ariali.ttf,
+  BoldItalicFont=arialbi.ttf
+]
+\setmonofont{consola.ttf}[
+  Path=C:/Windows/Fonts/,
+  BoldFont=consolab.ttf,
+  ItalicFont=consolai.ttf,
+  BoldItalicFont=consolaz.ttf,
+  Scale=0.82
+]
+\usepackage[main=russian,english]{babel}
+\usepackage{microtype}
+
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,tabularx,array,longtable,multirow}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{float}
+\usepackage[section]{placeins}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\sisetup{
+  output-decimal-marker={,},
+  group-separator={\,},
+  group-minimum-digits=4,
+  detect-all
+}
+\usepackage{xcolor}
+\definecolor{Ink}{HTML}{0F172A}
+\definecolor{Muted}{HTML}{475569}
+\definecolor{Rule}{HTML}{CBD5E1}
+\definecolor{BVC}{HTML}{7C3AED}
+\definecolor{Cyan}{HTML}{0EA5E9}
+\definecolor{Teal}{HTML}{14B8A6}
+\definecolor{Amber}{HTML}{F59E0B}
+\definecolor{Soft}{HTML}{F8FAFC}
+\usepackage[most]{tcolorbox}
+\newtcolorbox{resultbox}[1][]{
+  enhanced,
+  breakable,
+  colback=Soft,
+  colframe=BVC,
+  boxrule=0.8pt,
+  arc=1.5mm,
+  left=3mm,right=3mm,top=2mm,bottom=2mm,
+  title={#1},
+  fonttitle=\bfseries\sffamily,
+  coltitle=Ink
+}
+\newtcolorbox{methodbox}[1][]{
+  enhanced,
+  breakable,
+  colback=white,
+  colframe=Rule,
+  boxrule=0.6pt,
+  arc=1.5mm,
+  left=3mm,right=3mm,top=2mm,bottom=2mm,
+  title={#1},
+  fonttitle=\bfseries\sffamily,
+  coltitle=Ink
+}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit}
+\tikzset{
+  stage/.style={draw=Rule,rounded corners=2mm,fill=Soft,minimum height=11mm,
+    text width=28mm,align=center,font=\small\sffamily},
+  gate/.style={diamond,draw=BVC,fill=BVC!7,aspect=1.8,align=center,
+    inner sep=1.2mm,font=\small\sffamily},
+  flow/.style={-{Latex[length=2.2mm]},thick,draw=Muted},
+  note/.style={font=\scriptsize\sffamily,text=Muted,align=center}
+}
+
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\sffamily\color{Ink}}{\thesection.}{0.55em}{}
+\titleformat{\subsection}{\large\bfseries\sffamily\color{Ink}}{\thesubsection.}{0.55em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\sffamily\color{Ink}}{\thesubsubsection.}{0.55em}{}
+\titlespacing*{\section}{0pt}{2.2ex plus .5ex minus .2ex}{1.0ex}
+\titlespacing*{\subsection}{0pt}{1.8ex plus .4ex minus .2ex}{0.8ex}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\color{Muted}\ArticleShortTitle}
+\fancyhead[R]{\small\sffamily\color{Muted}Xynapse / BVC}
+\fancyfoot[C]{\small\sffamily\color{Muted}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{Rule}\leaders\hrule height \headrulewidth\hfill}}
+
+\usepackage{csquotes}
+\usepackage[
+  backend=biber,
+  style=numeric-comp,
+  sorting=nyt,
+  maxbibnames=8,
+  giveninits=true,
+  doi=true,
+  url=true,
+  isbn=false
+]{biblatex}
+\addbibresource{references.bib}
+\AtBeginBibliography{\footnotesize\sloppy\hbadness=10000\relax}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=BVC,
+  citecolor=BVC,
+  urlcolor=Cyan,
+  pdftitle={\ArticlePDFTitle},
+  pdfauthor={Халилов Джабраиль Эльнурович},
+  pdfsubject={Экспериментальная оценка BVC},
+  pdfkeywords={BVC, SWE-bench Verified, LLM, программирование, Xynapse}
+}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+\captionsetup{
+  font=small,
+  labelfont={bf,sf,color=Ink},
+  textfont={color=Muted},
+  justification=centering,
+  singlelinecheck=false,
+  skip=5pt
+}
+\setlist[itemize]{leftmargin=1.5em,itemsep=0.25em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=0.25em,topsep=0.35em}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\setlength{\parindent}{1.15em}
+\setlength{\parskip}{0.18em}
+\setlength{\emergencystretch}{4em}
+\tolerance=1200
+
+\newcommand{\BVCname}{Bounded Verification Council (BVC)}
+\newcommand{\pp}{п.\,п.}
+\newcommand{\dataset}{SWE-bench Verified}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\sourcehash}[1]{\texttt{\footnotesize #1}}
+
+\input{derived/metrics.tex}

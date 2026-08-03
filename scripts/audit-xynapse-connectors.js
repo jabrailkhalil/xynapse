@@ -64,7 +64,10 @@ function readText(filePath) {
 }
 
 function sha256(filePath) {
-  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(filePath))
+    .digest("hex");
 }
 
 function parseScalar(value) {
@@ -185,7 +188,11 @@ function roleCounts(models) {
 function runtimeSupported(model) {
   const provider = model.provider.toLowerCase();
   const modelName = model.model.toLowerCase();
-  if (provider.includes("yandex") || model.folderId || modelName.startsWith("gpt://")) {
+  if (
+    provider.includes("yandex") ||
+    model.folderId ||
+    modelName.startsWith("gpt://")
+  ) {
     return true;
   }
   if (provider.includes("anthropic")) {
@@ -198,10 +205,18 @@ function runtimeSupported(model) {
   ) {
     return true;
   }
-  if (provider.includes("xai") || provider.includes("grok") || modelName.includes("grok")) {
+  if (
+    provider.includes("xai") ||
+    provider.includes("grok") ||
+    modelName.includes("grok")
+  ) {
     return true;
   }
-  if (provider.includes("dashscope") || provider === "qwen" || provider === "kimi") {
+  if (
+    provider.includes("dashscope") ||
+    provider === "qwen" ||
+    provider === "kimi"
+  ) {
     return true;
   }
   return false;
@@ -260,7 +275,9 @@ const sourceModels = parseModelsFromConfig(sourceConfigPath);
 const sourceSignature = normalizeModels(sourceModels);
 
 console.log("Xynapse connector audit");
-console.log(`- source models: ${sourceModels.length} (${providerCounts(sourceModels)})`);
+console.log(
+  `- source models: ${sourceModels.length} (${providerCounts(sourceModels)})`,
+);
 console.log(`- source roles: ${roleCounts(sourceModels)}`);
 
 for (const provider of new Set(sourceModels.map((model) => model.provider))) {
@@ -289,16 +306,24 @@ for (const entry of presentRoots) {
     console.log(`  ok ${file}`);
   }
 
-  const legacyRuntime = path.join(entry.root, "bin", process.platform === "win32" ? "claw.exe" : "claw");
+  const legacyRuntime = path.join(
+    entry.root,
+    "bin",
+    process.platform === "win32" ? "claw.exe" : "claw",
+  );
   if (exists(legacyRuntime)) {
-    fail(`${entry.name}: legacy runtime still present at ${path.relative(repoRoot, legacyRuntime)}`);
+    fail(
+      `${entry.name}: legacy runtime still present at ${path.relative(repoRoot, legacyRuntime)}`,
+    );
   }
 
   const packagePath = path.join(entry.root, "package.json");
   if (exists(packagePath)) {
     const keys = packageConnectorKeys(packagePath);
     if (keys.name !== "xynapse-assistant" || keys.publisher !== "xynapse") {
-      fail(`${entry.name}: package identity is ${keys.publisher}.${keys.name}, expected xynapse.xynapse-assistant`);
+      fail(
+        `${entry.name}: package identity is ${keys.publisher}.${keys.name}, expected xynapse.xynapse-assistant`,
+      );
     }
   }
 
@@ -316,12 +341,30 @@ for (const entry of presentRoots) {
   if (exists(extensionJs)) {
     const syntaxError = nodeCheck(extensionJs);
     if (syntaxError) {
-      fail(`${entry.name}: out/extension.js syntax check failed: ${syntaxError.split(/\r?\n/)[0]}`);
+      fail(
+        `${entry.name}: out/extension.js syntax check failed: ${syntaxError.split(/\r?\n/)[0]}`,
+      );
     }
     const bundled = readText(extensionJs);
     for (const provider of connectorProviders) {
-      if (!bundled.includes(`"${provider}"`) && !bundled.includes(`'${provider}'`)) {
-        fail(`${entry.name}: bundled extension does not contain provider ${provider}`);
+      if (
+        !bundled.includes(`"${provider}"`) &&
+        !bundled.includes(`'${provider}'`)
+      ) {
+        fail(
+          `${entry.name}: bundled extension does not contain provider ${provider}`,
+        );
+      }
+    }
+    for (const marker of [
+      "normalizeXynapseEnvironmentProviderName",
+      "Environment proxy server stopped.",
+      "clientRunning",
+    ]) {
+      if (!bundled.includes(marker)) {
+        fail(
+          `${entry.name}: bundled extension is missing Environment marker ${marker}`,
+        );
       }
     }
   }
@@ -330,17 +373,29 @@ for (const entry of presentRoots) {
   if (exists(guiJs)) {
     const syntaxError = nodeCheck(guiJs);
     if (syntaxError) {
-      fail(`${entry.name}: gui/assets/index.js syntax check failed: ${syntaxError.split(/\r?\n/)[0]}`);
+      fail(
+        `${entry.name}: gui/assets/index.js syntax check failed: ${syntaxError.split(/\r?\n/)[0]}`,
+      );
     }
     const bundled = readText(guiJs);
-    for (const marker of ["XynapseFindCoreRuntimeModel", "XynapseCollectCoreRuntimeModels"]) {
+    for (const marker of [
+      "XynapseFindCoreRuntimeModel",
+      "XynapseCollectCoreRuntimeModels",
+      "Stop proxy",
+      "Terminal open",
+      "xynapse.environmentPermissionMode",
+    ]) {
       if (!bundled.includes(marker)) {
         fail(`${entry.name}: bundled GUI is missing ${marker}`);
       }
     }
   }
 
-  const runtimePath = path.join(entry.root, "bin", process.platform === "win32" ? "xynapse.exe" : "xynapse");
+  const runtimePath = path.join(
+    entry.root,
+    "bin",
+    process.platform === "win32" ? "xynapse.exe" : "xynapse",
+  );
   if (exists(runtimePath)) {
     const help = runHelp(runtimePath);
     if (!help.includes("Xynapse runtime") || !help.includes("Usage:")) {
@@ -364,8 +419,12 @@ for (const file of parityFiles) {
 }
 
 const runtimeModels = sourceModels.filter(runtimeSupported);
-const chatRuntimeModels = runtimeModels.filter((model) => model.roles.includes("chat"));
-const unsupportedRuntimeModels = sourceModels.filter((model) => !runtimeSupported(model));
+const chatRuntimeModels = runtimeModels.filter((model) =>
+  model.roles.includes("chat"),
+);
+const unsupportedRuntimeModels = sourceModels.filter(
+  (model) => !runtimeSupported(model),
+);
 if (chatRuntimeModels.length === 0) {
   fail("source: no chat-capable model is supported by Xynapse Core runtime");
 }
@@ -377,7 +436,9 @@ console.log(`- Core runtime models: ${runtimeModels.length} supported`);
 console.log(
   `- Core runtime unsupported by design: ${
     unsupportedRuntimeModels.length
-      ? unsupportedRuntimeModels.map((model) => `${model.name} (${model.provider})`).join(", ")
+      ? unsupportedRuntimeModels
+          .map((model) => `${model.name} (${model.provider})`)
+          .join(", ")
       : "none"
   }`,
 );

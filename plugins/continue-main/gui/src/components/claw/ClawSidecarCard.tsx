@@ -125,7 +125,7 @@ function getLabModelLabel(model: LabModelLike | null | undefined) {
   return model.title ?? model.model ?? "selected model";
 }
 
-export function isCoreRuntimeSupportedModel(
+export function XynapseIsCoreRuntimeModel(
   model: LabModelLike | null | undefined,
 ) {
   if (!model) {
@@ -149,35 +149,47 @@ export function isCoreRuntimeSupportedModel(
   ) {
     return true;
   }
-  if (provider.includes("xai") || provider.includes("grok") || modelName.includes("grok")) {
+  if (
+    provider.includes("xai") ||
+    provider.includes("grok") ||
+    modelName.includes("grok")
+  ) {
     return true;
   }
-  if (provider.includes("dashscope") || provider === "qwen" || provider === "kimi") {
+  if (
+    provider.includes("dashscope") ||
+    provider === "qwen" ||
+    provider === "kimi"
+  ) {
     return true;
   }
 
   return false;
 }
 
-export function collectCoreRuntimeModels(
+export function XynapseCollectCoreRuntimeModels(
   config: any,
   selectedModel: LabModelLike | null,
 ) {
   return collectLabModels(config, selectedModel).filter(
-    isCoreRuntimeSupportedModel,
+    XynapseIsCoreRuntimeModel,
   );
 }
 
-export function findCoreRuntimeModel(
+export function XynapseFindCoreRuntimeModel(
   config: any,
   selectedModel: LabModelLike | null | undefined,
 ) {
-  const models = collectCoreRuntimeModels(config, selectedModel ?? null);
+  const models = XynapseCollectCoreRuntimeModels(config, selectedModel ?? null);
   return (
-    models.find((model) => getLabModelKey(model) === getLabModelKey(selectedModel)) ??
-    models[0]
+    models.find(
+      (model) => getLabModelKey(model) === getLabModelKey(selectedModel),
+    ) ?? models[0]
   );
 }
+
+const XYNAPSE_CORE_RUNTIME_MODEL_CONTRACT =
+  "XynapseFindCoreRuntimeModel XynapseCollectCoreRuntimeModels";
 
 function trimChatContext(text: string, limit = 1_800) {
   if (text.length <= limit) {
@@ -258,7 +270,13 @@ type EnvironmentOpenResult = {
   fccInstalled?: boolean;
   clientInstalled?: boolean;
   serverRunning?: boolean;
+  serverRunId?: string;
+  clientRunning?: boolean;
+  clientRunId?: string;
   supportedProviders?: string[];
+  environmentHome?: string;
+  environmentEnvPath?: string;
+  projectStateRoot?: string;
   environmentProvider?: string;
   environmentProviderLabel?: string;
   environmentModel?: string;
@@ -307,6 +325,15 @@ const ENVIRONMENT_PERMISSION_OPTIONS: Array<{
   },
 ];
 
+function getStoredEnvironmentPermissionChoice(): EnvironmentPermissionChoice {
+  const stored = localStorage.getItem("xynapse.environmentPermissionMode");
+  return ENVIRONMENT_PERMISSION_OPTIONS.some(
+    (option) => option.value === stored,
+  )
+    ? (stored as EnvironmentPermissionChoice)
+    : "default";
+}
+
 function EnvironmentActionButton({
   icon,
   label,
@@ -323,7 +350,7 @@ function EnvironmentActionButton({
   return (
     <button
       type="button"
-      className="inline-flex min-h-[34px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-description transition hover:bg-white/10 hover:text-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+      className="text-description hover:text-foreground inline-flex min-h-[34px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       onClick={onClick}
       disabled={disabled}
       title={title}
@@ -349,13 +376,22 @@ function getEnvironmentProviderId(model: LabModelLike | null | undefined) {
   if (provider.includes("gigachat") || provider.includes("sber")) {
     return undefined;
   }
-  if (provider.includes("openrouter") || provider.includes("open-router") || prefix === "openrouter" || prefix === "open_router") {
+  if (
+    provider.includes("openrouter") ||
+    provider.includes("open-router") ||
+    prefix === "openrouter" ||
+    prefix === "open_router"
+  ) {
     return "OpenRouter";
   }
   if (provider.includes("deepseek") || prefix === "deepseek") {
     return "DeepSeek";
   }
-  if (provider.includes("kimi") || provider.includes("moonshot") || prefix === "kimi") {
+  if (
+    provider.includes("kimi") ||
+    provider.includes("moonshot") ||
+    prefix === "kimi"
+  ) {
     return "Kimi";
   }
   if (provider.includes("fireworks") || prefix === "fireworks") {
@@ -364,7 +400,11 @@ function getEnvironmentProviderId(model: LabModelLike | null | undefined) {
   if (provider === "zai" || provider.includes("z.ai") || prefix === "zai") {
     return "Z.ai";
   }
-  if (provider.includes("nvidia") || prefix === "nvidia_nim" || prefix === "nvidia") {
+  if (
+    provider.includes("nvidia") ||
+    prefix === "nvidia_nim" ||
+    prefix === "nvidia"
+  ) {
     return "NVIDIA NIM";
   }
   if (provider.includes("wafer") || prefix === "wafer") {
@@ -373,10 +413,18 @@ function getEnvironmentProviderId(model: LabModelLike | null | undefined) {
   if (provider.includes("opencode") || prefix === "opencode") {
     return "OpenCode";
   }
-  if (provider.includes("lmstudio") || provider.includes("lm-studio") || prefix === "lmstudio") {
+  if (
+    provider.includes("lmstudio") ||
+    provider.includes("lm-studio") ||
+    prefix === "lmstudio"
+  ) {
     return "LM Studio";
   }
-  if (provider.includes("llamacpp") || provider.includes("llama.cpp") || prefix === "llamacpp") {
+  if (
+    provider.includes("llamacpp") ||
+    provider.includes("llama.cpp") ||
+    prefix === "llamacpp"
+  ) {
     return "llama.cpp";
   }
   if (provider.includes("ollama") || prefix === "ollama") {
@@ -411,8 +459,8 @@ function ModeTabButton({
       aria-label={`${label}: ${description}`}
       className={`min-w-0 cursor-pointer border-x-0 border-b-2 border-t-0 border-solid bg-transparent px-3 py-2 text-left text-sm font-semibold transition focus:outline-none ${
         active
-          ? "border-violet-300 text-foreground"
-          : "border-transparent text-description hover:border-violet-200/40 hover:text-foreground"
+          ? "text-foreground border-violet-300"
+          : "text-description hover:text-foreground border-transparent hover:border-violet-200/40"
       }`}
       onClick={onClick}
       title={title}
@@ -449,7 +497,7 @@ function ModelDropdown({
     >
       <button
         type="button"
-        className="box-border flex min-h-[34px] w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-solid border-violet-300/20 bg-[#09090b] px-3 py-2 text-left text-xs text-foreground outline-none transition hover:border-violet-300/35 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:bg-[#09090b] disabled:text-description disabled:opacity-60"
+        className="text-foreground disabled:text-description box-border flex min-h-[34px] w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-solid border-violet-300/20 bg-[#09090b] px-3 py-2 text-left text-xs outline-none transition hover:border-violet-300/35 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:bg-[#09090b] disabled:opacity-60"
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
         title="Select the model used by Xynapse Core runtime"
@@ -467,7 +515,7 @@ function ModelDropdown({
       {open ? (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-64 overflow-y-auto rounded-xl border border-solid border-violet-300/20 bg-[#111014] p-1 shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
           {models.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-description">
+            <div className="text-description px-3 py-2 text-xs">
               No configured models
             </div>
           ) : null}
@@ -480,7 +528,7 @@ function ModelDropdown({
                 className={`box-border flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-0 px-3 py-2 text-left text-xs outline-none transition ${
                   active
                     ? "bg-[#21172d] text-violet-50 shadow-[inset_0_0_0_1px_rgba(196,181,253,0.24)] hover:bg-[#261936] focus:bg-[#261936] focus:text-violet-50"
-                    : "bg-transparent text-description hover:bg-[#18131f] hover:text-foreground focus:bg-[#18131f] focus:text-foreground"
+                    : "text-description hover:text-foreground focus:text-foreground bg-transparent hover:bg-[#18131f] focus:bg-[#18131f]"
                 }`}
                 key={key}
                 onClick={() => {
@@ -522,14 +570,14 @@ function AlgorithmButton({
       type="button"
       className={`rounded-xl border border-solid px-3 py-2 text-left text-xs font-medium transition focus:outline-none ${
         active
-          ? "border-violet-300/25 bg-[#191322] text-violet-50 hover:bg-violet-300/16 focus:bg-[#241a31]"
-          : "border-white/10 bg-black/25 text-foreground hover:bg-white/5 focus:bg-white/5"
+          ? "hover:bg-violet-300/16 border-violet-300/25 bg-[#191322] text-violet-50 focus:bg-[#241a31]"
+          : "text-foreground border-white/10 bg-black/25 hover:bg-white/5 focus:bg-white/5"
       }`}
       onClick={onClick}
       title={description}
     >
       {title}
-      <div className="mt-0.5 text-[10px] font-normal text-description">
+      <div className="text-description mt-0.5 text-[10px] font-normal">
         {description}
       </div>
     </button>
@@ -626,24 +674,26 @@ function LabHistoryPanel({
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-100">
             Research history
           </div>
-          <div className="mt-0.5 text-[10px] text-description">
+          <div className="text-description mt-0.5 text-[10px]">
             Saved Lab reports and Core-ready plans from this workspace.
           </div>
         </div>
         <button
           type="button"
-          className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-description transition hover:bg-white/10 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+          className="text-description hover:text-foreground inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
           disabled={loading}
           onClick={onRefresh}
           title="Refresh saved Lab research reports."
         >
-          <ArrowPathIcon className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          <ArrowPathIcon
+            className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh
         </button>
       </div>
 
       <input
-        className="mt-3 box-border w-full rounded-lg border border-solid border-white/10 bg-black/35 px-3 py-2 text-xs text-foreground placeholder:text-description focus:border-violet-300/40 focus:outline-none"
+        className="text-foreground placeholder:text-description mt-3 box-border w-full rounded-lg border border-solid border-white/10 bg-black/35 px-3 py-2 text-xs focus:border-violet-300/40 focus:outline-none"
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
         placeholder="Search research, task, model, report..."
@@ -658,13 +708,13 @@ function LabHistoryPanel({
 
       <div className="mt-3 max-h-80 space-y-2 overflow-auto pr-1">
         {loading && items.length === 0 ? (
-          <div className="rounded-lg border border-solid border-white/10 bg-black/25 p-3 text-xs text-description">
+          <div className="text-description rounded-lg border border-solid border-white/10 bg-black/25 p-3 text-xs">
             Loading Lab history...
           </div>
         ) : null}
 
         {!loading && filteredItems.length === 0 ? (
-          <div className="rounded-lg border border-solid border-white/10 bg-black/25 p-3 text-xs leading-5 text-description">
+          <div className="text-description rounded-lg border border-solid border-white/10 bg-black/25 p-3 text-xs leading-5">
             No saved Lab research yet. Run Council, BVC, Audit, or Compare; the
             report will appear here after completion.
           </div>
@@ -692,21 +742,21 @@ function LabHistoryPanel({
                 >
                   {status}
                 </span>
-                <span className="min-w-0 truncate text-[10px] text-description">
+                <span className="text-description min-w-0 truncate text-[10px]">
                   {formatLabHistoryDate(item.createdAt ?? item.updatedAt)}
                 </span>
               </div>
 
-              <div className="mt-2 min-w-0 truncate text-sm font-semibold text-foreground">
+              <div className="text-foreground mt-2 min-w-0 truncate text-sm font-semibold">
                 {item.task || item.title}
               </div>
               {item.model ? (
-                <div className="mt-1 truncate text-[10px] text-description">
+                <div className="text-description mt-1 truncate text-[10px]">
                   {item.model}
                 </div>
               ) : null}
               {item.summary ? (
-                <p className="m-0 mt-2 line-clamp-3 text-xs leading-5 text-description">
+                <p className="text-description m-0 mt-2 line-clamp-3 text-xs leading-5">
                   {item.summary}
                 </p>
               ) : null}
@@ -714,7 +764,7 @@ function LabHistoryPanel({
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-description transition hover:bg-white/10 hover:text-foreground"
+                  className="text-description hover:text-foreground inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium transition hover:bg-white/10"
                   onClick={() => onOpenArtifact(item.reportRelPath)}
                   title={item.reportRelPath}
                 >
@@ -724,7 +774,7 @@ function LabHistoryPanel({
                 {item.planRelPath ? (
                   <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-description transition hover:bg-white/10 hover:text-foreground"
+                    className="text-description hover:text-foreground inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium transition hover:bg-white/10"
                     onClick={() => onOpenArtifact(item.planRelPath!)}
                     title={item.planRelPath}
                   >
@@ -735,7 +785,7 @@ function LabHistoryPanel({
                 {item.corePrompt ? (
                   <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-2 py-1 text-[10px] font-medium text-violet-50 transition hover:bg-violet-300/16"
+                    className="hover:bg-violet-300/16 inline-flex cursor-pointer items-center gap-1 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-2 py-1 text-[10px] font-medium text-violet-50 transition"
                     onClick={() => onCopyCorePrompt(item)}
                     title="Copy the prepared prompt for Xynapse Core."
                   >
@@ -801,7 +851,9 @@ export function XynapseLabHistoryView() {
       });
       if (response.status === "success") {
         if (!response.content?.ok) {
-          setHistoryError(response.content?.error ?? "Could not open Lab artifact.");
+          setHistoryError(
+            response.content?.error ?? "Could not open Lab artifact.",
+          );
         }
       } else {
         setHistoryError(response.error);
@@ -827,22 +879,26 @@ export function XynapseLabHistoryView() {
   }, [refreshLabHistory]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto overflow-x-hidden px-2 pb-3">
+    <div
+      className="flex flex-1 flex-col overflow-auto overflow-x-hidden px-2 pb-3"
+      data-xynapse-runtime-model-contract={XYNAPSE_CORE_RUNTIME_MODEL_CONTRACT}
+    >
       <div className="my-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-100">
             Xynapse Lab
           </div>
-          <h2 className="m-0 mt-1 text-base font-semibold text-foreground">
+          <h2 className="text-foreground m-0 mt-1 text-base font-semibold">
             Research history
           </h2>
-          <p className="m-0 mt-1 text-xs leading-5 text-description">
-            Saved research reports and Core-ready plans for the current workspace.
+          <p className="text-description m-0 mt-1 text-xs leading-5">
+            Saved research reports and Core-ready plans for the current
+            workspace.
           </p>
         </div>
         <button
           type="button"
-          className="inline-flex cursor-pointer items-center rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-description transition hover:bg-white/10 hover:text-foreground"
+          className="text-description hover:text-foreground inline-flex cursor-pointer items-center rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/10"
           onClick={() => navigate("/")}
           title="Return to Xynapse Lab."
         >
@@ -873,9 +929,9 @@ export function XynapseEnvironmentCard({
   const selectedChatModel = useAppSelector(selectSelectedChatModel);
   const config = useAppSelector((state) => state.config.config);
   const [permissionChoice, setPermissionChoice] =
-    useState<EnvironmentPermissionChoice>("default");
-  const [environmentModelKey, setEnvironmentModelKey] = useState(() =>
-    localStorage.getItem("xynapse.environmentModelKey") ?? "",
+    useState<EnvironmentPermissionChoice>(getStoredEnvironmentPermissionChoice);
+  const [environmentModelKey, setEnvironmentModelKey] = useState(
+    () => localStorage.getItem("xynapse.environmentModelKey") ?? "",
   );
   const [status, setStatus] = useState<EnvironmentOpenResult | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -893,7 +949,9 @@ export function XynapseEnvironmentCard({
     [config, selectedChatModel],
   );
   const selectedEnvironmentModel =
-    environmentModels.find((model) => getLabModelKey(model) === environmentModelKey) ??
+    environmentModels.find(
+      (model) => getLabModelKey(model) === environmentModelKey,
+    ) ??
     environmentModels.find(isEnvironmentCompatibleModel) ??
     environmentModels[0] ??
     null;
@@ -918,107 +976,141 @@ export function XynapseEnvironmentCard({
   const selectedPermission = ENVIRONMENT_PERMISSION_OPTIONS.find(
     (option) => option.value === permissionChoice,
   );
+  const setupTaskRunning = runState.status === "running";
 
-  const requestEnvironment = useCallback(async (
-    action:
-      | "status"
-      | "update"
-      | "install"
-      | "startServer"
-      | "startClient"
-      | "stop",
-    extra?: { runId?: string },
-  ) => {
-    if (showOpenFolderAction && action !== "status") {
-      setStatus({ ok: false, message: "Open a project folder first." });
-      return null;
-    }
+  const requestEnvironment = useCallback(
+    async (
+      action:
+        | "status"
+        | "update"
+        | "install"
+        | "startServer"
+        | "startClient"
+        | "stopServer"
+        | "stop",
+      extra?: { runId?: string; silent?: boolean },
+    ) => {
+      if (
+        showOpenFolderAction &&
+        (action === "startServer" || action === "startClient")
+      ) {
+        setStatus({ ok: false, message: "Open a project folder first." });
+        return null;
+      }
 
-    if (
-      (action === "startServer" || action === "startClient") &&
-      !isSelectedEnvironmentCompatible
-    ) {
-      setStatus({
-        ok: false,
-        message:
-          "The selected Xynapse model is not supported by Environment. Choose a Yandex-backed Xynapse model or a model backed by OpenRouter, DeepSeek, Kimi, Fireworks, Z.ai, NVIDIA NIM, Wafer, OpenCode, LM Studio, llama.cpp, or Ollama.",
-      });
-      return null;
-    }
-
-    const runId =
-      extra?.runId ??
-      (action === "stop"
-        ? runState.runId
-        : createClientRunId());
-    setBusyAction(action);
-    try {
-      const response = await Promise.race([
-        ideMessenger.request("xynapse/openEnvironment", {
-          action,
-          runId,
-          workspaceDir,
-          permissionMode: permissionChoice,
-          environmentProvider: selectedEnvironmentModel?.provider,
-          environmentModel: selectedEnvironmentModel?.model,
-          environmentModelTitle: selectedEnvironmentModel?.title,
-          environmentApiKey: selectedEnvironmentModel?.apiKey,
-          environmentBaseUrl:
-            selectedEnvironmentModel?.apiBase ??
-            selectedEnvironmentModel?.baseUrl,
-          environmentFolderId:
-            selectedEnvironmentModel?.folderId ??
-            selectedEnvironmentModel?.requestOptions?.extraBodyProperties?.folderId,
-        }),
-        new Promise<{
-          status: "error";
-          error: string;
-        }>((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                status: "error",
-                error:
-                  "Environment did not respond. Try Reload Window and open it again.",
-              }),
-            8000,
-          ),
-        ),
-      ]);
-      if (response.status === "success") {
-        setStatus(response.content);
-        return response.content;
-      } else {
+      if (
+        (action === "startServer" || action === "startClient") &&
+        !isSelectedEnvironmentCompatible
+      ) {
         setStatus({
           ok: false,
-          message: response.error,
+          message:
+            "The selected Xynapse model is not supported by Environment. Choose a Yandex-backed Xynapse model or a model backed by OpenRouter, DeepSeek, Kimi, Fireworks, Z.ai, NVIDIA NIM, Wafer, OpenCode, LM Studio, llama.cpp, or Ollama.",
         });
+        return null;
       }
-    } catch (error) {
-      setStatus({
-        ok: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Could not open Environment.",
-      });
-    } finally {
-      setBusyAction(null);
-    }
-    return null;
-  }, [
-    ideMessenger,
-    isSelectedEnvironmentCompatible,
-    permissionChoice,
-    runState.runId,
-    selectedEnvironmentModel,
-    showOpenFolderAction,
-    workspaceDir,
-  ]);
+
+      const runId = extra?.runId ?? createClientRunId();
+      if (!extra?.silent) {
+        setBusyAction(action);
+      }
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const response = await Promise.race([
+          ideMessenger.request("xynapse/openEnvironment", {
+            action,
+            runId,
+            workspaceDir,
+            permissionMode: permissionChoice,
+            environmentProvider: selectedEnvironmentModel?.provider,
+            environmentModel: selectedEnvironmentModel?.model,
+            environmentModelTitle: selectedEnvironmentModel?.title,
+            environmentApiKey: selectedEnvironmentModel?.apiKey,
+            environmentBaseUrl:
+              selectedEnvironmentModel?.apiBase ??
+              selectedEnvironmentModel?.baseUrl,
+            environmentFolderId:
+              selectedEnvironmentModel?.folderId ??
+              selectedEnvironmentModel?.requestOptions?.extraBodyProperties
+                ?.folderId,
+          }),
+          new Promise<{
+            status: "error";
+            error: string;
+          }>((resolve) => {
+            timeoutId = setTimeout(
+              () =>
+                resolve({
+                  status: "error",
+                  error:
+                    "Environment did not respond. Try Reload Window and open it again.",
+                }),
+              12_000,
+            );
+          }),
+        ]);
+        if (response.status === "success") {
+          setStatus((previous) =>
+            action === "status"
+              ? response.content
+              : { ...previous, ...response.content },
+          );
+          if (response.content.clientRunning && response.content.clientRunId) {
+            setTerminalRunId(response.content.clientRunId);
+          } else if (
+            action === "status" ||
+            (action === "stop" && response.content.ok)
+          ) {
+            setTerminalRunId(null);
+          }
+          return response.content;
+        } else {
+          setStatus({
+            ok: false,
+            message: response.error,
+          });
+        }
+      } catch (error) {
+        setStatus({
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not open Environment.",
+        });
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (!extra?.silent) {
+          setBusyAction(null);
+        }
+      }
+      return null;
+    },
+    [
+      ideMessenger,
+      isSelectedEnvironmentCompatible,
+      permissionChoice,
+      selectedEnvironmentModel,
+      showOpenFolderAction,
+      workspaceDir,
+    ],
+  );
 
   useEffect(() => {
     void requestEnvironment("status");
   }, [requestEnvironment]);
+
+  useEffect(() => {
+    if (!status?.serverRunning && !status?.clientRunning) {
+      return;
+    }
+    const interval = setInterval(() => {
+      void requestEnvironment("status", { silent: true });
+    }, 5_000);
+    return () => clearInterval(interval);
+  }, [requestEnvironment, status?.clientRunning, status?.serverRunning]);
 
   useWebviewListener(
     "xynapse/environmentEvent",
@@ -1069,6 +1161,16 @@ export function XynapseEnvironmentCard({
     [],
   );
 
+  useEffect(() => {
+    if (runState.status !== "done" && runState.status !== "error") {
+      return;
+    }
+    const timeout = setTimeout(() => {
+      void requestEnvironment("status", { silent: true });
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [requestEnvironment, runState.runId, runState.status]);
+
   const outputText =
     runState.output.length > 0
       ? runState.output.map((chunk) => chunk.text).join("")
@@ -1076,14 +1178,15 @@ export function XynapseEnvironmentCard({
 
   const startCodingSession = async () => {
     const response = await requestEnvironment("startClient");
-    if (response?.ok && response.runId) {
-      setTerminalRunId(response.runId);
+    if (response?.ok && (response.clientRunId || response.runId)) {
+      setTerminalRunId(response.clientRunId ?? response.runId ?? null);
     }
   };
 
   const stopActiveEnvironment = async () => {
     const runId =
       terminalRunId ??
+      status?.clientRunId ??
       (runState.status === "running" ? runState.runId : undefined);
     if (!runId) {
       return;
@@ -1094,6 +1197,12 @@ export function XynapseEnvironmentCard({
     }
   };
 
+  const stopEnvironmentProxy = async () => {
+    await requestEnvironment("stopServer", {
+      runId: status?.serverRunId,
+    });
+  };
+
   return (
     <div className="flex flex-1 flex-col overflow-auto overflow-x-hidden px-2 pb-3">
       <section className="my-3 rounded-2xl border border-solid border-violet-300/15 bg-[#0b0a0d] p-4 shadow-[0_18px_48px_rgba(0,0,0,0.24)]">
@@ -1101,18 +1210,18 @@ export function XynapseEnvironmentCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <CommandLineIcon className="h-5 w-5 text-violet-100" />
-              <h2 className="m-0 text-base font-semibold text-foreground">
+              <h2 className="text-foreground m-0 text-base font-semibold">
                 Environment
               </h2>
               <span className="rounded-full border border-solid border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-100">
                 Upstream
               </span>
             </div>
-            <p className="m-0 mt-2 text-sm leading-6 text-description">
-              Uses a clean checkout of the upstream project in
-              .external/environment. The proxy runs in the background; the
-              coding session opens in the IDE integrated terminal for the
-              opened project.
+            <p className="text-description m-0 mt-2 text-sm leading-6">
+              Uses a Xynapse-managed upstream checkout stored in the current
+              Xynapse data profile. The opened project only receives
+              .xynapse/environment state; coding sessions run in the IDE
+              terminal with the project as the working directory.
             </p>
           </div>
         </div>
@@ -1125,16 +1234,19 @@ export function XynapseEnvironmentCard({
 
         <div className="mt-4 grid grid-cols-1 gap-3">
           <div className="rounded-xl border border-solid border-white/10 bg-[#08080a] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-description">
+            <div className="text-description text-[11px] font-semibold uppercase tracking-[0.16em]">
               Xynapse model
             </div>
             <select
-              className="mt-2 w-full rounded-lg border border-solid border-white/10 bg-[#08080a] px-3 py-2 text-sm text-foreground outline-none"
+              className="text-foreground mt-2 w-full rounded-lg border border-solid border-white/10 bg-[#08080a] px-3 py-2 text-sm outline-none"
               value={getLabModelKey(selectedEnvironmentModel)}
               disabled={busyAction !== null || environmentModels.length === 0}
               onChange={(event) => {
                 setEnvironmentModelKey(event.target.value);
-                localStorage.setItem("xynapse.environmentModelKey", event.target.value);
+                localStorage.setItem(
+                  "xynapse.environmentModelKey",
+                  event.target.value,
+                );
               }}
             >
               {environmentModels.map((model) => {
@@ -1148,7 +1260,7 @@ export function XynapseEnvironmentCard({
                 );
               })}
             </select>
-            <div className="mt-2 grid grid-cols-1 gap-1 text-xs leading-5 text-description">
+            <div className="text-description mt-2 grid grid-cols-1 gap-1 text-xs leading-5">
               <div>
                 Selected:{" "}
                 {selectedEnvironmentModel
@@ -1157,8 +1269,7 @@ export function XynapseEnvironmentCard({
               </div>
               <div>
                 Environment route:{" "}
-                {selectedEnvironmentProvider ??
-                  "not supported by Environment"}
+                {selectedEnvironmentProvider ?? "not supported by Environment"}
               </div>
               <div>
                 Active upstream model:{" "}
@@ -1172,7 +1283,7 @@ export function XynapseEnvironmentCard({
                 directly by the upstream free-claude-code runtime.
               </div>
             ) : (
-              <div className="mt-2 text-[11px] leading-5 text-description">
+              <div className="text-description mt-2 text-[11px] leading-5">
                 The upstream session will use this Xynapse model and its saved
                 Xynapse key; there is no separate Environment key picker.
               </div>
@@ -1180,16 +1291,21 @@ export function XynapseEnvironmentCard({
           </div>
 
           <label className="block">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-description">
+            <span className="text-description text-[11px] font-semibold uppercase tracking-[0.16em]">
               Client permission mode
             </span>
             <select
-              className="mt-1 w-full rounded-lg border border-solid border-white/10 bg-[#08080a] px-3 py-2 text-sm text-foreground outline-none"
+              className="text-foreground mt-1 w-full rounded-lg border border-solid border-white/10 bg-[#08080a] px-3 py-2 text-sm outline-none"
               value={permissionChoice}
               disabled={busyAction !== null}
-              onChange={(event) =>
-                setPermissionChoice(event.target.value as EnvironmentPermissionChoice)
-              }
+              onChange={(event) => {
+                const value = event.target.value as EnvironmentPermissionChoice;
+                setPermissionChoice(value);
+                localStorage.setItem(
+                  "xynapse.environmentPermissionMode",
+                  value,
+                );
+              }}
             >
               {ENVIRONMENT_PERMISSION_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1198,7 +1314,7 @@ export function XynapseEnvironmentCard({
               ))}
             </select>
             {selectedPermission ? (
-              <span className="mt-1 block text-xs text-description">
+              <span className="text-description mt-1 block text-xs">
                 {selectedPermission.description}
               </span>
             ) : null}
@@ -1211,7 +1327,7 @@ export function XynapseEnvironmentCard({
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-100">
                 Upstream status
               </div>
-              <p className="m-0 mt-2 text-xs leading-5 text-description">
+              <p className="text-description m-0 mt-2 text-xs leading-5">
                 {status?.message ??
                   (busyAction
                     ? "Working..."
@@ -1230,21 +1346,36 @@ export function XynapseEnvironmentCard({
                 icon={<ArrowPathIcon className="h-3.5 w-3.5" />}
                 label="Update upstream"
                 title="Pull the clean upstream checkout and reinstall the tool when uv is available."
-                disabled={busyAction !== null}
+                disabled={busyAction !== null || setupTaskRunning}
                 onClick={() => void requestEnvironment("update")}
               />
               <EnvironmentActionButton
                 icon={<WrenchScrewdriverIcon className="h-3.5 w-3.5" />}
                 label="Install runtime"
                 title="Install uv/Python 3.14 and the upstream commands."
-                disabled={busyAction !== null}
+                disabled={busyAction !== null || setupTaskRunning}
                 onClick={() => void requestEnvironment("install")}
               />
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-description">
+          <div className="text-description mt-3 grid grid-cols-1 gap-2 text-[11px]">
+            {status?.environmentHome ? (
+              <div className="truncate">
+                Environment home: {status.environmentHome}
+              </div>
+            ) : null}
             {status?.upstreamRoot ? (
               <div className="truncate">Checkout: {status.upstreamRoot}</div>
+            ) : null}
+            {status?.projectStateRoot ? (
+              <div className="truncate">
+                Workspace state: {status.projectStateRoot}
+              </div>
+            ) : null}
+            {status?.environmentEnvPath ? (
+              <div className="truncate">
+                Env file: {status.environmentEnvPath}
+              </div>
             ) : null}
             {status?.upstreamCommit ? (
               <div>
@@ -1253,12 +1384,32 @@ export function XynapseEnvironmentCard({
               </div>
             ) : null}
             <div>
-              uv: {status?.uvInstalled ? "installed" : "missing"} | Python
-              3.14: {status?.python314Installed ? "installed" : "missing"} |
-              upstream commands: {status?.fccInstalled ? "installed" : "missing"}
+              uv:{" "}
+              {status
+                ? status.uvInstalled
+                  ? "installed"
+                  : "missing"
+                : "checking"}
+              {" | "}Python 3.14:{" "}
+              {status
+                ? status.python314Installed
+                  ? "installed"
+                  : "missing"
+                : "checking"}
+              {" | "}upstream commands:{" "}
+              {status
+                ? status.fccInstalled
+                  ? "installed"
+                  : "missing"
+                : "checking"}
             </div>
             <div>
-              Client command: {status?.clientInstalled ? "installed" : "missing"}
+              Client command:{" "}
+              {status
+                ? status.clientInstalled
+                  ? "installed"
+                  : "missing"
+                : "checking"}
             </div>
             {status?.supportedProviders?.length ? (
               <div>
@@ -1267,8 +1418,27 @@ export function XynapseEnvironmentCard({
               </div>
             ) : null}
             <div>
-              Proxy server: {status?.serverRunning ? "running" : "stopped"}
+              Proxy server:{" "}
+              {status
+                ? status.serverRunning
+                  ? "running"
+                  : "stopped"
+                : "checking"}
+              {" | "}Coding terminal:{" "}
+              {status ? (status.clientRunning ? "open" : "closed") : "checking"}
             </div>
+            {status?.environmentProviderLabel ? (
+              <div>
+                Saved route: {status.environmentProviderLabel}
+                {status.environmentCredentialEnv
+                  ? ` | ${status.environmentCredentialEnv}: ${
+                      status.environmentApiKeyConfigured
+                        ? "configured"
+                        : "missing"
+                    }`
+                  : " | local endpoint"}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -1278,7 +1448,7 @@ export function XynapseEnvironmentCard({
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-100">
                 Coding session
               </div>
-              <p className="m-0 mt-1 text-xs leading-5 text-description">
+              <p className="text-description m-0 mt-1 text-xs leading-5">
                 Start a coding session in the real IDE terminal. The proxy
                 server starts in the background automatically.
               </p>
@@ -1286,29 +1456,57 @@ export function XynapseEnvironmentCard({
             <div className="flex flex-wrap gap-2">
               <EnvironmentActionButton
                 icon={<CommandLineIcon className="h-3.5 w-3.5" />}
-                label="Start proxy"
+                label={status?.serverRunning ? "Restart proxy" : "Start proxy"}
                 title="Start the upstream local proxy server in the background."
-                disabled={busyAction !== null || !isSelectedEnvironmentCompatible}
+                disabled={
+                  busyAction !== null ||
+                  setupTaskRunning ||
+                  showOpenFolderAction ||
+                  !isSelectedEnvironmentCompatible
+                }
                 onClick={() => void requestEnvironment("startServer")}
               />
               <EnvironmentActionButton
+                icon={<CheckIcon className="h-3.5 w-3.5" />}
+                label="Stop proxy"
+                title="Stop the background Environment proxy server."
+                disabled={
+                  busyAction !== null ||
+                  setupTaskRunning ||
+                  !status?.serverRunning
+                }
+                onClick={() => void stopEnvironmentProxy()}
+              />
+              <EnvironmentActionButton
                 icon={<CommandLineIcon className="h-3.5 w-3.5" />}
-                label="Open terminal session"
+                label={
+                  status?.clientRunning
+                    ? "Terminal open"
+                    : "Open terminal session"
+                }
                 title="Start an interactive upstream code session in the IDE terminal."
                 disabled={
                   busyAction !== null ||
+                  setupTaskRunning ||
                   showOpenFolderAction ||
+                  status?.clientRunning ||
                   !isSelectedEnvironmentCompatible
                 }
                 onClick={() => void startCodingSession()}
               />
               <EnvironmentActionButton
                 icon={<CheckIcon className="h-3.5 w-3.5" />}
-                label={terminalRunId ? "Stop terminal" : "Stop task"}
+                label={
+                  terminalRunId || status?.clientRunning
+                    ? "Close terminal"
+                    : "Stop task"
+                }
                 title="Stop the active Environment terminal or task process."
                 disabled={
                   busyAction !== null ||
-                  (!terminalRunId && (!runState.runId || runState.status !== "running"))
+                  (!terminalRunId &&
+                    !status?.clientRunning &&
+                    (!runState.runId || runState.status !== "running"))
                 }
                 onClick={() => void stopActiveEnvironment()}
               />
@@ -1320,7 +1518,7 @@ export function XynapseEnvironmentCard({
           >
             {outputText}
           </pre>
-          <div className="mt-2 text-[11px] leading-5 text-description">
+          <div className="text-description mt-2 text-[11px] leading-5">
             This panel only shows setup/update output. The coding session uses
             the native Terminal panel, so prompts, arrows, Backspace, Esc, and
             Ctrl+C work normally.
@@ -1419,17 +1617,18 @@ export function XynapseResearchCard({
   ) => {
     setActiveCouncilMode(null);
     setLabNotice({
-      title: mode === "bvc" ? "BVC verification prepared" : "Council run prepared",
+      title:
+        mode === "bvc" ? "BVC verification prepared" : "Council run prepared",
       body:
         mode === "bvc"
-          ? "BVC is a non-coding verification mode. It checks a candidate answer against criteria, budget, and role outputs."
-          : "Council is a non-coding multi-role discussion mode. Use it for critique, alternatives, and a final decision.",
+          ? "BVC verifies an existing candidate answer or claim. Use Council or Compare when you need a plan generated from scratch."
+          : "Council is a non-coding multi-role discussion mode. It must produce the requested plan, critique, alternatives, and final decision now.",
       template: JSON.stringify(config, null, 2),
       runLabel: mode === "bvc" ? "Run BVC check" : "Run Council review",
       runPrompt:
         mode === "bvc"
-          ? `Run BVC verification with this configuration. Do not edit files. Return criteria, checks, contradictions, confidence, and final verdict.\n\n${JSON.stringify(config, null, 2)}`
-          : `Run a Council review with this configuration. Do not edit files. Return role opinions, conflicts, synthesis, and final decision.\n\n${JSON.stringify(config, null, 2)}`,
+          ? `Run BVC verification with this configuration. Do not edit files. Verify the candidate answer or claim in the task field against concrete criteria. If the task field asks you to create a plan, write code, design a presentation, or generate a solution from scratch instead of verifying an existing candidate, return REJECTED and explain that Council or Compare should be used. For valid BVC input, return only concrete criteria, checks performed against the candidate/workspace, contradictions, confidence, final verdict, and specific follow-up actions.\n\n${JSON.stringify(config, null, 2)}`
+          : `Run a Council review with this configuration. Do not edit files. Do not summarize this JSON configuration. Execute the review now and produce the requested deliverable for the task field.\n\nReturn exactly these sections:\n## Role opinions\n- PM: concrete product/scope view.\n- Architect: concrete structure/architecture view.\n- Developer: concrete implementation steps.\n- Reviewer: concrete risks and corrections.\n\n## Conflicts / tradeoffs\nList disagreements or tradeoffs between roles.\n\n## Final plan\nGive the actionable plan as numbered steps with concrete files, UI states, features, and tests when the task is about software. If the task asks for a presentation plan, write the presentation plan now. If it asks for a code plan, write the code plan now.\n\n## Acceptance criteria\nList checks that prove the plan/result is good. Prefer runnable checks and visible UI behavior over generic quality statements.\n\n## Core prompt\nWrite the exact concise prompt that can be pasted into Xynapse Core. It must be an executable handoff: tell Core what to inspect, create/change, and verify. Do not ask Core to write another plan unless the user's task is explicitly documentation-only.\n\nNever answer that the Council 'will provide' or 'will review' later; provide the result in this response.\n\n${JSON.stringify(config, null, 2)}`,
     });
   };
 
@@ -1443,7 +1642,11 @@ export function XynapseResearchCard({
   };
 
   const runLabPrompt = (prompt: string) => {
-    if (showOpenFolderAction || !prompt.trim() || runState.status === "running") {
+    if (
+      showOpenFolderAction ||
+      !prompt.trim() ||
+      runState.status === "running"
+    ) {
       return;
     }
     const runId = createClientRunId();
@@ -1479,7 +1682,7 @@ export function XynapseResearchCard({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <BeakerIcon className="h-4 w-4 text-violet-200" />
-            <h3 className="m-0 text-base font-semibold text-foreground">
+            <h3 className="text-foreground m-0 text-base font-semibold">
               Xynapse Lab
             </h3>
             <span className="rounded-full border border-solid border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-violet-100">
@@ -1488,17 +1691,19 @@ export function XynapseResearchCard({
           </div>
         </div>
 
-        <p className="m-0 mt-2 text-sm leading-5 text-description">
+        <p className="text-description m-0 mt-2 text-sm leading-5">
           Lab is the research layer. Use Core for code edits; use Lab for
           Council, BVC, audit, comparison, and model-key reasoning.
         </p>
 
-        <div className="mt-3 rounded-xl border border-solid border-violet-300/15 bg-black/25 p-3 text-xs leading-5 text-description">
+        <div className="text-description mt-3 rounded-xl border border-solid border-violet-300/15 bg-black/25 p-3 text-xs leading-5">
           <div className="mb-1 font-semibold uppercase tracking-[0.16em] text-violet-100">
             How to choose a mode
           </div>
-          <div>Council: roles discuss a decision and synthesize a final answer.</div>
-          <div>BVC: budgeted verification checks candidate answers.</div>
+          <div>
+            Council: generate a plan, decision, or presentation outline.
+          </div>
+          <div>BVC: verify an existing candidate answer or claim only.</div>
           <div>Audit: risk and quality review without file edits.</div>
           <div>Compare: alternatives, tradeoffs, and a recommended path.</div>
         </div>
@@ -1507,13 +1712,13 @@ export function XynapseResearchCard({
           <AlgorithmButton
             active
             title="Council"
-            description="roles, critique, decision"
+            description="plan, critique, decision"
             onClick={() => openCouncilDialog("council")}
           />
           <AlgorithmButton
             active
             title="BVC"
-            description="budgeted verification"
+            description="verify candidate only"
             onClick={() => openCouncilDialog("bvc")}
           />
           <AlgorithmButton
@@ -1559,7 +1764,7 @@ export function XynapseResearchCard({
             <div className="text-sm font-semibold text-violet-50">
               {labNotice.title}
             </div>
-            <p className="m-0 mt-1 text-xs leading-5 text-description">
+            <p className="text-description m-0 mt-1 text-xs leading-5">
               {labNotice.body}
             </p>
             {labNotice.template ? (
@@ -1570,7 +1775,7 @@ export function XynapseResearchCard({
             {labNotice.runPrompt ? (
               <button
                 type="button"
-                className="mt-3 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-xs font-medium text-violet-50 transition hover:bg-violet-300/16 disabled:cursor-not-allowed disabled:opacity-60"
+                className="hover:bg-violet-300/16 mt-3 rounded-lg border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-xs font-medium text-violet-50 transition disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={showOpenFolderAction || runState.status === "running"}
                 onClick={() => runLabPrompt(labNotice.runPrompt!)}
                 title={
@@ -1582,8 +1787,8 @@ export function XynapseResearchCard({
                 {showOpenFolderAction
                   ? "Open project first"
                   : runState.status === "running"
-                  ? "Running..."
-                  : labNotice.runLabel ?? "Run"}
+                    ? "Running..."
+                    : (labNotice.runLabel ?? "Run")}
               </button>
             ) : null}
           </div>
@@ -1605,7 +1810,7 @@ export function XynapseResearchCard({
               </button>
             ) : (
               <span
-                className="text-[10px] uppercase tracking-[0.14em] text-description"
+                className="text-description text-[10px] uppercase tracking-[0.14em]"
                 title="Current Lab runtime state."
               >
                 {runState.status}
@@ -1620,7 +1825,7 @@ export function XynapseResearchCard({
         {showOpenFolderAction ? (
           <button
             type="button"
-            className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-sm font-medium text-violet-50 transition hover:bg-violet-300/16 focus:bg-[#241a31] focus:outline-none"
+            className="hover:bg-violet-300/16 mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-sm font-medium text-violet-50 transition focus:bg-[#241a31] focus:outline-none"
             onClick={() => ideMessenger.post("openFolder", undefined)}
             title="Open a workspace folder. Core and Lab will use the same project root."
           >
@@ -1715,7 +1920,7 @@ export function ClawSidecarCard({
   const setActiveRunMode = onRunModeChange ?? setLocalRunMode;
 
   const models = useMemo(
-    () => collectCoreRuntimeModels(config, coreSelectedModel),
+    () => XynapseCollectCoreRuntimeModels(config, coreSelectedModel),
     [config, coreSelectedModel],
   );
   const selectedModel =
@@ -1739,7 +1944,8 @@ export function ClawSidecarCard({
 
   return (
     <section
-      className="m-0 box-border min-w-0 max-w-full overflow-visible rounded-xl border border-solid border-violet-300/15 bg-[#101010] p-3 text-foreground"
+      className="text-foreground m-0 box-border min-w-0 max-w-full overflow-visible rounded-xl border border-solid border-violet-300/15 bg-[#101010] p-3"
+      data-xynapse-runtime-model-contract={XYNAPSE_CORE_RUNTIME_MODEL_CONTRACT}
       title="Xynapse Core is the coding runtime. It can inspect, plan, and edit files in the opened workspace."
     >
       <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
@@ -1748,7 +1954,7 @@ export function ClawSidecarCard({
             <h3 className="m-0 truncate text-base font-semibold">
               Xynapse Core
             </h3>
-          <span className="rounded-full border border-solid border-emerald-300/20 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200">
+            <span className="rounded-full border border-solid border-emerald-300/20 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200">
               coding runtime
             </span>
           </div>
@@ -1758,7 +1964,7 @@ export function ClawSidecarCard({
           className={`shrink-0 rounded-full border border-solid px-2 py-1 text-[10px] uppercase tracking-[0.16em] ${
             runState.status === "running"
               ? "cursor-pointer border-violet-300/30 bg-violet-300/15 text-violet-100"
-              : "border-white/10 bg-white/5 text-description"
+              : "text-description border-white/10 bg-white/5"
           }`}
           disabled={runState.status !== "running"}
           onClick={stopRun}
@@ -1775,7 +1981,7 @@ export function ClawSidecarCard({
       {showOpenFolderAction ? (
         <button
           type="button"
-          className="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-sm font-medium text-violet-50 transition hover:bg-violet-300/16 focus:bg-[#241a31] focus:outline-none"
+          className="hover:bg-violet-300/16 mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-solid border-violet-300/20 bg-[#191322] px-3 py-2 text-sm font-medium text-violet-50 transition focus:bg-[#241a31] focus:outline-none"
           onClick={() => ideMessenger.post("openFolder", undefined)}
           title="Open a workspace folder. Core and Lab will use the same project root."
         >
@@ -1789,7 +1995,9 @@ export function ClawSidecarCard({
       </label>
       <ModelDropdown
         disabled={
-          workspaceLocked || runState.status === "running" || models.length === 0
+          workspaceLocked ||
+          runState.status === "running" ||
+          models.length === 0
         }
         models={models}
         onChange={setActiveModelKey}
@@ -1803,8 +2011,8 @@ export function ClawSidecarCard({
           className={`rounded-lg border border-solid px-3 py-2 text-left text-xs ${
             activeRunMode === "plan"
               ? "border-violet-300/35 bg-violet-300/15 text-violet-50"
-              : "border-white/10 bg-black/30 text-description"
-          } disabled:bg-black/30 disabled:text-description disabled:opacity-60`}
+              : "text-description border-white/10 bg-black/30"
+          } disabled:text-description disabled:bg-black/30 disabled:opacity-60`}
           disabled={workspaceLocked || runState.status === "running"}
           onClick={() => setActiveRunMode("plan")}
           title="Plan mode: inspect and propose a plan without editing files."
@@ -1817,8 +2025,8 @@ export function ClawSidecarCard({
           className={`rounded-lg border border-solid px-3 py-2 text-left text-xs ${
             activeRunMode === "workspace-write"
               ? "border-violet-300/35 bg-violet-300/15 text-violet-50"
-              : "border-white/10 bg-black/30 text-description"
-          } disabled:bg-black/30 disabled:text-description disabled:opacity-60`}
+              : "text-description border-white/10 bg-black/30"
+          } disabled:text-description disabled:bg-black/30 disabled:opacity-60`}
           disabled={workspaceLocked || runState.status === "running"}
           onClick={() => setActiveRunMode("workspace-write")}
           title="Edit mode: allow file changes inside the opened workspace."
@@ -1831,8 +2039,8 @@ export function ClawSidecarCard({
           className={`rounded-lg border border-solid px-3 py-2 text-left text-xs ${
             activeRunMode === "danger-full-access"
               ? "border-red-300/35 bg-[#281316] text-red-50"
-              : "border-white/10 bg-black/30 text-description"
-          } disabled:bg-black/30 disabled:text-description disabled:opacity-60`}
+              : "text-description border-white/10 bg-black/30"
+          } disabled:text-description disabled:bg-black/30 disabled:opacity-60`}
           disabled={workspaceLocked || runState.status === "running"}
           onClick={() => setActiveRunMode("danger-full-access")}
           title="Full mode: all runtime tools, including shell commands. Requires explicit confirmation before run."
@@ -1845,7 +2053,7 @@ export function ClawSidecarCard({
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-2 text-xs text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-description disabled:opacity-60"
+          className="text-foreground disabled:text-description flex cursor-pointer items-center gap-1.5 rounded-lg border border-solid border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 disabled:cursor-not-allowed disabled:bg-white/5 disabled:opacity-60"
           disabled={workspaceLocked || runState.status === "running"}
           onClick={runDoctor}
           title="Run runtime diagnostics for the opened workspace"

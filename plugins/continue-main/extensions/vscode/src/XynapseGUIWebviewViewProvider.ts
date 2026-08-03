@@ -244,6 +244,31 @@ export class XynapseGUIWebviewViewProvider
         <script nonce="${nonce}">window.isFullScreen = ${isFullScreen}</script>
         <script nonce="${nonce}">
           (function(){
+            function showBootError(title, detail) {
+              var root = document.getElementById("root");
+              if (!root) return;
+              root.innerHTML =
+                '<div style="min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;color:var(--vscode-editor-foreground);background:var(--vscode-editor-background);">' +
+                '<div style="width:100%;max-width:520px;border:1px solid var(--vscode-errorForeground,#f14c4c);border-radius:14px;padding:24px;background:var(--vscode-sideBar-background);">' +
+                '<div style="font-size:18px;font-weight:650;margin-bottom:8px;">' + title + '</div>' +
+                '<pre style="white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.45;opacity:.82;">' + String(detail || "Unknown error").replace(/[<>&]/g, function(ch){ return {"<":"&lt;", ">":"&gt;", "&":"&amp;"}[ch]; }) + '</pre>' +
+                '</div></div>';
+            }
+            window.addEventListener("error", function(event) {
+              showBootError("Xynapse UI failed to load", (event.message || "Script error") + " at " + (event.filename || "") + ":" + (event.lineno || 0) + ":" + (event.colno || 0));
+            });
+            window.addEventListener("unhandledrejection", function(event) {
+              var reason = event.reason && (event.reason.stack || event.reason.message || String(event.reason));
+              showBootError("Xynapse UI failed to start", reason || "Unhandled promise rejection");
+            });
+            setTimeout(function(){
+              var boot = document.getElementById("xynapse-boot-fallback");
+              if (!boot) return;
+              var subtitle = boot.querySelector("div[style*='opacity']");
+              if (subtitle) {
+                subtitle.textContent = "The UI bundle has not mounted yet. Check Developer Tools or the extension logs for the startup error.";
+              }
+            }, 8000);
             var button = document.getElementById("xynapse-open-folder-fallback");
             if (!button) return;
             button.addEventListener("click", function(){

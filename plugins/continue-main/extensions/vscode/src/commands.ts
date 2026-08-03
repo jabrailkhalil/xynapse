@@ -76,7 +76,9 @@ type RuntimePromptRequest =
       allowedTools?: string;
     };
 
-type RuntimeDoctorRequest = { runId?: string; workspaceDir?: string } | undefined;
+type RuntimeDoctorRequest =
+  | { runId?: string; workspaceDir?: string }
+  | undefined;
 type EnvironmentOpenRequest =
   | {
       action?:
@@ -92,6 +94,7 @@ type EnvironmentOpenRequest =
       workspaceDir?: string;
       input?: string;
       environmentProvider?: string;
+      provider?: string;
       environmentModel?: string;
       environmentModelTitle?: string;
       environmentApiKey?: string;
@@ -119,7 +122,13 @@ type EnvironmentOpenResponse = {
   fccInstalled?: boolean;
   clientInstalled?: boolean;
   serverRunning?: boolean;
+  serverRunId?: string;
+  clientRunning?: boolean;
+  clientRunId?: string;
   supportedProviders?: string[];
+  environmentHome?: string;
+  environmentEnvPath?: string;
+  projectStateRoot?: string;
   environmentProvider?: string;
   environmentProviderLabel?: string;
   environmentModel?: string;
@@ -184,10 +193,12 @@ type LabHistoryResponse = {
   error?: string;
 };
 
-type LabArtifactRequest = {
-  workspaceDir?: string;
-  relPath?: string;
-} | undefined;
+type LabArtifactRequest =
+  | {
+      workspaceDir?: string;
+      relPath?: string;
+    }
+  | undefined;
 
 const XYNAPSE_PROFILE_FILES = [
   "config.yaml",
@@ -195,6 +206,7 @@ const XYNAPSE_PROFILE_FILES = [
   "config.json",
   "account.json",
   "profile.json",
+  "environment.env",
 ] as const;
 
 type XynapseProfileFileName = (typeof XYNAPSE_PROFILE_FILES)[number];
@@ -233,7 +245,11 @@ function writeImportedProfileFile(
   const outputPath = path.join(targetDir, outputName);
 
   fs.writeFileSync(outputPath, serialized);
-  if (outputName === "config.yaml" || outputName === "config.json") {
+  if (
+    outputName === "config.yaml" ||
+    outputName === "config.json" ||
+    outputName === "environment.env"
+  ) {
     setConfigFilePermissions(outputPath);
   }
 }
@@ -250,7 +266,11 @@ function copyProfileFolder(sourceDir: string, targetDir: string): string[] {
     const outputName = fileName === "config.yml" ? "config.yaml" : fileName;
     const targetPath = path.join(targetDir, outputName);
     fs.copyFileSync(sourcePath, targetPath);
-    if (outputName === "config.yaml" || outputName === "config.json") {
+    if (
+      outputName === "config.yaml" ||
+      outputName === "config.json" ||
+      outputName === "environment.env"
+    ) {
       setConfigFilePermissions(targetPath);
     }
     copied.push(outputName);
@@ -326,6 +346,12 @@ async function readProfileBackupFile(
 ): Promise<string> {
   const raw = fs.readFileSync(filePath);
   const text = raw.toString("utf8");
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (ext !== ".enc") {
+    return text;
+  }
+
   const trimmed = text.trim();
 
   if (trimmed.startsWith("{") || trimmed.startsWith("name:")) {
@@ -341,85 +367,104 @@ async function readProfileBackupFile(
   }
 }
 
+async function importXynapseProfileSource(
+  sourcePath: string,
+  targetDir: string,
+  ide: VsCodeIde,
+): Promise<string[]> {
+  const sourceStat = fs.statSync(sourcePath);
+
+  if (sourceStat.isDirectory()) {
+    return copyProfileFolder(sourcePath, targetDir);
+  }
+
+  const ext = path.extname(sourcePath).toLowerCase();
+  const baseName = path.basename(sourcePath).toLowerCase();
+
+  if (baseName === "config.yaml" || baseName === "config.yml") {
+    fs.copyFileSync(sourcePath, getConfigYamlPath("vscode"));
+    setConfigFilePermissions(getConfigYamlPath("vscode"));
+    return ["config.yaml"];
+  }
+  if (baseName === "config.json") {
+    fs.copyFileSync(sourcePath, getConfigJsonPath());
+    setConfigFilePermissions(getConfigJsonPath());
+    return ["config.json"];
+  }
+  if (
+    baseName === "account.json" ||
+    baseName === "profile.json" ||
+    baseName === "environment.env" ||
+    ext === ".env"
+  ) {
+    const outputName = ext === ".env" ? "environment.env" : baseName;
+    const targetPath = path.join(targetDir, outputName);
+    fs.copyFileSync(sourcePath, targetPath);
+    if (outputName === "environment.env") {
+      setConfigFilePermissions(targetPath);
+    }
+    return [outputName];
+  }
+
+  const raw = await readProfileBackupFile(sourcePath, ide);
+
+  if (ext === ".yaml" || ext === ".yml") {
+    const parsed = YAML.parse(raw);
+    if (parsed?.models || parsed?.version || parsed?.schema) {
+      fs.writeFileSync(getConfigYamlPath("vscode"), raw);
+      setConfigFilePermissions(getConfigYamlPath("vscode"));
+      return ["config.yaml"];
+    }
+  }
+
+  return applyProfileBackupPayload(parseProfileBackupPayload(raw), targetDir);
+}
+
 async function importXynapseProfileBackup(
   ide: VsCodeIde,
   configHandler: ConfigHandler,
 ) {
+  const desktopPath = path.join(
+    process.env.USERPROFILE ?? process.env.HOME ?? "",
+    "Desktop",
+  );
   const selected = await vscode.window.showOpenDialog({
     canSelectFiles: true,
-    canSelectFolders: true,
-    canSelectMany: false,
-    openLabel: "Import Xynapse profile",
-    filters: {
-      "Xynapse profile backup": ["enc", "yaml", "yml", "json"],
-      "All files": ["*"],
-    },
+    canSelectFolders: false,
+    canSelectMany: true,
+    defaultUri: fs.existsSync(desktopPath)
+      ? vscode.Uri.file(desktopPath)
+      : undefined,
+    openLabel: "Import Xynapse profile/config",
   });
 
-  if (!selected?.[0]) {
+  if (!selected?.length) {
     return;
   }
 
-  const sourcePath = selected[0].fsPath;
   const targetDir = getXynapseGlobalPath();
   fs.mkdirSync(targetDir, { recursive: true });
   const backupPath = createProfileImportBackup(targetDir);
 
-  const sourceStat = fs.statSync(sourcePath);
   let importedFiles: string[] = [];
-
-  if (sourceStat.isDirectory()) {
-    importedFiles = copyProfileFolder(sourcePath, targetDir);
-  } else {
-    const ext = path.extname(sourcePath).toLowerCase();
-    const baseName = path.basename(sourcePath).toLowerCase();
-
-    if (baseName === "config.yaml" || baseName === "config.yml") {
-      fs.copyFileSync(sourcePath, getConfigYamlPath("vscode"));
-      setConfigFilePermissions(getConfigYamlPath("vscode"));
-      importedFiles = ["config.yaml"];
-    } else if (baseName === "config.json") {
-      fs.copyFileSync(sourcePath, getConfigJsonPath());
-      setConfigFilePermissions(getConfigJsonPath());
-      importedFiles = ["config.json"];
-    } else if (baseName === "account.json" || baseName === "profile.json") {
-      fs.copyFileSync(sourcePath, path.join(targetDir, baseName));
-      importedFiles = [baseName];
-    } else if (ext === ".enc" || ext === ".json" || ext === ".yaml" || ext === ".yml") {
-      const raw = await readProfileBackupFile(sourcePath, ide);
-
-      if (ext === ".yaml" || ext === ".yml") {
-        const parsed = YAML.parse(raw);
-        if (parsed?.models || parsed?.version || parsed?.schema) {
-          fs.writeFileSync(getConfigYamlPath("vscode"), raw);
-          setConfigFilePermissions(getConfigYamlPath("vscode"));
-          importedFiles = ["config.yaml"];
-        } else {
-          importedFiles = applyProfileBackupPayload(
-            parseProfileBackupPayload(raw),
-            targetDir,
-          );
-        }
-      } else {
-        importedFiles = applyProfileBackupPayload(
-          parseProfileBackupPayload(raw),
-          targetDir,
-        );
-      }
-    }
+  for (const source of selected) {
+    importedFiles.push(
+      ...(await importXynapseProfileSource(source.fsPath, targetDir, ide)),
+    );
   }
+  importedFiles = [...new Set(importedFiles)];
 
   if (importedFiles.length === 0) {
     throw new Error(
-      "No Xynapse profile files were found in the selected backup.",
+      "No Xynapse profile/config files were found in the selected source.",
     );
   }
 
-  await configHandler.reloadConfig("Imported Xynapse profile backup");
+  await configHandler.reloadConfig("Imported Xynapse profile/config");
 
   const backupMessage = backupPath ? ` Backup: ${backupPath}` : "";
   void vscode.window.showInformationMessage(
-    `Imported Xynapse profile: ${importedFiles.join(", ")}.${backupMessage}`,
+    `Imported Xynapse profile/config: ${importedFiles.join(", ")}.${backupMessage}`,
   );
 }
 
@@ -509,7 +554,15 @@ function getRequestedWorkspaceDir(
       : undefined;
 
   if (requested) {
-    const resolved = path.resolve(requested);
+    let requestedPath = requested;
+    if (/^file:/i.test(requested)) {
+      try {
+        requestedPath = vscode.Uri.parse(requested).fsPath;
+      } catch (_error) {
+        requestedPath = requested;
+      }
+    }
+    const resolved = path.resolve(requestedPath);
     const matchingFolder = workspaceFolders.find((folder) =>
       isSameOrInsidePath(folder.uri.fsPath, resolved),
     );
@@ -520,7 +573,8 @@ function getRequestedWorkspaceDir(
 
   const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
   if (activeEditorUri?.scheme === "file") {
-    const activeWorkspace = vscode.workspace.getWorkspaceFolder(activeEditorUri);
+    const activeWorkspace =
+      vscode.workspace.getWorkspaceFolder(activeEditorUri);
     if (activeWorkspace) {
       return activeWorkspace.uri.fsPath;
     }
@@ -529,7 +583,9 @@ function getRequestedWorkspaceDir(
   return workspaceFolders[0]?.uri.fsPath;
 }
 
-function getRuntimePermissionMode(request?: RuntimePromptRequest): RuntimePermissionMode {
+function getRuntimePermissionMode(
+  request?: RuntimePromptRequest,
+): RuntimePermissionMode {
   if (
     request &&
     typeof request === "object" &&
@@ -572,14 +628,13 @@ function buildWorkspaceAwareLabPrompt(
   previousDiscussion?: string,
   runtimeRules?: string,
 ) {
-  const modeInstruction =
-    planMode
-      ? "Plan mode: inspect the workspace and produce a concrete implementation plan only. Do not edit files and do not run commands."
-      : permissionMode === "danger-full-access"
-        ? "Full access mode: you may inspect, edit files, and use runtime tools for this workspace task. Keep changes scoped and explain dangerous actions before using them."
-        : permissionMode === "workspace-write"
-      ? "You may inspect and edit files inside this workspace only. Before writing, identify the target files, keep changes minimal, and do not modify files outside the workspace."
-      : "Read-only mode: inspect files and explain results, but do not edit files.";
+  const modeInstruction = planMode
+    ? "Plan mode: inspect the workspace and produce a concrete implementation plan only. Do not edit files and do not run commands."
+    : permissionMode === "danger-full-access"
+      ? "Full access mode: you may inspect, edit files, and use runtime tools for this workspace task. Keep changes scoped and explain dangerous actions before using them."
+      : permissionMode === "workspace-write"
+        ? "You may inspect and edit files inside this workspace only. Before writing, identify the target files, keep changes minimal, and do not modify files outside the workspace."
+        : "Read-only mode: inspect files and explain results, but do not edit files.";
   const actionInstruction =
     planMode || permissionMode === "read-only"
       ? ""
@@ -600,9 +655,7 @@ function buildWorkspaceAwareLabPrompt(
     actionInstruction,
     launchInstruction,
     outputInstruction,
-    runtimeRules?.trim()
-      ? `Active Xynapse rules:\n${runtimeRules.trim()}`
-      : "",
+    runtimeRules?.trim() ? `Active Xynapse rules:\n${runtimeRules.trim()}` : "",
     formatCoreConversationContext(previousTurns),
     formatUiConversationContext(previousDiscussion),
     "User task:",
@@ -613,7 +666,9 @@ function buildWorkspaceAwareLabPrompt(
     .join("\n\n");
 }
 
-function getRuntimeRequestRunId(request?: RuntimePromptRequest | RuntimeDoctorRequest) {
+function getRuntimeRequestRunId(
+  request?: RuntimePromptRequest | RuntimeDoctorRequest,
+) {
   if (request && typeof request === "object" && "runId" in request) {
     return request.runId;
   }
@@ -672,16 +727,26 @@ function extractLabTaskTitle(prompt: string) {
     return taskLine.replace(/^[^:=]+[:=]\s*/, "").trim();
   }
 
-  return prompt.split(/\r?\n/).find((line) => line.trim())?.trim() ?? "lab-run";
+  return (
+    prompt
+      .split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? "lab-run"
+  );
 }
 
 function relativizeWorkspacePath(cwd: string, absPath: string) {
   return path.relative(cwd, absPath).replace(/\\/g, "/");
 }
 
-function buildCorePlanPrompt(planRelPath: string) {
+function buildCorePlanPrompt(planRelPath: string, hasLabCoreHandoff = false) {
   return [
     `Read the Core improvement plan at \`${planRelPath}\` and implement only the concrete items listed there.`,
+    ...(hasLabCoreHandoff
+      ? [
+          "If the plan contains a `Lab Core Handoff` section, use that as the primary task after inspecting the workspace.",
+        ]
+      : []),
     "Inspect the current workspace files first, then apply the smallest useful code/UI changes.",
     "Do not paste the Lab report into the answer, do not echo full files, and do not rewrite working code from scratch unless the plan explicitly requires it.",
     "After editing, briefly list changed files and the checks you ran.",
@@ -702,7 +767,7 @@ function asciiSummary(value: string, fallback: string) {
   if (!trimmed) {
     return fallback;
   }
-  return /^[\x00-\x7F]*$/.test(trimmed) ? trimmed : fallback;
+  return trimmed.replace(/\s+/g, " ");
 }
 
 function limitText(value: string, maxChars: number) {
@@ -718,8 +783,14 @@ function compactLabOutputForArtifact(output: string, maxChars: number) {
     "[omitted HTML document dump; inspect the workspace file directly]";
   const cleaned = output
     .replace(/<!doctype html[\s\S]*?<\/html>/gi, htmlOmitted)
-    .replace(/\u2026 output truncated for display; full result preserved in session\./g, "[tool output truncated]")
-    .replace(/\.{3} output truncated for display; full result preserved in session\./g, "[tool output truncated]")
+    .replace(
+      /\u2026 output truncated for display; full result preserved in session\./g,
+      "[tool output truncated]",
+    )
+    .replace(
+      /\.{3} output truncated for display; full result preserved in session\./g,
+      "[tool output truncated]",
+    )
     .replace(/\n{3,}/g, "\n\n");
   return limitText(cleaned, maxChars);
 }
@@ -753,19 +824,35 @@ function compactLabOutputForPlan(output: string) {
       if (!trimmed) {
         return false;
       }
-      if (/^(read_file|file_search|text_search|write_file|edit_file|bash)\b/i.test(trimmed)) {
+      if (
+        /^(read_file|file_search|text_search|write_file|edit_file|bash)\b/i.test(
+          trimmed,
+        )
+      ) {
         return false;
       }
-      if (/^(xynapse activity:|runtime route:|runtime env:|runtime state:)/i.test(trimmed)) {
+      if (
+        /^(xynapse activity:|runtime route:|runtime env:|runtime state:)/i.test(
+          trimmed,
+        )
+      ) {
         return false;
       }
-      if (/^(workspace root:|user task:|end of xynapse internal prompt)/i.test(trimmed)) {
+      if (
+        /^(workspace root:|user task:|end of xynapse internal prompt)/i.test(
+          trimmed,
+        )
+      ) {
         return false;
       }
       if (/^(in \.|[{}"\[\]],?)/i.test(trimmed)) {
         return false;
       }
-      if (/[\\/]?\.xynapse[\\/]|xynapse-lab\.jsonl|lab-ui-\d+|last-run\.json/i.test(trimmed)) {
+      if (
+        /[\\/]?\.xynapse[\\/]|xynapse-lab\.jsonl|lab-ui-\d+|last-run\.json/i.test(
+          trimmed,
+        )
+      ) {
         return false;
       }
       if (/^(<!doctype|<html|<head|<body|<style|<script|<\/)/i.test(trimmed)) {
@@ -779,9 +866,97 @@ function compactLabOutputForPlan(output: string) {
   return limitText(lines.join("\n"), 6000);
 }
 
+function extractLabCoreHandoff(output: string) {
+  const patterns = [
+    /(?:^|\n)\s*#{1,3}\s*Core prompt\s*\n([\s\S]*?)(?=\n\s*#{1,3}\s+\S|\n\s*Saved readable Lab report:|\n\s*Process exited|\s*$)/i,
+    /(?:^|\n)\s*Core Prompt\s*(?:\n|:)\s*([\s\S]*?)(?=\n\s*(?:Acceptance Criteria|Conflicts|Final Plan|Saved readable Lab report:|Process exited)|\s*$)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(output);
+    if (!match?.[1]) {
+      continue;
+    }
+    const cleaned = match[1]
+      .replace(/^\s*code\s*/i, "")
+      .replace(/^```(?:text)?\s*/i, "")
+      .replace(/```$/i, "")
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter(
+        (line) =>
+          !/^(Saved readable Lab report:|Saved Core|Paste this into Xynapse Core:|Process exited)/i.test(
+            line.trim(),
+          ),
+      )
+      .join("\n")
+      .trim();
+    if (cleaned.length >= 24) {
+      return limitText(cleaned, 1800);
+    }
+  }
+
+  return "";
+}
+
+function detectGenericBvcRubric(output: string) {
+  const lower = output.toLowerCase();
+  const rubricSignals = [
+    /identify the task and roles/i,
+    /verification criteria/i,
+    /check for the presence/i,
+    /verify the implementation/i,
+    /ensure css is used/i,
+    /high confidence if/i,
+    /medium confidence if/i,
+    /low confidence if/i,
+    /pass if .*meets all criteria/i,
+    /fail if .*significant issues/i,
+  ];
+
+  const signalCount = rubricSignals.filter((signal) =>
+    signal.test(output),
+  ).length;
+  const hasBvcShape =
+    /\bbvc verification\b/i.test(output) ||
+    (lower.includes("criteria") &&
+      lower.includes("checks") &&
+      lower.includes("contradictions") &&
+      lower.includes("confidence") &&
+      lower.includes("final verdict"));
+
+  return hasBvcShape && signalCount >= 4;
+}
+
+function detectCouncilConfigEcho(output: string) {
+  const echoSignals = [
+    /the task is to/i,
+    /should be reviewed by a council/i,
+    /difficulty level is set/i,
+    /since the task is in plan mode/i,
+    /i will proceed to summarize/i,
+    /task:\s*.+roles:/is,
+    /the council review will provide/i,
+    /will provide opinions/i,
+  ];
+  const signalCount = echoSignals.filter((signal) =>
+    signal.test(output),
+  ).length;
+  const hasCouncilDeliverable =
+    /(^|\n)\s*#{1,3}\s*(Role opinions|Conflicts|Synthesis|Final decision|Final plan|Implementation plan|Acceptance criteria|Core prompt|План|Критерии|Итоговое решение)/im.test(
+      output,
+    ) || /(^|\n)\s*[-*]\s*(PM|Architect|Developer|Reviewer)\s*:/im.test(output);
+
+  return signalCount >= 2 && !hasCouncilDeliverable;
+}
+
 function detectLabRejected(output: string) {
-  return /\bREJECTED\b|insufficient specification|not a verifiable requirement|cannot proceed as defined/i.test(
-    output,
+  return (
+    /\bREJECTED\b|insufficient specification|not a verifiable requirement|cannot proceed as defined/i.test(
+      output,
+    ) ||
+    detectGenericBvcRubric(output) ||
+    detectCouncilConfigEcho(output)
   );
 }
 
@@ -789,17 +964,53 @@ function buildRejectedFindingsSummary(output: string) {
   const reasons = new Set<string>();
   const lower = output.toLowerCase();
 
-  if (/vague|ambig|undefined|not a verifiable requirement|more powerful/i.test(output)) {
-    reasons.add("The Lab run rejected the request because the task is too vague to implement safely.");
+  if (
+    /vague|ambig|undefined|not a verifiable requirement|more powerful/i.test(
+      output,
+    )
+  ) {
+    reasons.add(
+      "The Lab run rejected the request because the task is too vague to implement safely.",
+    );
   }
-  if (/acceptance criteria|success metrics|testable|verifiability/i.test(output)) {
-    reasons.add("Acceptance criteria and measurable success conditions are missing.");
+  if (
+    /acceptance criteria|success metrics|testable|verifiability/i.test(output)
+  ) {
+    reasons.add(
+      "Acceptance criteria and measurable success conditions are missing.",
+    );
   }
   if (/same model|identical model|role diversity|uniform model/i.test(output)) {
-    reasons.add("The BVC role setup has weak diversity because multiple roles use the same model.");
+    reasons.add(
+      "The BVC role setup has weak diversity because multiple roles use the same model.",
+    );
   }
   if (/no existing user stories|traceability|baseline spec/i.test(output)) {
-    reasons.add("There is no baseline specification or user story to trace the requested improvement against.");
+    reasons.add(
+      "There is no baseline specification or user story to trace the requested improvement against.",
+    );
+  }
+  if (detectGenericBvcRubric(output)) {
+    reasons.add(
+      "BVC returned a generic verification rubric instead of concrete implementation findings.",
+    );
+    reasons.add(
+      "BVC is for checking an existing candidate answer or claim; use Council or Compare when the user needs a plan generated from scratch.",
+    );
+  }
+  if (detectCouncilConfigEcho(output)) {
+    reasons.add(
+      "Council returned a configuration summary instead of role opinions, tradeoffs, final plan, and acceptance criteria.",
+    );
+    reasons.add(
+      "Run Council again with the updated prompt; it must produce the requested deliverable immediately, not describe what it will do.",
+    );
+  }
+
+  if (reasons.size === 0) {
+    reasons.add(
+      "The Lab result did not contain concrete, implementable findings.",
+    );
   }
 
   const examples: string[] = [];
@@ -857,12 +1068,19 @@ function persistLabArtifacts(options: {
   const planPath = path.join(plansDir, `${artifactBase}-core-plan.md`);
   const reportRelPath = relativizeWorkspacePath(options.cwd, reportPath);
   const planRelPath = relativizeWorkspacePath(options.cwd, planPath);
-  const taskSummary = asciiSummary(taskTitle, "See the source Lab report for the original user task.");
-  const compactReportOutput = compactLabOutputForArtifact(options.output, 30000);
+  const taskSummary = asciiSummary(
+    taskTitle,
+    "See the source Lab report for the original user task.",
+  );
+  const compactReportOutput = compactLabOutputForArtifact(
+    options.output,
+    30000,
+  );
   const rejected = detectLabRejected(options.output);
+  const labCoreHandoff = rejected ? "" : extractLabCoreHandoff(options.output);
   const corePrompt = rejected
     ? buildCoreRefinementPrompt(planRelPath)
-    : buildCorePlanPrompt(planRelPath);
+    : buildCorePlanPrompt(planRelPath, !!labCoreHandoff);
   const planFindings = rejected
     ? buildRejectedFindingsSummary(options.output)
     : compactLabOutputForPlan(options.output);
@@ -922,10 +1140,14 @@ function persistLabArtifacts(options: {
           "6. Verify the changed behavior with the available file/runtime tools and report what was checked.",
         ]),
     "",
+    ...(labCoreHandoff
+      ? ["## Lab Core Handoff", "", "```text", labCoreHandoff, "```", ""]
+      : []),
     "## Findings Summary",
     "",
     "```text",
-    planFindings || "No concise Lab findings captured. Open the source Lab report if needed.",
+    planFindings ||
+      "No concise Lab findings captured. Open the source Lab report if needed.",
     "```",
     "",
   ].join("\n");
@@ -986,8 +1208,14 @@ function compactLabHistorySummary(raw: string) {
   const cleaned = (output || fallback)
     .replace(/```[\s\S]*?```/g, "[large block omitted]")
     .replace(/\[[^\]]*omitted[^\]]*\]/gi, "[omitted]")
-    .replace(/^(read_file|file_search|text_search|write_file|edit_file|bash)\b.*$/gim, "")
-    .replace(/^(runtime route:|runtime env:|runtime state:|workspace root:).*$/gim, "")
+    .replace(
+      /^(read_file|file_search|text_search|write_file|edit_file|bash)\b.*$/gim,
+      "",
+    )
+    .replace(
+      /^(runtime route:|runtime env:|runtime state:|workspace root:).*$/gim,
+      "",
+    )
     .replace(/\n{3,}/g, "\n\n")
     .trim();
   return limitText(cleaned || "No concise Lab summary captured.", 900);
@@ -1019,7 +1247,9 @@ function listXynapseLabHistory(cwd: string): LabHistoryItem[] {
 
   const reportEntries = fs
     .readdirSync(reportsDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"));
+    .filter(
+      (entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"),
+    );
 
   const items = reportEntries
     .map((entry): LabHistoryItem | undefined => {
@@ -1032,10 +1262,12 @@ function listXynapseLabHistory(cwd: string): LabHistoryItem[] {
         const planPath = path.join(plansDir, `${artifactBase}-core-plan.md`);
         const hasPlan = fs.existsSync(planPath);
         const plan = hasPlan ? fs.readFileSync(planPath, "utf8") : "";
-        const title = /^#\s+(.+)$/m.exec(raw)?.[1]?.trim() || "Xynapse Lab research";
+        const title =
+          /^#\s+(.+)$/m.exec(raw)?.[1]?.trim() || "Xynapse Lab research";
         const task = metadata.task || title;
         const exitCode =
-          metadata["exit code"] && Number.isFinite(Number(metadata["exit code"]))
+          metadata["exit code"] &&
+          Number.isFinite(Number(metadata["exit code"]))
             ? Number(metadata["exit code"])
             : null;
 
@@ -1050,7 +1282,9 @@ function listXynapseLabHistory(cwd: string): LabHistoryItem[] {
           createdAt: metadata.created || stat.birthtime.toISOString(),
           updatedAt: stat.mtime.toISOString(),
           reportRelPath: relativizeWorkspacePath(cwd, reportPath),
-          planRelPath: hasPlan ? relativizeWorkspacePath(cwd, planPath) : undefined,
+          planRelPath: hasPlan
+            ? relativizeWorkspacePath(cwd, planPath)
+            : undefined,
           corePrompt: plan ? extractCorePromptFromPlan(plan) : undefined,
           summary: compactLabHistorySummary(raw),
         };
@@ -1226,8 +1460,7 @@ function recoverToolOnlyConversationTurn(
 
 function providerEnvSummary(env: Record<string, string>) {
   const merged = { ...process.env, ...env };
-  const present = (key: string) =>
-    merged[key]?.trim() ? "present" : "absent";
+  const present = (key: string) => (merged[key]?.trim() ? "present" : "absent");
   const value = (key: string) => merged[key]?.trim() || "default";
 
   return [
@@ -1248,12 +1481,44 @@ function getRuntimePathKey(env: Record<string, string | undefined>) {
   return Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "Path";
 }
 
+function getEnvironmentUvHome() {
+  return path.join(getDefaultEnvironmentHome(), "uv");
+}
+
+function getEnvironmentUvToolDir() {
+  return path.join(getEnvironmentUvHome(), "tools");
+}
+
+function getEnvironmentUvToolBinDir() {
+  return path.join(getEnvironmentUvHome(), "bin");
+}
+
+function getEnvironmentUvPythonInstallDir() {
+  return path.join(getEnvironmentUvHome(), "python");
+}
+
+function getEnvironmentUvCacheDir() {
+  return path.join(getEnvironmentUvHome(), "cache");
+}
+
+function applyEnvironmentUvEnv(env: Record<string, string | undefined>) {
+  env.UV_TOOL_DIR = getEnvironmentUvToolDir();
+  env.UV_TOOL_BIN_DIR = getEnvironmentUvToolBinDir();
+  env.UV_PYTHON_INSTALL_DIR = getEnvironmentUvPythonInstallDir();
+  env.UV_CACHE_DIR = getEnvironmentUvCacheDir();
+}
+
 function getWindowsRuntimePathPrefixes() {
   if (process.platform !== "win32") {
     return [];
   }
 
   return [
+    getEnvironmentUvToolBinDir(),
+    path.join(
+      getEnvironmentUvPythonInstallDir(),
+      "cpython-3.14-windows-x86_64-none",
+    ),
     path.join(process.env.USERPROFILE ?? "", ".local", "bin"),
     path.join(
       process.env.APPDATA ?? "",
@@ -1262,7 +1527,12 @@ function getWindowsRuntimePathPrefixes() {
       "cpython-3.14-windows-x86_64-none",
     ),
     path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "bin"),
-    path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "usr", "bin"),
+    path.join(
+      process.env.ProgramFiles ?? "C:\\Program Files",
+      "Git",
+      "usr",
+      "bin",
+    ),
     path.join(
       process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
       "Git",
@@ -1287,6 +1557,7 @@ function getWindowsCommandCandidatePaths(command: string) {
     : `${command}.exe`;
 
   return [
+    path.join(getEnvironmentUvToolBinDir(), executable),
     path.join(process.env.USERPROFILE ?? "", ".local", "bin", executable),
     path.join(
       process.env.APPDATA ?? "",
@@ -1299,6 +1570,7 @@ function getWindowsCommandCandidatePaths(command: string) {
 }
 
 function applyRuntimePathFixes(env: Record<string, string | undefined>) {
+  applyEnvironmentUvEnv(env);
   const pathKey = getRuntimePathKey(env);
   const existingPath = env[pathKey] ?? env.PATH ?? process.env.PATH ?? "";
   const pathParts = existingPath
@@ -1358,7 +1630,12 @@ function ensureXynapseRuntimeState(
 }
 
 function runtimePromptFileRelPath(runId: string) {
-  return [".xynapse", "runtime", "prompts", `${safeRuntimeSessionId(runId) ?? "prompt"}.md`].join("/");
+  return [
+    ".xynapse",
+    "runtime",
+    "prompts",
+    `${safeRuntimeSessionId(runId) ?? "prompt"}.md`,
+  ].join("/");
 }
 
 function writeRuntimePromptFile(cwd: string, runId: string, prompt: string) {
@@ -1678,7 +1955,11 @@ async function confirmAndRestoreRuntimeCheckpoint(
   cwd: string,
   request?: RuntimeCheckpointRestoreRequest,
 ): Promise<RuntimeCheckpointRestoreResult> {
-  const checkpointDir = runtimeCheckpointDir(cwd, request?.sessionId, request?.runId);
+  const checkpointDir = runtimeCheckpointDir(
+    cwd,
+    request?.sessionId,
+    request?.runId,
+  );
   const manifestPath = checkpointDir
     ? path.join(checkpointDir, "manifest.json")
     : undefined;
@@ -1712,7 +1993,9 @@ async function confirmAndRestoreRuntimeCheckpoint(
   }
 
   restoreXynapseRuntimeCheckpoint(cwd, request?.sessionId, request?.runId);
-  void vscode.window.showInformationMessage("Workspace rolled back to the selected chat point.");
+  void vscode.window.showInformationMessage(
+    "Workspace rolled back to the selected chat point.",
+  );
   return { action: "restored" };
 }
 
@@ -1769,7 +2052,9 @@ function appendXynapseCoreConversationTurn(
     turns.push({
       ...turn,
       user: trimConversationText(turn.user, 4_000),
-      assistant: trimConversationText(cleanRuntimeOutputForChat(turn.assistant)),
+      assistant: trimConversationText(
+        cleanRuntimeOutputForChat(turn.assistant),
+      ),
       timestamp: new Date().toISOString(),
     });
     fs.writeFileSync(
@@ -1864,15 +2149,16 @@ function runRuntimeInWebview(
     cwd: options.cwd,
     model: options.model,
     command: `xynapse ${args.join(" ")}`,
-    text: [
-      `Starting ${options.title} in ${options.cwd}`,
-      options.route ? `Runtime route: ${options.route}` : undefined,
-      `Runtime env: ${providerEnvSummary(options.env ?? {})}`,
-      "Runtime state: .xynapse",
-      "",
-    ]
-      .filter(Boolean)
-      .join("\n") + "\n",
+    text:
+      [
+        `Starting ${options.title} in ${options.cwd}`,
+        options.route ? `Runtime route: ${options.route}` : undefined,
+        `Runtime env: ${providerEnvSummary(options.env ?? {})}`,
+        "Runtime state: .xynapse",
+        "",
+      ]
+        .filter(Boolean)
+        .join("\n") + "\n",
   });
 
   const child = spawn(executable, args, {
@@ -2044,11 +2330,10 @@ function stopRuntimeInWebview(
   });
 
   if (process.platform === "win32" && child.pid) {
-    const killer = spawn(
-      "taskkill",
-      ["/pid", String(child.pid), "/t", "/f"],
-      { windowsHide: true, stdio: "ignore" },
-    );
+    const killer = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
     killer.on("error", () => child.kill());
   } else {
     child.kill("SIGTERM");
@@ -2079,16 +2364,12 @@ function setRuntimeEnv(
   env[key] = value.trim();
 }
 
-function normalizeProviderName(value: unknown) {
-  return String(value ?? "")
-    .toLowerCase()
-    .replace(/_/g, "-")
-    .trim();
-}
-
 const YANDEX_OPENAI_BASE_URL = "https://llm.api.cloud.yandex.net/v1";
 
-function collectRuntimeEnvFromObject(value: unknown, env: Record<string, string>) {
+function collectRuntimeEnvFromObject(
+  value: unknown,
+  env: Record<string, string>,
+) {
   if (!value || typeof value !== "object") {
     return;
   }
@@ -2099,7 +2380,7 @@ function collectRuntimeEnvFromObject(value: unknown, env: Record<string, string>
   }
 
   const record = value as Record<string, unknown>;
-  const provider = normalizeProviderName(
+  const provider = normalizeXynapseEnvironmentProviderName(
     record.provider ?? record.name ?? record.uses,
   );
   const model = String(record.model ?? record.title ?? "").toLowerCase();
@@ -2124,15 +2405,18 @@ function collectRuntimeEnvFromObject(value: unknown, env: Record<string, string>
 
   const providerUnset = provider.length === 0;
   const isYandex = provider.includes("yandex");
-  const isAnthropic =
-    provider.includes("anthropic");
+  const isAnthropic = provider.includes("anthropic");
   const isOpenAi =
     isYandex ||
     provider.includes("openai") ||
     provider.includes("openai-compatible") ||
     provider.includes("deepseek") ||
     model.includes("deepseek") ||
-    (providerUnset && (model.startsWith("gpt-") || model.startsWith("o1") || model.startsWith("o3") || model.startsWith("o4")));
+    (providerUnset &&
+      (model.startsWith("gpt-") ||
+        model.startsWith("o1") ||
+        model.startsWith("o3") ||
+        model.startsWith("o4")));
   const isXai =
     provider.includes("xai") ||
     provider.includes("grok") ||
@@ -2149,7 +2433,11 @@ function collectRuntimeEnvFromObject(value: unknown, env: Record<string, string>
   } else if (isOpenAi) {
     if (isYandex) {
       setRuntimeEnv(env, "YANDEX_API_KEY", record.apiKey);
-      setRuntimeEnv(env, "YANDEX_BASE_URL", record.apiBase ?? record.baseUrl ?? YANDEX_OPENAI_BASE_URL);
+      setRuntimeEnv(
+        env,
+        "YANDEX_BASE_URL",
+        record.apiBase ?? record.baseUrl ?? YANDEX_OPENAI_BASE_URL,
+      );
       setRuntimeEnv(env, "YANDEX_FOLDER_ID", record.folderId);
       setRuntimeEnv(
         env,
@@ -2174,15 +2462,16 @@ function collectRuntimeEnvFromObject(value: unknown, env: Record<string, string>
     setRuntimeEnv(env, "DASHSCOPE_BASE_URL", record.apiBase ?? record.baseUrl);
   }
 
-  Object.values(record).forEach((item) => collectRuntimeEnvFromObject(item, env));
+  Object.values(record).forEach((item) =>
+    collectRuntimeEnvFromObject(item, env),
+  );
 }
 
 function getConfiguredRuntimeModelOverride() {
-  const configured =
-    vscode.workspace
-      .getConfiguration("xynapse")
-      .get<string>("runtimeModel")
-      ?.trim();
+  const configured = vscode.workspace
+    .getConfiguration("xynapse")
+    .get<string>("runtimeModel")
+    ?.trim();
 
   if (!configured || configured.toLowerCase() === "auto") {
     return undefined;
@@ -2204,11 +2493,12 @@ function getModelIdentity(value: unknown) {
       : typeof record.name === "string"
         ? record.name.trim()
         : "";
-  const provider = normalizeProviderName(record.provider);
+  const provider = normalizeXynapseEnvironmentProviderName(record.provider);
   const folderId =
     typeof record.folderId === "string"
       ? record.folderId.trim()
-      : typeof (record.requestOptions as any)?.extraBodyProperties?.folderId === "string"
+      : typeof (record.requestOptions as any)?.extraBodyProperties?.folderId ===
+          "string"
         ? (record.requestOptions as any).extraBodyProperties.folderId.trim()
         : "";
 
@@ -2265,7 +2555,10 @@ function loadRawConfigModels(): ILLM[] {
         : YAML.parse(raw);
       models.push(...flattenConfigModels(parsed));
     } catch (error) {
-      console.warn(`Failed to read ${configPath} for Xynapse runtime models`, error);
+      console.warn(
+        `Failed to read ${configPath} for Xynapse runtime models`,
+        error,
+      );
     }
   }
 
@@ -2280,7 +2573,9 @@ function findRequestedModel(
   const data = typeof request === "object" ? request : undefined;
   const requestedTitle = data?.modelTitle?.trim();
   const requestedModel = data?.model?.trim();
-  const requestedProvider = normalizeProviderName(data?.provider);
+  const requestedProvider = normalizeXynapseEnvironmentProviderName(
+    data?.provider,
+  );
   const models = [...rawModels, ...flattenConfigModels(config)];
 
   if (requestedTitle || requestedModel) {
@@ -2360,14 +2655,16 @@ function toRuntimeModelRoute(model: ILLM | undefined) {
   const modelName = identity.model || identity.title;
   const loweredModel = modelName.toLowerCase();
 
-  if (provider.includes("yandex") || !!identity.folderId || modelName.startsWith("gpt://")) {
+  if (
+    provider.includes("yandex") ||
+    !!identity.folderId ||
+    modelName.startsWith("gpt://")
+  ) {
     const yandexModel = toYandexOpenAiModelUri(modelName, identity.folderId);
     return yandexModel ? `yandex/${yandexModel}` : undefined;
   }
 
-  if (
-    provider.includes("anthropic")
-  ) {
+  if (provider.includes("anthropic")) {
     return modelName;
   }
 
@@ -2380,11 +2677,19 @@ function toRuntimeModelRoute(model: ILLM | undefined) {
     return ensureOpenAiRoutingPrefix(modelName);
   }
 
-  if (provider.includes("xai") || provider.includes("grok") || loweredModel.includes("grok")) {
+  if (
+    provider.includes("xai") ||
+    provider.includes("grok") ||
+    loweredModel.includes("grok")
+  ) {
     return /^grok/i.test(modelName) ? modelName : `grok/${modelName}`;
   }
 
-  if (provider.includes("dashscope") || provider === "qwen" || provider === "kimi") {
+  if (
+    provider.includes("dashscope") ||
+    provider === "qwen" ||
+    provider === "kimi"
+  ) {
     if (/^(qwen|kimi)[/-]/i.test(modelName)) {
       return modelName;
     }
@@ -2399,7 +2704,7 @@ function hasExplicitRuntimeModelRequest(request?: RuntimePromptRequest) {
   return Boolean(
     data?.modelTitle?.trim() ||
       data?.model?.trim() ||
-      normalizeProviderName(data?.provider),
+      normalizeXynapseEnvironmentProviderName(data?.provider),
   );
 }
 
@@ -2408,9 +2713,15 @@ function findRuntimeSupportedModel(config: any, rawModels: ILLM[] = []) {
     config?.selectedModelByRole?.edit,
     config?.selectedModelByRole?.apply,
     config?.selectedModelByRole?.chat,
-    ...(Array.isArray(config?.modelsByRole?.edit) ? config.modelsByRole.edit : []),
-    ...(Array.isArray(config?.modelsByRole?.apply) ? config.modelsByRole.apply : []),
-    ...(Array.isArray(config?.modelsByRole?.chat) ? config.modelsByRole.chat : []),
+    ...(Array.isArray(config?.modelsByRole?.edit)
+      ? config.modelsByRole.edit
+      : []),
+    ...(Array.isArray(config?.modelsByRole?.apply)
+      ? config.modelsByRole.apply
+      : []),
+    ...(Array.isArray(config?.modelsByRole?.chat)
+      ? config.modelsByRole.chat
+      : []),
     ...rawModels,
     ...flattenConfigModels(config),
   ];
@@ -2434,7 +2745,10 @@ function findRuntimeSupportedModel(config: any, rawModels: ILLM[] = []) {
   return undefined;
 }
 
-async function collectRuntimeEnv(configHandler: ConfigHandler, preferredModel?: ILLM) {
+async function collectRuntimeEnv(
+  configHandler: ConfigHandler,
+  preferredModel?: ILLM,
+) {
   const env: Record<string, string> = {};
 
   collectRuntimeEnvFromObject(preferredModel, env);
@@ -2443,7 +2757,10 @@ async function collectRuntimeEnv(configHandler: ConfigHandler, preferredModel?: 
     const { config } = await configHandler.loadConfig();
     collectRuntimeEnvFromObject(config, env);
   } catch (error) {
-    console.warn("Failed to read Xynapse config for Xynapse runtime env", error);
+    console.warn(
+      "Failed to read Xynapse config for Xynapse runtime env",
+      error,
+    );
   }
 
   for (const configPath of [getConfigYamlPath("vscode"), getConfigJsonPath()]) {
@@ -2457,7 +2774,10 @@ async function collectRuntimeEnv(configHandler: ConfigHandler, preferredModel?: 
         : YAML.parse(raw);
       collectRuntimeEnvFromObject(parsed, env);
     } catch (error) {
-      console.warn(`Failed to scan ${configPath} for Xynapse runtime env`, error);
+      console.warn(
+        `Failed to scan ${configPath} for Xynapse runtime env`,
+        error,
+      );
     }
   }
 
@@ -2480,7 +2800,10 @@ function collectRuntimeEnvFromLocalFiles(preferredModel?: ILLM) {
         : YAML.parse(raw);
       collectRuntimeEnvFromObject(parsed, env);
     } catch (error) {
-      console.warn(`Failed to scan ${configPath} for Xynapse runtime env`, error);
+      console.warn(
+        `Failed to scan ${configPath} for Xynapse runtime env`,
+        error,
+      );
     }
   }
 
@@ -2566,6 +2889,7 @@ function quoteTerminalArg(value: string) {
 const ENVIRONMENT_REPO_URL =
   "https://github.com/Alishahryar1/free-claude-code.git";
 const ENVIRONMENT_DIR_NAME = "environment";
+const ENVIRONMENT_UPSTREAM_DIR_NAME = "upstream";
 const ENVIRONMENT_SUPPORTED_PROVIDERS = [
   "nvidia_nim",
   "open_router",
@@ -2664,6 +2988,8 @@ const ENVIRONMENT_PROVIDER_DESCRIPTORS: EnvironmentProviderDescriptor[] = [
 type ExternalEnvironmentRootResolution = {
   root?: string;
   parent?: string;
+  home?: string;
+  layout?: "portable" | "global" | "dev-external";
   error?: string;
 };
 
@@ -2675,7 +3001,10 @@ type EnvironmentPtySession = {
 };
 
 const environmentPtySessions = new Map<string, EnvironmentPtySession>();
-const environmentIntegratedTerminalSessions = new Map<string, vscode.Terminal>();
+const environmentIntegratedTerminalSessions = new Map<
+  string,
+  vscode.Terminal
+>();
 let environmentTerminalCloseListenerRegistered = false;
 
 type XynapseEnvironmentBridgeConfig = {
@@ -2724,12 +3053,51 @@ function loadEnvironmentNativeModule<T>(id: string): T | null {
   }
 }
 
-function findExternalEnvironmentParent(extensionContext: vscode.ExtensionContext) {
+function isDirectory(pathValue: string | undefined) {
+  if (!pathValue) {
+    return false;
+  }
+  try {
+    return fs.statSync(pathValue).isDirectory();
+  } catch (_error) {
+    return false;
+  }
+}
+
+function getXynapsePortableDataPath() {
+  const candidates = [
+    process.env.VSCODE_PORTABLE,
+    process.env.VSCODE_PORTABLE_DATA_PATH,
+    process.execPath
+      ? path.join(path.dirname(process.execPath), "data")
+      : undefined,
+  ];
+
+  return candidates.find(isDirectory);
+}
+
+function getDefaultEnvironmentHome() {
+  const portableDataPath = getXynapsePortableDataPath();
+  if (portableDataPath) {
+    return path.join(portableDataPath, ".xynapse", ENVIRONMENT_DIR_NAME);
+  }
+
+  return path.join(getXynapseGlobalPath(), ENVIRONMENT_DIR_NAME);
+}
+
+function getPortableOrGlobalEnvironmentRoot() {
+  return path.join(getDefaultEnvironmentHome(), ENVIRONMENT_UPSTREAM_DIR_NAME);
+}
+
+function findDevExternalEnvironmentParent(
+  extensionContext: vscode.ExtensionContext,
+) {
   const startPoints = [
     extensionContext.extensionPath,
     process.cwd(),
-    process.execPath ? path.dirname(process.execPath) : undefined,
-    ...(vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
+    ...(vscode.workspace.workspaceFolders ?? []).map(
+      (folder) => folder.uri.fsPath,
+    ),
   ].filter((value): value is string => Boolean(value));
   const visited = new Set<string>();
 
@@ -2738,7 +3106,7 @@ function findExternalEnvironmentParent(extensionContext: vscode.ExtensionContext
     while (!visited.has(current)) {
       visited.add(current);
       const externalDir = path.join(current, ".external");
-      if (fs.existsSync(externalDir) && fs.statSync(externalDir).isDirectory()) {
+      if (isDirectory(externalDir)) {
         return externalDir;
       }
       const parent = path.dirname(current);
@@ -2748,43 +3116,48 @@ function findExternalEnvironmentParent(extensionContext: vscode.ExtensionContext
       current = parent;
     }
   }
-
-  const executableDir = process.execPath ? path.dirname(process.execPath) : undefined;
-  return executableDir
-    ? path.join(executableDir, ".external")
-    : path.join(extensionContext.extensionPath, ".external");
 }
 
 function resolveExternalEnvironmentRoot(
   extensionContext: vscode.ExtensionContext,
 ): ExternalEnvironmentRootResolution {
-  const parent = findExternalEnvironmentParent(extensionContext);
-  if (!parent) {
-    return {
-      error:
-        "Environment storage was not found. Expected an .external directory next to the IDE.",
-    };
-  }
+  const portableDataPath = getXynapsePortableDataPath();
+  const devExternalParent = portableDataPath
+    ? undefined
+    : findDevExternalEnvironmentParent(extensionContext);
+  const home = devExternalParent ?? getDefaultEnvironmentHome();
+  const root = devExternalParent
+    ? path.join(devExternalParent, ENVIRONMENT_DIR_NAME)
+    : getPortableOrGlobalEnvironmentRoot();
+  const parent = path.dirname(root);
+  const layout = devExternalParent
+    ? "dev-external"
+    : portableDataPath
+      ? "portable"
+      : "global";
 
-  const root = path.join(parent, ENVIRONMENT_DIR_NAME);
   if (!fs.existsSync(root)) {
     return {
+      home,
       parent,
       root,
+      layout,
       error: "The upstream Environment checkout is not installed yet.",
     };
   }
 
   if (!fs.existsSync(path.join(root, "pyproject.toml"))) {
     return {
+      home,
       parent,
       root,
+      layout,
       error:
         "The Environment directory exists, but it is not the upstream free-claude-code project.",
     };
   }
 
-  return { parent, root };
+  return { home, parent, root, layout };
 }
 
 function normalizeEnvironmentClientPermissionMode(
@@ -2856,6 +3229,12 @@ function getEnvironmentToolPythonPath() {
     process.platform === "win32"
       ? [
           path.join(
+            getEnvironmentUvToolDir(),
+            "free-claude-code",
+            "Scripts",
+            "python.exe",
+          ),
+          path.join(
             process.env.APPDATA ?? "",
             "uv",
             "tools",
@@ -2865,6 +3244,12 @@ function getEnvironmentToolPythonPath() {
           ),
         ]
       : [
+          path.join(
+            getEnvironmentUvToolDir(),
+            "free-claude-code",
+            "bin",
+            "python",
+          ),
           path.join(
             process.env.HOME ?? "",
             ".local",
@@ -2910,9 +3295,12 @@ function runEnvironmentSync(
   args: string[],
   cwd?: string,
 ): string | undefined {
+  const env = { ...process.env };
+  applyRuntimePathFixes(env);
   const result = spawnSync(command, args, {
     cwd,
     encoding: "utf8",
+    env,
     windowsHide: true,
   });
   if (result.status !== 0) {
@@ -2922,7 +3310,13 @@ function runEnvironmentSync(
 }
 
 function getEnvironmentGitCommit(root: string) {
-  return runEnvironmentSync("git", ["-C", root, "rev-parse", "--short", "HEAD"]);
+  return runEnvironmentSync("git", [
+    "-C",
+    root,
+    "rev-parse",
+    "--short",
+    "HEAD",
+  ]);
 }
 
 function isEnvironmentGitDirty(root: string) {
@@ -2948,7 +3342,9 @@ function hasPython314() {
     return true;
   }
 
-  return commandExists(process.platform === "win32" ? "python3.14.exe" : "python3.14");
+  return commandExists(
+    process.platform === "win32" ? "python3.14.exe" : "python3.14",
+  );
 }
 
 function setEnvironmentProviderEnv(
@@ -2976,7 +3372,7 @@ function collectEnvironmentProviderEnvFromObject(
   }
 
   const record = value as Record<string, unknown>;
-  const provider = normalizeProviderName(
+  const provider = normalizeXynapseEnvironmentProviderName(
     record.provider ?? record.name ?? record.uses,
   );
   const model = String(record.model ?? record.title ?? "").toLowerCase();
@@ -3038,7 +3434,10 @@ function collectEnvironmentProviderEnvFromLocalFiles() {
         : YAML.parse(raw);
       collectEnvironmentProviderEnvFromObject(parsed, env);
     } catch (error) {
-      console.warn(`Failed to scan ${configPath} for Environment provider env`, error);
+      console.warn(
+        `Failed to scan ${configPath} for Environment provider env`,
+        error,
+      );
     }
   }
 
@@ -3046,6 +3445,10 @@ function collectEnvironmentProviderEnvFromLocalFiles() {
 }
 
 function getEnvironmentManagedEnvPath() {
+  return path.join(getDefaultEnvironmentHome(), "environment.env");
+}
+
+function getLegacyEnvironmentManagedEnvPath() {
   return path.join(getXynapseGlobalPath(), "environment.env");
 }
 
@@ -3074,7 +3477,9 @@ function parseDotEnvText(raw: string) {
 }
 
 function readEnvironmentManagedEnv() {
-  const envPath = getEnvironmentManagedEnvPath();
+  const envPath = fs.existsSync(getEnvironmentManagedEnvPath())
+    ? getEnvironmentManagedEnvPath()
+    : getLegacyEnvironmentManagedEnvPath();
   if (!fs.existsSync(envPath)) {
     return {};
   }
@@ -3122,15 +3527,22 @@ function getSavedEnvironmentProviderId(values = readEnvironmentManagedEnv()) {
 }
 
 function getEnvironmentConfigStatus(values = readEnvironmentManagedEnv()) {
+  const discovered = collectEnvironmentProviderEnvFromLocalFiles();
   const provider = getEnvironmentProviderDescriptor(
     getSavedEnvironmentProviderId(values),
   );
   const model = values.MODEL?.trim() || provider.defaultModel;
   const configuredCredential = provider.credentialEnv
-    ? Boolean(values[provider.credentialEnv]?.trim() || process.env[provider.credentialEnv]?.trim())
+    ? Boolean(
+        values[provider.credentialEnv]?.trim() ||
+          discovered[provider.credentialEnv]?.trim() ||
+          process.env[provider.credentialEnv]?.trim(),
+      )
     : true;
   const baseUrl = provider.baseUrlEnv
-    ? values[provider.baseUrlEnv]?.trim() || provider.defaultBaseUrl
+    ? values[provider.baseUrlEnv]?.trim() ||
+      discovered[provider.baseUrlEnv]?.trim() ||
+      provider.defaultBaseUrl
     : undefined;
 
   return {
@@ -3224,12 +3636,15 @@ function writeEnvironmentManagedEnv(
       .sort(),
   ];
   const lines = [
-    "# Managed by Xynapse Environment. This file is global for all Xynapse IDE windows.",
+    "# Managed by Xynapse Environment. This file belongs to the current Xynapse data profile.",
     ...keys.map((key) => `${key}=${quoteDotEnvValue(next[key] ?? "")}`),
     "",
   ];
-  fs.mkdirSync(path.dirname(getEnvironmentManagedEnvPath()), { recursive: true });
+  fs.mkdirSync(path.dirname(getEnvironmentManagedEnvPath()), {
+    recursive: true,
+  });
   fs.writeFileSync(getEnvironmentManagedEnvPath(), lines.join("\n"), "utf8");
+  setConfigFilePermissions(getEnvironmentManagedEnvPath());
 }
 
 function applyEnvironmentManagedEnv(env: Record<string, string | undefined>) {
@@ -3246,12 +3661,33 @@ function applyEnvironmentManagedEnv(env: Record<string, string | undefined>) {
   return env;
 }
 
-function buildExternalEnvironmentEnv() {
+function getEnvironmentProjectStateRoot(cwd?: string) {
+  return cwd ? path.join(cwd, ".xynapse", ENVIRONMENT_DIR_NAME) : undefined;
+}
+
+function ensureEnvironmentProjectStateRoot(cwd?: string) {
+  const projectStateRoot = getEnvironmentProjectStateRoot(cwd);
+  if (projectStateRoot) {
+    fs.mkdirSync(projectStateRoot, { recursive: true });
+  }
+  return projectStateRoot;
+}
+
+function buildExternalEnvironmentEnv(
+  projectStateRoot?: string,
+  upstreamRoot?: string,
+) {
   const env: Record<string, string | undefined> = {
     ...process.env,
     FCC_OPEN_BROWSER: "false",
     ...collectEnvironmentProviderEnvFromLocalFiles(),
   };
+  env.XYNAPSE_ENVIRONMENT_HOME = getDefaultEnvironmentHome();
+  env.XYNAPSE_ENVIRONMENT_UPSTREAM =
+    upstreamRoot ?? getPortableOrGlobalEnvironmentRoot();
+  if (projectStateRoot) {
+    env.XYNAPSE_ENVIRONMENT_PROJECT_STATE = projectStateRoot;
+  }
   applyEnvironmentManagedEnv(env);
   applyRuntimePathFixes(env);
   return env;
@@ -3277,14 +3713,37 @@ function sendEnvironmentEvent(
   sidebar.webviewProtocol?.send("xynapse/environmentEvent", event);
 }
 
+function buildEnvironmentUvShellSetup() {
+  if (process.platform === "win32") {
+    return [
+      `$env:UV_TOOL_DIR = ${quotePowerShellArg(getEnvironmentUvToolDir())}`,
+      `$env:UV_TOOL_BIN_DIR = ${quotePowerShellArg(getEnvironmentUvToolBinDir())}`,
+      `$env:UV_PYTHON_INSTALL_DIR = ${quotePowerShellArg(getEnvironmentUvPythonInstallDir())}`,
+      `$env:UV_CACHE_DIR = ${quotePowerShellArg(getEnvironmentUvCacheDir())}`,
+      "New-Item -ItemType Directory -Force -Path $env:UV_TOOL_DIR,$env:UV_TOOL_BIN_DIR,$env:UV_PYTHON_INSTALL_DIR,$env:UV_CACHE_DIR | Out-Null",
+      `$env:Path = ${quotePowerShellArg(getEnvironmentUvToolBinDir())} + ';' + "$env:USERPROFILE\\.local\\bin;$env:USERPROFILE\\AppData\\Roaming\\Python\\Python314\\Scripts;" + $env:Path`,
+    ].join("; ");
+  }
+
+  return [
+    `export UV_TOOL_DIR=${quotePosixShellArg(getEnvironmentUvToolDir())}`,
+    `export UV_TOOL_BIN_DIR=${quotePosixShellArg(getEnvironmentUvToolBinDir())}`,
+    `export UV_PYTHON_INSTALL_DIR=${quotePosixShellArg(getEnvironmentUvPythonInstallDir())}`,
+    `export UV_CACHE_DIR=${quotePosixShellArg(getEnvironmentUvCacheDir())}`,
+    'mkdir -p "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"',
+    `export PATH=${quotePosixShellArg(getEnvironmentUvToolBinDir())}:$HOME/.local/bin:$PATH`,
+  ].join("; ");
+}
+
 function buildEnvironmentInstallCommand() {
   if (process.platform === "win32") {
     return [
       "$ErrorActionPreference = 'Stop'",
+      buildEnvironmentUvShellSetup(),
       "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { irm https://astral.sh/uv/install.ps1 | iex }",
-      "$env:Path = \"$env:USERPROFILE\\.local\\bin;$env:USERPROFILE\\AppData\\Roaming\\Python\\Python314\\Scripts;$env:Path\"",
+      buildEnvironmentUvShellSetup(),
       "uv python install 3.14",
-      "$toolPython = Join-Path $env:APPDATA 'uv\\tools\\free-claude-code\\Scripts\\python.exe'",
+      "$toolPython = Join-Path $env:UV_TOOL_DIR 'free-claude-code\\Scripts\\python.exe'",
       "$hasCommands = (Get-Command fcc-server -ErrorAction SilentlyContinue) -and (Get-Command fcc-claude -ErrorAction SilentlyContinue)",
       "$hasPackage = $false",
       "if (Test-Path $toolPython) { & $toolPython -c 'import cli.entrypoints' 2>$null; $hasPackage = ($LASTEXITCODE -eq 0) }",
@@ -3294,10 +3753,11 @@ function buildEnvironmentInstallCommand() {
 
   return [
     "set -e",
+    buildEnvironmentUvShellSetup(),
     "command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh",
-    'export PATH="$HOME/.local/bin:$PATH"',
+    buildEnvironmentUvShellSetup(),
     "uv python install 3.14",
-    `if command -v fcc-server >/dev/null 2>&1 && command -v fcc-claude >/dev/null 2>&1 && "$HOME/.local/share/uv/tools/free-claude-code/bin/python" -c 'import cli.entrypoints' >/dev/null 2>&1; then echo 'Environment runtime already installed.'; else uv tool install --force git+${ENVIRONMENT_REPO_URL}; fi`,
+    `if command -v fcc-server >/dev/null 2>&1 && command -v fcc-claude >/dev/null 2>&1 && "$UV_TOOL_DIR/free-claude-code/bin/python" -c 'import cli.entrypoints' >/dev/null 2>&1; then echo 'Environment runtime already installed.'; else uv tool install --force git+${ENVIRONMENT_REPO_URL}; fi`,
   ].join("; ");
 }
 
@@ -3307,7 +3767,7 @@ function buildEnvironmentUpdateCommand(root: string) {
     process.platform === "win32"
       ? `if (Get-Command uv -ErrorAction SilentlyContinue) { uv tool install --force git+${ENVIRONMENT_REPO_URL} }`
       : `command -v uv >/dev/null 2>&1 && uv tool install --force git+${ENVIRONMENT_REPO_URL}`;
-  return `${pull}; ${reinstall}`;
+  return `${buildEnvironmentUvShellSetup()}; ${pull}; ${reinstall}`;
 }
 
 function buildEnvironmentServerCommand(root: string) {
@@ -3334,6 +3794,8 @@ function startEnvironmentPty(
     role?: "client" | "server" | "task";
     runId: string;
     title: string;
+    projectStateRoot?: string;
+    upstreamRoot?: string;
     visible?: boolean;
   },
 ): EnvironmentOpenResponse {
@@ -3370,7 +3832,10 @@ function startEnvironmentPty(
       cols: 140,
       rows: 32,
       cwd: options.cwd,
-      env: buildExternalEnvironmentEnv(),
+      env: buildExternalEnvironmentEnv(
+        options.projectStateRoot,
+        options.upstreamRoot,
+      ),
       useConpty: process.platform === "win32",
     });
   } catch (error) {
@@ -3451,10 +3916,27 @@ function getEnvironmentServerSession(root?: string) {
   );
 }
 
+function getLatestEnvironmentClientSession() {
+  const entries = Array.from(environmentIntegratedTerminalSessions.entries());
+  return entries[entries.length - 1];
+}
+
+function getEnvironmentSessionStatus(root?: string) {
+  const server = getEnvironmentServerSession(root);
+  const client = getLatestEnvironmentClientSession();
+  return {
+    serverRunning: Boolean(server),
+    serverRunId: server?.runId,
+    clientRunning: Boolean(client),
+    clientRunId: client?.[0],
+  };
+}
+
 function startEnvironmentServerIfNeeded(
   sidebar: XynapseGUIWebviewViewProvider,
   root: string,
   runId: string,
+  projectStateRoot?: string,
 ) {
   const existing = getEnvironmentServerSession(root);
   if (existing) {
@@ -3464,6 +3946,7 @@ function startEnvironmentServerIfNeeded(
       cwd: existing.cwd,
       runId: existing.runId,
       serverRunning: true,
+      serverRunId: existing.runId,
     };
   }
 
@@ -3474,11 +3957,14 @@ function startEnvironmentServerIfNeeded(
     visible: false,
     title: "Start upstream proxy server",
     command: buildEnvironmentServerCommand(root),
+    projectStateRoot,
+    upstreamRoot: root,
   });
 
   return {
     ...started,
     serverRunning: started.ok,
+    serverRunId: started.ok ? started.runId : undefined,
   };
 }
 
@@ -3486,7 +3972,9 @@ function startEnvironmentIntegratedTerminal(
   request: EnvironmentOpenRequest,
   options: {
     cwd: string;
+    projectStateRoot?: string;
     runId: string;
+    upstreamRoot?: string;
   },
 ): EnvironmentOpenResponse {
   const existing = environmentIntegratedTerminalSessions.get(options.runId);
@@ -3497,6 +3985,8 @@ function startEnvironmentIntegratedTerminal(
       message: "Environment coding terminal is already open.",
       cwd: options.cwd,
       runId: options.runId,
+      clientRunning: true,
+      clientRunId: options.runId,
     };
   }
 
@@ -3504,7 +3994,10 @@ function startEnvironmentIntegratedTerminal(
   const terminal = vscode.window.createTerminal({
     name: "Environment",
     cwd: options.cwd,
-    env: buildExternalEnvironmentEnv(),
+    env: buildExternalEnvironmentEnv(
+      options.projectStateRoot,
+      options.upstreamRoot,
+    ),
     iconPath: new vscode.ThemeIcon("terminal"),
   });
 
@@ -3518,12 +4011,20 @@ function startEnvironmentIntegratedTerminal(
       "Environment coding session opened in the IDE Terminal. Use the terminal panel for prompts and interactive confirmations.",
     cwd: options.cwd,
     runId: options.runId,
+    clientRunning: true,
+    clientRunId: options.runId,
   };
 }
 
-function mapXynapseModelToEnvironmentProvider(request?: EnvironmentOpenRequest) {
-  const provider = normalizeProviderName(request?.environmentProvider);
-  const model = String(request?.environmentModel ?? "").toLowerCase().trim();
+function mapXynapseModelToEnvironmentProvider(
+  request?: EnvironmentOpenRequest,
+) {
+  const provider = normalizeXynapseEnvironmentProviderName(
+    request?.environmentProvider,
+  );
+  const model = String(request?.environmentModel ?? "")
+    .toLowerCase()
+    .trim();
   const prefix = model.split("/", 1)[0];
 
   if (
@@ -3534,13 +4035,22 @@ function mapXynapseModelToEnvironmentProvider(request?: EnvironmentOpenRequest) 
     return undefined;
   }
 
-  if (provider.includes("openrouter") || provider.includes("open-router") || prefix === "openrouter" || prefix === "open_router") {
+  if (
+    provider.includes("openrouter") ||
+    provider.includes("open-router") ||
+    prefix === "openrouter" ||
+    prefix === "open_router"
+  ) {
     return "open_router";
   }
   if (provider.includes("deepseek") || prefix === "deepseek") {
     return "deepseek";
   }
-  if (provider.includes("kimi") || provider.includes("moonshot") || prefix === "kimi") {
+  if (
+    provider.includes("kimi") ||
+    provider.includes("moonshot") ||
+    prefix === "kimi"
+  ) {
     return "kimi";
   }
   if (provider.includes("fireworks") || prefix === "fireworks") {
@@ -3549,7 +4059,11 @@ function mapXynapseModelToEnvironmentProvider(request?: EnvironmentOpenRequest) 
   if (provider === "zai" || provider.includes("z.ai") || prefix === "zai") {
     return "zai";
   }
-  if (provider.includes("nvidia") || prefix === "nvidia_nim" || prefix === "nvidia") {
+  if (
+    provider.includes("nvidia") ||
+    prefix === "nvidia_nim" ||
+    prefix === "nvidia"
+  ) {
     return "nvidia_nim";
   }
   if (provider.includes("wafer") || prefix === "wafer") {
@@ -3558,10 +4072,18 @@ function mapXynapseModelToEnvironmentProvider(request?: EnvironmentOpenRequest) 
   if (provider.includes("opencode") || prefix === "opencode") {
     return "opencode";
   }
-  if (provider.includes("lmstudio") || provider.includes("lm-studio") || prefix === "lmstudio") {
+  if (
+    provider.includes("lmstudio") ||
+    provider.includes("lm-studio") ||
+    prefix === "lmstudio"
+  ) {
     return "lmstudio";
   }
-  if (provider.includes("llamacpp") || provider.includes("llama.cpp") || prefix === "llamacpp") {
+  if (
+    provider.includes("llamacpp") ||
+    provider.includes("llama.cpp") ||
+    prefix === "llamacpp"
+  ) {
     return "llamacpp";
   }
   if (provider.includes("ollama") || prefix === "ollama") {
@@ -3649,13 +4171,23 @@ function getEnvironmentSourceLabel(request?: EnvironmentOpenRequest) {
 }
 
 function isYandexEnvironmentRequest(request?: EnvironmentOpenRequest) {
-  const provider = normalizeProviderName(request?.environmentProvider);
-  const model = String(request?.environmentModel ?? "").toLowerCase().trim();
+  const provider = normalizeXynapseEnvironmentProviderName(
+    request?.environmentProvider ?? request?.provider,
+  );
+  const model = `${request?.environmentModel ?? ""}`.trim().toLowerCase();
+
   return (
     provider.includes("yandex") ||
     model.startsWith("gpt://") ||
-    Boolean(request?.environmentFolderId?.trim())
+    Boolean(`${request?.environmentFolderId ?? ""}`.trim())
   );
+}
+
+function normalizeXynapseEnvironmentProviderName(value: unknown): string {
+  return `${value ?? ""}`
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 function normalizeYandexOpenAiBaseUrl(value?: string) {
@@ -3663,9 +4195,7 @@ function normalizeYandexOpenAiBaseUrl(value?: string) {
   if (!trimmed || /foundationmodels/i.test(trimmed)) {
     return YANDEX_OPENAI_BASE_URL;
   }
-  return trimmed
-    .replace(/\/chat\/completions\/?$/i, "")
-    .replace(/\/+$/, "");
+  return trimmed.replace(/\/chat\/completions\/?$/i, "").replace(/\/+$/, "");
 }
 
 function extractAnthropicText(content: any): string {
@@ -3741,14 +4271,19 @@ function toOpenAiMessagesFromAnthropic(body: any) {
       continue;
     }
 
-    if (role === "user" && blocks?.some((block: any) => block?.type === "tool_result")) {
+    if (
+      role === "user" &&
+      blocks?.some((block: any) => block?.type === "tool_result")
+    ) {
       const userText = extractAnthropicText(
         blocks.filter((block: any) => block?.type !== "tool_result"),
       );
       if (userText) {
         messages.push({ role: "user", content: userText });
       }
-      for (const block of blocks.filter((item: any) => item?.type === "tool_result")) {
+      for (const block of blocks.filter(
+        (item: any) => item?.type === "tool_result",
+      )) {
         messages.push({
           role: "tool",
           tool_call_id: block.tool_use_id || block.id || "toolu_unknown",
@@ -3874,7 +4409,9 @@ async function callYandexOpenAiBridge(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Yandex Cloud API error (${response.status}): ${errorText}`);
+    throw new Error(
+      `Yandex Cloud API error (${response.status}): ${errorText}`,
+    );
   }
 
   return response.json();
@@ -4071,7 +4608,9 @@ async function handleXynapseEnvironmentBridgeRequest(
 ) {
   const config = xynapseEnvironmentBridgeConfig;
   if (!config) {
-    sendBridgeJson(res, 503, { error: "Xynapse Environment bridge is not configured." });
+    sendBridgeJson(res, 503, {
+      error: "Xynapse Environment bridge is not configured.",
+    });
     return;
   }
 
@@ -4079,12 +4618,18 @@ async function handleXynapseEnvironmentBridgeRequest(
   const pathname = url.pathname.replace(/\/+$/, "");
 
   try {
-    if (req.method === "GET" && (pathname === "/health" || pathname === "/v1/health")) {
+    if (
+      req.method === "GET" &&
+      (pathname === "/health" || pathname === "/v1/health")
+    ) {
       sendBridgeJson(res, 200, { ok: true });
       return;
     }
 
-    if (req.method === "GET" && (pathname === "/models" || pathname === "/v1/models")) {
+    if (
+      req.method === "GET" &&
+      (pathname === "/models" || pathname === "/v1/models")
+    ) {
       sendBridgeJson(res, 200, {
         object: "list",
         data: [
@@ -4113,7 +4658,10 @@ async function handleXynapseEnvironmentBridgeRequest(
       return;
     }
 
-    if (req.method === "POST" && (pathname === "/v1/messages" || pathname === "/messages")) {
+    if (
+      req.method === "POST" &&
+      (pathname === "/v1/messages" || pathname === "/messages")
+    ) {
       const body = await readBridgeJsonBody(req);
       if (body?.stream !== false) {
         await sendAnthropicBridgeSseWithKeepalive(
@@ -4128,7 +4676,9 @@ async function handleXynapseEnvironmentBridgeRequest(
       return;
     }
 
-    sendBridgeJson(res, 404, { error: `Unsupported bridge route: ${req.method} ${pathname}` });
+    sendBridgeJson(res, 404, {
+      error: `Unsupported bridge route: ${req.method} ${pathname}`,
+    });
   } catch (error) {
     sendBridgeJson(res, 500, {
       error: error instanceof Error ? error.message : String(error),
@@ -4136,13 +4686,16 @@ async function handleXynapseEnvironmentBridgeRequest(
   }
 }
 
-async function ensureXynapseEnvironmentBridge(config: XynapseEnvironmentBridgeConfig) {
+async function ensureXynapseEnvironmentBridge(
+  config: XynapseEnvironmentBridgeConfig,
+) {
   xynapseEnvironmentBridgeConfig = config;
   if (xynapseEnvironmentBridgeServer && xynapseEnvironmentBridgeBaseUrl) {
     return xynapseEnvironmentBridgeBaseUrl;
   }
 
-  const preferredPort = Number(process.env.XYNAPSE_ENVIRONMENT_BRIDGE_PORT) || 53518;
+  const preferredPort =
+    Number(process.env.XYNAPSE_ENVIRONMENT_BRIDGE_PORT) || 53518;
   const listen = (port: number) =>
     new Promise<void>((resolve, reject) => {
       const server = http.createServer((req, res) => {
@@ -4153,7 +4706,9 @@ async function ensureXynapseEnvironmentBridge(config: XynapseEnvironmentBridgeCo
         const address = server.address();
         if (!address || typeof address === "string") {
           server.close();
-          reject(new Error("Could not allocate Xynapse Environment bridge port."));
+          reject(
+            new Error("Could not allocate Xynapse Environment bridge port."),
+          );
           return;
         }
         xynapseEnvironmentBridgeServer = server;
@@ -4176,11 +4731,10 @@ async function ensureXynapseEnvironmentBridge(config: XynapseEnvironmentBridgeCo
 
 async function configureYandexEnvironmentBridge(
   request?: EnvironmentOpenRequest,
-):
-  Promise<
-    | { ok: true; provider: EnvironmentProviderDescriptor }
-    | { ok: false; message: string }
-  > {
+): Promise<
+  | { ok: true; provider: EnvironmentProviderDescriptor }
+  | { ok: false; message: string }
+> {
   const sourceLabel = getEnvironmentSourceLabel(request);
   const scannedEnv = {
     ...collectRuntimeEnvFromLocalFiles(),
@@ -4353,7 +4907,12 @@ async function ensureSavedXynapseEnvironmentBridge() {
   const bridgeBaseUrl = await ensureXynapseEnvironmentBridge({
     apiKey,
     baseUrl: normalizeYandexOpenAiBaseUrl(
-      getEnvironmentValueForKey("YANDEX_BASE_URL", undefined, scannedEnv, savedEnv),
+      getEnvironmentValueForKey(
+        "YANDEX_BASE_URL",
+        undefined,
+        scannedEnv,
+        savedEnv,
+      ),
     ),
     folderId,
     model,
@@ -4390,6 +4949,15 @@ async function openExternalEnvironmentTerminal(
   const runId = request?.runId ?? createLabRunId();
   const rootResolution = resolveExternalEnvironmentRoot(extensionContext);
   const root = rootResolution.root;
+  const projectStateRoot =
+    action === "startServer" || action === "startClient"
+      ? ensureEnvironmentProjectStateRoot(cwd)
+      : getEnvironmentProjectStateRoot(cwd);
+  const environmentPaths = {
+    environmentHome: rootResolution.home ?? getDefaultEnvironmentHome(),
+    environmentEnvPath: getEnvironmentManagedEnvPath(),
+    projectStateRoot,
+  };
 
   if (action === "sendInput") {
     const session = request?.runId
@@ -4400,6 +4968,7 @@ async function openExternalEnvironmentTerminal(
         ok: false,
         message: "No active Environment session was found.",
         runId: request?.runId,
+        ...environmentPaths,
       };
     }
     session.process.write(request?.input ?? "");
@@ -4408,6 +4977,7 @@ async function openExternalEnvironmentTerminal(
       message: "Input sent.",
       cwd: session.cwd,
       runId: session.runId,
+      ...environmentPaths,
     };
   }
 
@@ -4430,6 +5000,9 @@ async function openExternalEnvironmentTerminal(
         message: "Environment coding terminal closed.",
         cwd,
         runId: integratedRunId,
+        ...environmentPaths,
+        ...getEnvironmentSessionStatus(root),
+        ...getEnvironmentConfigStatus(),
       };
     }
 
@@ -4444,6 +5017,7 @@ async function openExternalEnvironmentTerminal(
         ok: false,
         message: "No active Environment session was found.",
         runId: request?.runId,
+        ...environmentPaths,
       };
     }
     session.process.kill();
@@ -4453,6 +5027,9 @@ async function openExternalEnvironmentTerminal(
       message: "Environment session stopped.",
       cwd: session.cwd,
       runId: session.runId,
+      ...environmentPaths,
+      ...getEnvironmentSessionStatus(root),
+      ...getEnvironmentConfigStatus(),
     };
   }
 
@@ -4464,7 +5041,9 @@ async function openExternalEnvironmentTerminal(
         message: "Environment proxy server is not running.",
         cwd: root,
         runId,
-        serverRunning: false,
+        ...environmentPaths,
+        ...getEnvironmentSessionStatus(root),
+        ...getEnvironmentConfigStatus(),
       };
     }
     session.process.kill();
@@ -4474,20 +5053,29 @@ async function openExternalEnvironmentTerminal(
       message: "Environment proxy server stopped.",
       cwd: session.cwd,
       runId: session.runId,
-      serverRunning: false,
+      ...environmentPaths,
+      ...getEnvironmentSessionStatus(root),
+      ...getEnvironmentConfigStatus(),
     };
   }
 
   if (action === "update" && rootResolution.parent && root) {
     if (!fs.existsSync(root)) {
       fs.mkdirSync(rootResolution.parent, { recursive: true });
-      return startEnvironmentPty(sidebar, {
-        runId,
-        cwd: rootResolution.parent,
-        role: "task",
-        title: "Install upstream Environment checkout",
-        command: `git clone ${ENVIRONMENT_REPO_URL} ${quoteTerminalArg(root)}`,
-      });
+      return {
+        ...startEnvironmentPty(sidebar, {
+          runId,
+          cwd: rootResolution.parent,
+          role: "task",
+          title: "Install upstream Environment checkout",
+          command: `git clone ${ENVIRONMENT_REPO_URL} ${quoteTerminalArg(root)}`,
+          projectStateRoot,
+          upstreamRoot: root,
+        }),
+        upstreamRoot: root,
+        ...environmentPaths,
+        ...getEnvironmentSessionStatus(root),
+      };
     }
     if (rootResolution.error) {
       return {
@@ -4495,16 +5083,24 @@ async function openExternalEnvironmentTerminal(
         message: rootResolution.error,
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
       };
     }
     stopEnvironmentServer(root);
-    return startEnvironmentPty(sidebar, {
-      runId,
-      cwd: root,
-      role: "task",
-      title: "Update upstream Environment checkout",
-      command: buildEnvironmentUpdateCommand(root),
-    });
+    return {
+      ...startEnvironmentPty(sidebar, {
+        runId,
+        cwd: root,
+        role: "task",
+        title: "Update upstream Environment checkout",
+        command: buildEnvironmentUpdateCommand(root),
+        projectStateRoot,
+        upstreamRoot: root,
+      }),
+      upstreamRoot: root,
+      ...environmentPaths,
+      ...getEnvironmentSessionStatus(root),
+    };
   }
 
   if (action === "install") {
@@ -4512,13 +5108,20 @@ async function openExternalEnvironmentTerminal(
     if (root) {
       stopEnvironmentServer(root);
     }
-    return startEnvironmentPty(sidebar, {
-      runId,
-      cwd: installCwd,
-      role: "task",
-      title: "Install or update upstream Environment runtime",
-      command: buildEnvironmentInstallCommand(),
-    });
+    return {
+      ...startEnvironmentPty(sidebar, {
+        runId,
+        cwd: installCwd,
+        role: "task",
+        title: "Install or update upstream Environment runtime",
+        command: buildEnvironmentInstallCommand(),
+        projectStateRoot,
+        upstreamRoot: root,
+      }),
+      upstreamRoot: root,
+      ...environmentPaths,
+      ...getEnvironmentSessionStatus(root),
+    };
   }
 
   if (rootResolution.error) {
@@ -4529,6 +5132,7 @@ async function openExternalEnvironmentTerminal(
       upstreamRoot: root,
       runId,
       supportedProviders: ENVIRONMENT_SUPPORTED_PROVIDERS,
+      ...environmentPaths,
       ...getEnvironmentConfigStatus(),
     };
   }
@@ -4538,11 +5142,13 @@ async function openExternalEnvironmentTerminal(
       ok: false,
       message: "Environment root was not resolved.",
       runId,
+      ...environmentPaths,
     };
   }
 
   if (action === "startServer") {
-    const configuredProvider = await configureEnvironmentFromXynapseRequest(request);
+    const configuredProvider =
+      await configureEnvironmentFromXynapseRequest(request);
     if (!configuredProvider.ok) {
       return {
         ok: false,
@@ -4550,6 +5156,7 @@ async function openExternalEnvironmentTerminal(
         cwd: root,
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
@@ -4562,12 +5169,16 @@ async function openExternalEnvironmentTerminal(
         cwd: root,
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
     return {
-      ...startEnvironmentServerIfNeeded(sidebar, root, runId),
+      ...startEnvironmentServerIfNeeded(sidebar, root, runId, projectStateRoot),
+      upstreamRoot: root,
+      ...environmentPaths,
       ...getEnvironmentConfigStatus(),
+      ...getEnvironmentSessionStatus(root),
     };
   }
 
@@ -4578,6 +5189,7 @@ async function openExternalEnvironmentTerminal(
         message: "Open a project folder first.",
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
@@ -4589,6 +5201,7 @@ async function openExternalEnvironmentTerminal(
         cwd,
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
@@ -4600,10 +5213,12 @@ async function openExternalEnvironmentTerminal(
         cwd,
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
-    const configuredProvider = await configureEnvironmentFromXynapseRequest(request);
+    const configuredProvider =
+      await configureEnvironmentFromXynapseRequest(request);
     if (!configuredProvider.ok) {
       return {
         ok: false,
@@ -4611,6 +5226,7 @@ async function openExternalEnvironmentTerminal(
         cwd,
         upstreamRoot: root,
         runId,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
@@ -4619,45 +5235,36 @@ async function openExternalEnvironmentTerminal(
       sidebar,
       root,
       `${runId}-server`,
+      projectStateRoot,
     );
     if (!server.ok) {
       return {
         ...server,
+        upstreamRoot: root,
+        ...environmentPaths,
         ...getEnvironmentConfigStatus(),
       };
     }
     return {
-      ...startEnvironmentIntegratedTerminal(request, { runId, cwd }),
-      ...getEnvironmentConfigStatus(),
-    };
-  }
-
-  if (!cwd) {
-    return {
-      ok: false,
-      message: "Open a project folder first.",
+      ...startEnvironmentIntegratedTerminal(request, {
+        runId,
+        cwd,
+        projectStateRoot,
+        upstreamRoot: root,
+      }),
       upstreamRoot: root,
-      runId,
+      ...environmentPaths,
+      ...getEnvironmentConfigStatus(),
+      ...getEnvironmentSessionStatus(root),
     };
   }
 
   let statusMessage =
     "Environment is linked to the clean upstream checkout. Use Install runtime, then Start coding session.";
-  if (isYandexEnvironmentRequest(request)) {
-    const configuredProvider = await configureEnvironmentFromXynapseRequest(request);
-    if (!configuredProvider.ok) {
-      return {
-        ok: false,
-        message: configuredProvider.message,
-        cwd,
-        upstreamRoot: root,
-        runId,
-        supportedProviders: ENVIRONMENT_SUPPORTED_PROVIDERS,
-        ...getEnvironmentConfigStatus(),
-      };
-    }
+  const configStatus = getEnvironmentConfigStatus();
+  if (configStatus.environmentSourceLabel?.includes("Xynapse Bridge")) {
     statusMessage =
-      "Environment is linked to the clean upstream checkout. Xynapse Bridge is ready; start a coding session in the IDE terminal.";
+      "Environment is linked to the clean upstream checkout. Xynapse Bridge is configured and will start with the next proxy or coding session.";
   }
 
   return {
@@ -4673,9 +5280,10 @@ async function openExternalEnvironmentTerminal(
     python314Installed: hasPython314(),
     fccInstalled: isEnvironmentRuntimeInstalled(),
     clientInstalled: isEnvironmentClientInstalled(),
-    serverRunning: Boolean(getEnvironmentServerSession(root)),
     supportedProviders: ENVIRONMENT_SUPPORTED_PROVIDERS,
-    ...getEnvironmentConfigStatus(),
+    ...environmentPaths,
+    ...configStatus,
+    ...getEnvironmentSessionStatus(root),
   };
 }
 
@@ -4699,8 +5307,10 @@ async function resolveRuntimeExecutable(
   cwd: string,
 ) {
   const configured =
-    vscode.workspace.getConfiguration("xynapse").get<string>("runtimePath")?.trim() ??
-    process.env.XYNAPSE_RUNTIME_PATH?.trim();
+    vscode.workspace
+      .getConfiguration("xynapse")
+      .get<string>("runtimePath")
+      ?.trim() ?? process.env.XYNAPSE_RUNTIME_PATH?.trim();
   if (configured) {
     const isPathLike =
       path.isAbsolute(configured) ||
@@ -4728,7 +5338,11 @@ async function resolveRuntimeExecutable(
   }
 
   const binaryName = process.platform === "win32" ? "xynapse.exe" : "xynapse";
-  const bundledCandidate = path.join(extensionContext.extensionPath, "bin", binaryName);
+  const bundledCandidate = path.join(
+    extensionContext.extensionPath,
+    "bin",
+    binaryName,
+  );
   if (fs.existsSync(bundledCandidate)) {
     return bundledCandidate;
   }
@@ -4987,10 +5601,7 @@ const getCommandsMap: (
       } else {
         focusGUI();
 
-        sidebar.webviewProtocol?.request(
-          "focusInputWithoutClear",
-          undefined,
-        );
+        sidebar.webviewProtocol?.request("focusInputWithoutClear", undefined);
 
         void addHighlightedCodeToContext(sidebar.webviewProtocol);
       }
@@ -5129,9 +5740,7 @@ const getCommandsMap: (
         toggle: true,
       });
     },
-    "xynapse.focusXynapseSessionId": async (
-      sessionId: string | undefined,
-    ) => {
+    "xynapse.focusXynapseSessionId": async (sessionId: string | undefined) => {
       if (!sessionId) {
         sessionId = await vscode.window.showInputBox({
           prompt: "Enter the Session ID",
@@ -5160,7 +5769,7 @@ const getCommandsMap: (
         false,
       );
     },
-    "xynapse.config.import": async () => {
+    "xynapse.profile.import": async () => {
       await importXynapseProfileBackup(ide, configHandler);
     },
     "xynapse.openEnvironment": async (
@@ -5186,7 +5795,11 @@ const getCommandsMap: (
         return;
       }
 
-      const executable = await resolveRuntimeExecutable(ide, extensionContext, cwd);
+      const executable = await resolveRuntimeExecutable(
+        ide,
+        extensionContext,
+        cwd,
+      );
       if (!executable) {
         sendLabRunEvent(sidebar, {
           runId,
@@ -5219,7 +5832,8 @@ const getCommandsMap: (
       if (!cwd) {
         return {
           items: [],
-          error: "Open a project folder first. Lab history is stored per workspace.",
+          error:
+            "Open a project folder first. Lab history is stored per workspace.",
         };
       }
 
@@ -5282,7 +5896,9 @@ const getCommandsMap: (
     "xynapse.runtimePrompt": async (request?: RuntimePromptRequest) => {
       const runId = getRuntimeRequestRunId(request) ?? createLabRunId();
       const isCoreRequest = isCoreRuntimeRequest(request);
-      const title = isCoreRequest ? "Xynapse Core task" : "Xynapse Lab algorithm";
+      const title = isCoreRequest
+        ? "Xynapse Core task"
+        : "Xynapse Lab algorithm";
       const cwd = getRequestedWorkspaceDir(request);
       if (!cwd) {
         sendLabRunEvent(sidebar, {
@@ -5312,7 +5928,11 @@ const getCommandsMap: (
       }
 
       const permissionMode = getRuntimePermissionMode(request);
-      const executable = await resolveRuntimeExecutable(ide, extensionContext, cwd);
+      const executable = await resolveRuntimeExecutable(
+        ide,
+        extensionContext,
+        cwd,
+      );
       if (!executable) {
         sendLabRunEvent(sidebar, {
           runId,
@@ -5356,11 +5976,7 @@ const getCommandsMap: (
         permissionMode,
         allowedTools,
       );
-      if (
-        isCoreRequest &&
-        runtimeSessionId &&
-        permissionMode !== "read-only"
-      ) {
+      if (isCoreRequest && runtimeSessionId && permissionMode !== "read-only") {
         createXynapseRuntimeCheckpoint(cwd, runtimeSessionId, runId);
       }
 
@@ -5521,8 +6137,7 @@ const getCommandsMap: (
       const quickPick = vscode.window.createQuickPick();
 
       const { config: xynapseConfig } = await configHandler.loadConfig();
-      const autocompleteModels =
-        xynapseConfig?.modelsByRole.autocomplete ?? [];
+      const autocompleteModels = xynapseConfig?.modelsByRole.autocomplete ?? [];
       const selected =
         xynapseConfig?.selectedModelByRole?.autocomplete?.title ?? undefined;
 
@@ -5810,7 +6425,9 @@ const getCommandsMap: (
 
       isMovingFullScreenPanelToNewWindow = true;
       try {
-        await vscode.commands.executeCommand("workbench.action.moveEditorToNewWindow");
+        await vscode.commands.executeCommand(
+          "workbench.action.moveEditorToNewWindow",
+        );
       } catch (error) {
         console.warn("Failed to move Xynapse panel into a new window", error);
         void vscode.window.showWarningMessage(

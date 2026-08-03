@@ -69,7 +69,7 @@ import { getRuntimeAllowedToolsForMode } from "../../util/xynapseRuntimeTools";
 import {
   buildPreviousDiscussion,
   createClientRunId,
-  findCoreRuntimeModel,
+  XynapseFindCoreRuntimeModel,
   XynapseEnvironmentCard,
   XynapseResearchCard,
 } from "../../components/claw/ClawSidecarCard";
@@ -353,14 +353,17 @@ export function Chat() {
             typeof index === "number" &&
             currentMode !== "plan" &&
             stateSnapshot.session.history.length > index + 1 &&
-            ((stateSnapshot.session.history[index]?.message as any)?.metadata as any)
-              ?.xynapseRuntimeRunId
+            (
+              (stateSnapshot.session.history[index]?.message as any)
+                ?.metadata as any
+            )?.xynapseRuntimeRunId
           ) {
             const restoreResult = await ideMessenger.request(
               "xynapse/confirmAndRestoreRuntimeCheckpoint",
               {
                 runId: (
-                  (stateSnapshot.session.history[index]?.message as any)?.metadata as any
+                  (stateSnapshot.session.history[index]?.message as any)
+                    ?.metadata as any
                 )?.xynapseRuntimeRunId,
                 sessionId: stateSnapshot.session.id,
               },
@@ -373,16 +376,15 @@ export function Chat() {
 
           const defaultContextProviders =
             stateSnapshot.config.config.experimental?.defaultContext ?? [];
-          const { selectedContextItems, content } =
-            await resolveEditorContent({
-              editorState,
-              modifiers,
-              ideMessenger,
-              defaultContextProviders,
-              availableSlashCommands: stateSnapshot.config.config.slashCommands,
-              dispatch,
-              getState: () => reduxStore.getState(),
-            });
+          const { selectedContextItems, content } = await resolveEditorContent({
+            editorState,
+            modifiers,
+            ideMessenger,
+            defaultContextProviders,
+            availableSlashCommands: stateSnapshot.config.config.slashCommands,
+            dispatch,
+            getState: () => reduxStore.getState(),
+          });
           const { systemMessage: runtimeRules, appliedRules } =
             getSystemMessageWithRules({
               availableRules: stateSnapshot.config.config.rules,
@@ -402,7 +404,7 @@ export function Chat() {
             return;
           }
 
-          const runtimeModel = findCoreRuntimeModel(
+          const runtimeModel = XynapseFindCoreRuntimeModel(
             stateSnapshot.config.config,
             selectedModelByRole.chat,
           );
@@ -497,13 +499,7 @@ export function Chat() {
         setLocalStorage("mainTextEntryCounter", 1);
       }
     },
-    [
-      dispatch,
-      hasWorkspace,
-      ideMessenger,
-      reduxStore,
-      setIsCreatingAgent,
-    ],
+    [dispatch, hasWorkspace, ideMessenger, reduxStore, setIsCreatingAgent],
   );
 
   useWebviewListener(
@@ -761,7 +757,6 @@ export function Chat() {
             inputId={MAIN_EDITOR_INPUT_ID}
           />
         ) : null}
-
       </div>
     </>
   );

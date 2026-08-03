@@ -30,44 +30,60 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     void,
   ];
   "xynapse/runtimePrompt": [
-    {
-      prompt?: string;
-      model?: string;
-      modelTitle?: string;
-      provider?: string;
-      permissionMode?: "read-only" | "workspace-write" | "danger-full-access";
-      planMode?: boolean;
-      runId?: string;
-      surface?: "core" | "lab";
-      workspaceDir?: string;
-      sessionId?: string;
-      previousDiscussion?: string;
-      runtimeRules?: string;
-      allowedTools?: string;
-    } | undefined,
+    (
+      | {
+          prompt?: string;
+          model?: string;
+          modelTitle?: string;
+          provider?: string;
+          permissionMode?:
+            | "read-only"
+            | "workspace-write"
+            | "danger-full-access";
+          planMode?: boolean;
+          runId?: string;
+          surface?: "core" | "lab";
+          workspaceDir?: string;
+          sessionId?: string;
+          previousDiscussion?: string;
+          runtimeRules?: string;
+          allowedTools?: string;
+        }
+      | undefined
+    ),
     void,
   ];
   "xynapse/runtimeStop": [{ runId?: string } | undefined, void];
   "xynapse/openEnvironment": [
-    {
-      action?:
-        | "status"
-        | "update"
-        | "install"
-        | "startServer"
-        | "startClient"
-        | "sendInput"
-        | "stop";
-      runId?: string;
-      workspaceDir?: string;
-      input?: string;
-      permissionMode?:
-        | "default"
-        | "plan"
-        | "acceptEdits"
-        | "dontAsk"
-        | "bypassPermissions";
-    } | undefined,
+    (
+      | {
+          action?:
+            | "status"
+            | "update"
+            | "install"
+            | "startServer"
+            | "startClient"
+            | "sendInput"
+            | "stopServer"
+            | "stop";
+          runId?: string;
+          workspaceDir?: string;
+          input?: string;
+          environmentProvider?: string;
+          environmentModel?: string;
+          environmentModelTitle?: string;
+          environmentApiKey?: string;
+          environmentBaseUrl?: string;
+          environmentFolderId?: string;
+          permissionMode?:
+            | "default"
+            | "plan"
+            | "acceptEdits"
+            | "dontAsk"
+            | "bypassPermissions";
+        }
+      | undefined
+    ),
     {
       ok: boolean;
       message?: string;
@@ -81,8 +97,22 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
       python314Installed?: boolean;
       fccInstalled?: boolean;
       clientInstalled?: boolean;
+      serverRunning?: boolean;
+      serverRunId?: string;
+      clientRunning?: boolean;
+      clientRunId?: string;
       adminUrl?: string;
       supportedProviders?: string[];
+      environmentHome?: string;
+      environmentEnvPath?: string;
+      projectStateRoot?: string;
+      environmentProvider?: string;
+      environmentProviderLabel?: string;
+      environmentModel?: string;
+      environmentSourceLabel?: string;
+      environmentCredentialEnv?: string;
+      environmentApiKeyConfigured?: boolean;
+      environmentBaseUrl?: string;
     },
   ];
   "xynapse/listLabHistory": [
@@ -114,16 +144,16 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     { sessionId?: string; workspaceDir?: string } | undefined,
     void,
   ];
-  "xynapse/clearRuntimeSessions": [
-    { workspaceDir?: string } | undefined,
-    void,
-  ];
+  "xynapse/clearRuntimeSessions": [{ workspaceDir?: string } | undefined, void];
   "xynapse/confirmAndRestoreRuntimeCheckpoint": [
-    {
-      runId?: string;
-      sessionId?: string;
-      workspaceDir?: string;
-    } | undefined,
+    (
+      | {
+          runId?: string;
+          sessionId?: string;
+          workspaceDir?: string;
+        }
+      | undefined
+    ),
     {
       action: "restored" | "continue" | "cancel";
       message?: string;
