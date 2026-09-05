@@ -1,0 +1,6 @@
+Xynapse BVC
+Copyright (c) 2026 Dzhabrail Khalilov
+
+Extracted from the Council/BVC implementation in Xynapse Assistant, a fork of
+Continue (Copyright Continue Dev, Inc.). Distributed under Apache License 2.0.
+The package has no runtime dependency on Continue, VS Code, or a model SDK.

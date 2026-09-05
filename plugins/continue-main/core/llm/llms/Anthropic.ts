@@ -292,6 +292,19 @@ class Anthropic extends BaseLLM {
       yield {
         role: "assistant",
         content: json.content[0].text,
+        metadata: json.stop_reason
+          ? { finishReason: json.stop_reason }
+          : undefined,
+        usage: json.usage
+          ? {
+              promptTokens: json.usage.input_tokens,
+              completionTokens: json.usage.output_tokens,
+              promptTokensDetails: {
+                cachedTokens: json.usage.cache_read_input_tokens,
+                cacheWriteTokens: json.usage.cache_creation_input_tokens,
+              },
+            }
+          : undefined,
         ...(Object.keys(cost).length > 0 ? { cost } : {}),
       };
       return;
@@ -299,6 +312,7 @@ class Anthropic extends BaseLLM {
 
     let lastToolUseId: string | undefined;
     let lastToolUseName: string | undefined;
+    let finishReason: string | undefined;
     let usage: Usage = {
       promptTokens: 0,
       completionTokens: 0,
@@ -324,6 +338,9 @@ class Anthropic extends BaseLLM {
         case "message_delta":
           // Update usage information during streaming
           const deltaEvent = rawEvent as RawMessageDeltaEvent;
+          if (deltaEvent.delta.stop_reason) {
+            finishReason = deltaEvent.delta.stop_reason;
+          }
           if (deltaEvent.usage) {
             usage.completionTokens = deltaEvent.usage.output_tokens;
           }
@@ -397,6 +414,7 @@ class Anthropic extends BaseLLM {
       role: "assistant",
       content: "",
       usage,
+      metadata: finishReason ? { finishReason } : undefined,
     };
   }
 

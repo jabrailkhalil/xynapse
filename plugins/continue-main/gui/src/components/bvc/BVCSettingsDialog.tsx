@@ -14,7 +14,7 @@ const DEFAULTS: BVCParams = {
   tauCrit: 0.7,
   tauCovBase: 0.5,
   kMax: 2,
-  bRes: 2,
+  bRes: 1,
 };
 
 const STORAGE_KEY = "bvc-settings";
@@ -117,7 +117,7 @@ function BVCSettingsDialog({ onClose }: BVCSettingsDialogProps) {
 
       <ParamRow
         label="τ_crit — Critical Threshold"
-        hint="Fail if D_vote still exceeds this after all critique rounds"
+        hint="Use a single-model plan when disagreement remains above this value"
         value={params.tauCrit}
         min={0}
         max={1}
@@ -126,8 +126,8 @@ function BVCSettingsDialog({ onClose }: BVCSettingsDialogProps) {
       />
 
       <ParamRow
-        label="τ_cov — Coverage Base"
-        hint="Base coverage threshold (adapts with agent count)"
+        label="τ_cov — Missing Decision Limit"
+        hint="Use a single-model plan when too many role decisions are missing"
         value={params.tauCovBase}
         min={0}
         max={1}
@@ -147,8 +147,8 @@ function BVCSettingsDialog({ onClose }: BVCSettingsDialogProps) {
       />
 
       <ParamRow
-        label="B_res — Budget Reserve"
-        hint="Reserved LLM calls for synthesis + overhead"
+        label="B_res — Additional Calls"
+        hint="Add calls to the difficulty budget; one call is always reserved for the final plan"
         value={params.bRes}
         min={1}
         max={10}

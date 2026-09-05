@@ -2,6 +2,132 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { ILLM } from "../../index.js";
 import OpenAI from "./OpenAI.js";
 
+describe("OpenAI Responses terminal events", () => {
+  function modelWithEvents(events: object[]) {
+    const model = new OpenAI({ apiKey: "test-api-key", model: "gpt-5" });
+    (model as any).fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""),
+        ),
+      );
+    return model;
+  }
+
+  const text = { type: "response.output_text.delta", delta: "Partial plan" };
+  const usage = { input_tokens: 4, output_tokens: 9, total_tokens: 13 };
+
+  test("delivers final status and usage through streamChat without duplicate text", async () => {
+    const model = modelWithEvents([
+      text,
+      {
+        type: "response.completed",
+        response: { status: "completed", output: [], usage },
+      },
+    ]);
+    const messages = [];
+    for await (const message of model.streamChat(
+      [{ role: "user", content: "Plan a change" }],
+      new AbortController().signal,
+    ))
+      messages.push(message);
+    expect(messages).toEqual([
+      expect.objectContaining({ content: "Partial plan" }),
+      expect.objectContaining({
+        content: "",
+        metadata: expect.objectContaining({ finishReason: "stop" }),
+        usage: expect.objectContaining({
+          promptTokens: 4,
+          completionTokens: 9,
+        }),
+      }),
+    ]);
+  });
+
+  test.each([
+    [
+      {
+        type: "response.failed",
+        response: {
+          status: "failed",
+          output: [],
+          usage,
+          error: { message: "Provider failed" },
+        },
+      },
+      "Provider failed",
+    ],
+    [{ type: "error", message: "Transport failed" }, "Transport failed"],
+  ])(
+    "does not swallow failure after text was streamed",
+    async (terminal, error) => {
+      const model = modelWithEvents([text, terminal]);
+      const stream = (model as any)._streamResponses(
+        [],
+        new AbortController().signal,
+        { model: "gpt-5" },
+      );
+      expect((await stream.next()).value.content).toBe("Partial plan");
+      await expect(
+        (async () => {
+          for await (const _ of stream) {
+            /* consume terminal metadata */
+          }
+        })(),
+      ).rejects.toThrow(error);
+    },
+  );
+
+  test("rejects a stream that closes before the terminal event", async () => {
+    const model = modelWithEvents([text]);
+    const stream = (model as any)._streamResponses(
+      [],
+      new AbortController().signal,
+      { model: "gpt-5" },
+    );
+    expect((await stream.next()).value.content).toBe("Partial plan");
+    await expect(stream.next()).rejects.toThrow("before a terminal event");
+  });
+
+  test("unpacks nonstream Responses items and retains terminal metadata", async () => {
+    const model = new OpenAI({ apiKey: "test-api-key", model: "o1" });
+    (model as any).fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "incomplete",
+          incomplete_details: { reason: "max_output_tokens" },
+          usage,
+          output: [
+            {
+              type: "message",
+              id: "message-1",
+              content: [{ type: "output_text", text: "Partial plan" }],
+            },
+          ],
+        }),
+      ),
+    );
+    const messages = [];
+    for await (const message of model.streamChat(
+      [{ role: "user", content: "Plan a change" }],
+      new AbortController().signal,
+    ))
+      messages.push(message);
+    expect(messages).toEqual([
+      expect.objectContaining({ role: "assistant", content: "Partial plan" }),
+      expect.objectContaining({
+        content: "",
+        metadata: expect.objectContaining({ finishReason: "length" }),
+        usage: expect.objectContaining({
+          promptTokens: 4,
+          completionTokens: 9,
+        }),
+      }),
+    ]);
+  });
+});
+
 interface LlmTestCase {
   llm: ILLM;
   methodToTest: keyof ILLM;

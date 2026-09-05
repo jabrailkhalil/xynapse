@@ -603,19 +603,31 @@ class OpenAI extends BaseLLM {
       signal,
     });
 
+    let receivedTerminalEvent = false;
     for await (const evt of streamSse(response)) {
-      try {
-        const msg = fromResponsesChunk(evt);
-        if (Array.isArray(msg)) {
-          for (const m of msg) {
-            if (m) yield m;
-          }
-        } else if (msg) {
-          yield msg;
+      const msg = fromResponsesChunk(evt);
+      if (Array.isArray(msg)) {
+        for (const m of msg) {
+          if (m) yield m;
         }
-      } catch {
-        // ignore malformed chunks
+      } else if (msg) {
+        yield msg;
       }
+      if (
+        evt.type === "response.completed" ||
+        evt.type === "response.incomplete" ||
+        evt.type === "response.failed"
+      ) {
+        receivedTerminalEvent = true;
+      }
+      if (evt.type === "response.failed") {
+        throw new Error(
+          `Responses API failed: ${evt.response?.error?.message || "unknown error"}`,
+        );
+      }
+    }
+    if (!receivedTerminalEvent && !signal.aborted) {
+      throw new Error("Responses API stream ended before a terminal event.");
     }
   }
 

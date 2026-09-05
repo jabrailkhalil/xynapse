@@ -1019,7 +1019,10 @@ export abstract class BaseLLM implements ILLM {
       message: chunk,
     });
 
-    if (chunk.role === "assistant" && chunk.usage) {
+    if (
+      (chunk.role === "assistant" || chunk.role === "thinking") &&
+      chunk.usage
+    ) {
       usage = chunk.usage;
     }
 
@@ -1098,7 +1101,9 @@ export abstract class BaseLLM implements ILLM {
     options: CompletionOptions,
   ): AsyncGenerator<ChatMessage> {
     const msg = await (this as any)._responses(messages, signal, options);
-    yield msg as ChatMessage;
+    for (const message of Array.isArray(msg) ? msg : [msg]) {
+      if (message) yield message as ChatMessage;
+    }
   }
 
   // Update the streamChat method:

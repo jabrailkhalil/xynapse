@@ -35,6 +35,7 @@ import {
   TextMessagePart,
   ThinkingChatMessage,
   ToolCallDelta,
+  Usage,
 } from "..";
 
 function appendReasoningFieldsIfSupported(
@@ -257,6 +258,11 @@ export function fromChatResponse(response: ChatCompletion): ChatMessage[] {
       [key: string]: any;
     }[];
   };
+  const finishReason = message.refusal
+    ? "refusal"
+    : response.choices[0].finish_reason;
+  const metadata = finishReason ? { finishReason } : undefined;
+  const usage = fromChatUsage(response.usage);
 
   // Check for reasoning content first (similar to fromChatCompletionChunk)
   if (message.reasoning_content || message.reasoning) {
@@ -283,6 +289,8 @@ export function fromChatResponse(response: ChatCompletion): ChatMessage[] {
     messages.push({
       role: "assistant",
       content: "",
+      metadata,
+      usage,
       toolCalls: message.tool_calls
         ?.filter((tc) => !tc.type || tc.type === "function")
         .map((tc) => ({
@@ -297,16 +305,44 @@ export function fromChatResponse(response: ChatCompletion): ChatMessage[] {
   } else {
     messages.push({
       role: "assistant",
-      content: message.content ?? "",
+      content: message.refusal || message.content || "",
+      metadata,
+      usage,
     });
   }
 
   return messages;
 }
 
+function fromChatUsage(
+  rawUsage: ChatCompletionChunk["usage"],
+): Usage | undefined {
+  return rawUsage
+    ? {
+        promptTokens: rawUsage.prompt_tokens,
+        completionTokens: rawUsage.completion_tokens,
+        promptTokensDetails: rawUsage.prompt_tokens_details
+          ? { cachedTokens: rawUsage.prompt_tokens_details.cached_tokens }
+          : undefined,
+        completionTokensDetails: rawUsage.completion_tokens_details
+          ? {
+              acceptedPredictionTokens:
+                rawUsage.completion_tokens_details.accepted_prediction_tokens,
+              reasoningTokens:
+                rawUsage.completion_tokens_details.reasoning_tokens,
+              rejectedPredictionTokens:
+                rawUsage.completion_tokens_details.rejected_prediction_tokens,
+            }
+          : undefined,
+      }
+    : undefined;
+}
+
 export function fromChatCompletionChunk(
   chunk: ChatCompletionChunk,
 ): ChatMessage | undefined {
+  const finishReason = chunk.choices?.[0]?.finish_reason;
+  const usage = fromChatUsage(chunk.usage);
   const delta = chunk.choices?.[0]?.delta as
     | (ChatCompletionChunk.Choice.Delta & {
         reasoning?: string;
@@ -316,11 +352,20 @@ export function fromChatCompletionChunk(
         }[];
       })
     | undefined;
+  const metadata = delta?.refusal
+    ? { finishReason: "refusal" }
+    : finishReason
+      ? { finishReason }
+      : undefined;
 
-  if (delta?.content) {
+  if (delta?.refusal) {
+    return { role: "assistant", content: delta.refusal, metadata, usage };
+  } else if (delta?.content) {
     return {
       role: "assistant",
       content: delta.content,
+      metadata,
+      usage,
     };
   } else if (delta?.tool_calls) {
     const toolCalls = delta?.tool_calls
@@ -339,6 +384,8 @@ export function fromChatCompletionChunk(
         role: "assistant",
         content: "",
         toolCalls,
+        metadata,
+        usage,
       };
     }
   } else if (
@@ -351,8 +398,19 @@ export function fromChatCompletionChunk(
       content: delta.reasoning_content || delta.reasoning || "",
       signature: delta?.reasoning_details?.[0]?.signature,
       reasoning_details: delta?.reasoning_details as any[],
+      metadata,
+      usage,
     };
     return message;
+  }
+
+  if (finishReason || usage) {
+    return {
+      role: "assistant",
+      content: "",
+      metadata,
+      usage,
+    };
   }
 
   return undefined;
@@ -531,6 +589,28 @@ function handleResponsesStreamEvent(
   e: ResponseStreamEvent,
 ): ChatMessage | undefined {
   const t = (e as any).type as string;
+  if (
+    t === "response.completed" ||
+    t === "response.incomplete" ||
+    t === "response.failed"
+  ) {
+    return responsesCompletionMetadata(
+      (e as any).response,
+      t.slice("response.".length),
+    );
+  }
+  if (t === "error") {
+    throw new Error(
+      `Responses API error: ${(e as any).message || "unknown error"}`,
+    );
+  }
+  if (t === "response.refusal.delta" || t === "response.refusal.done") {
+    return {
+      role: "assistant",
+      content: t === "response.refusal.delta" ? (e as any).delta || "" : "",
+      metadata: { finishReason: "refusal" },
+    };
+  }
   if (t === "response.output_text.delta") {
     return handleTextDeltaEvent(e as ResponseTextDeltaEvent);
   }
@@ -565,9 +645,61 @@ function handleResponsesStreamEvent(
   return undefined;
 }
 
+function responsesCompletionMetadata(
+  response: OpenAIResponse,
+  status: string | undefined = response.status,
+): AssistantChatMessage {
+  const refusal = response.output?.some(
+    (item) =>
+      item.type === "message" &&
+      item.content.some((part) => part.type === "refusal"),
+  );
+  const incompleteReason = response.incomplete_details?.reason;
+  const finishReason =
+    status === "failed" || status === "cancelled"
+      ? "error"
+      : status === "incomplete"
+        ? incompleteReason === "max_output_tokens"
+          ? "length"
+          : incompleteReason === "content_filter"
+            ? "content_filter"
+            : "incomplete"
+        : refusal
+          ? "refusal"
+          : status === "completed"
+            ? "stop"
+            : undefined;
+  const rawUsage = response.usage;
+  return {
+    role: "assistant",
+    content: "",
+    metadata: {
+      finishReason,
+      responseStatus: status,
+      ...(response.error ? { responseError: response.error.message } : {}),
+    },
+    usage: rawUsage
+      ? {
+          promptTokens: rawUsage.input_tokens,
+          completionTokens: rawUsage.output_tokens,
+          promptTokensDetails: rawUsage.input_tokens_details
+            ? { cachedTokens: rawUsage.input_tokens_details.cached_tokens }
+            : undefined,
+          completionTokensDetails: rawUsage.output_tokens_details
+            ? {
+                reasoningTokens:
+                  rawUsage.output_tokens_details.reasoning_tokens,
+              }
+            : undefined,
+        }
+      : undefined,
+  };
+}
+
 function handleResponsesFinal(
   resp: OpenAIResponse,
 ): ChatMessage | ChatMessage[] | undefined {
+  const completion = responsesCompletionMetadata(resp);
   // Prefer structured output items when present
   if (Array.isArray(resp.output) && resp.output.length > 0) {
     const result: ChatMessage[] = [];
@@ -666,15 +798,15 @@ function handleResponsesFinal(
         continue;
       }
     }
-    if (result.length > 0) return result;
+    if (result.length > 0) return [...result, completion];
   }
 
   // Fallback to output_text when no structured output is present
   if (typeof resp.output_text === "string" && resp.output_text.length > 0) {
-    return { role: "assistant", content: resp.output_text };
+    return { ...completion, content: resp.output_text };
   }
 
-  return undefined;
+  return completion;
 }
 
 export function fromResponsesChunk(

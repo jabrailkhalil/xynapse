@@ -131,6 +131,90 @@ describe("Anthropic", () => {
     vi.clearAllMocks();
   });
 
+  test("preserves stop reason and usage for nonstream output", async () => {
+    const anthropic = new Anthropic({
+      apiKey: "test-api-key",
+      model: "claude-sonnet-4-5",
+    });
+    const response = new Response(
+      JSON.stringify({
+        content: [{ type: "text", text: "Partial plan" }],
+        stop_reason: "max_tokens",
+        usage: {
+          input_tokens: 11,
+          output_tokens: 17,
+          cache_read_input_tokens: 2,
+          cache_creation_input_tokens: 3,
+        },
+      }),
+    );
+    const messages = [];
+    for await (const message of (anthropic as any).handleResponse(
+      response,
+      false,
+    )) {
+      messages.push(message);
+    }
+    expect(messages).toEqual([
+      expect.objectContaining({
+        role: "assistant",
+        content: "Partial plan",
+        metadata: { finishReason: "max_tokens" },
+        usage: {
+          promptTokens: 11,
+          completionTokens: 17,
+          promptTokensDetails: { cachedTokens: 2, cacheWriteTokens: 3 },
+        },
+      }),
+    ]);
+  });
+
+  test.each(["end_turn", "max_tokens", "refusal"])(
+    "preserves %s and cumulative usage in the final streaming message",
+    async (stopReason) => {
+      const anthropic = new Anthropic({
+        apiKey: "test-api-key",
+        model: "claude-sonnet-4-5",
+      });
+      const events = [
+        {
+          type: "message_start",
+          message: { usage: { input_tokens: 11, cache_read_input_tokens: 2 } },
+        },
+        {
+          type: "content_block_delta",
+          delta: { type: "text_delta", text: "Partial plan" },
+        },
+        {
+          type: "message_delta",
+          delta: { stop_reason: stopReason },
+          usage: { output_tokens: 17 },
+        },
+        { type: "message_stop" },
+      ];
+      const response = new Response(
+        events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""),
+      );
+      const messages = [];
+      for await (const message of (anthropic as any).handleResponse(
+        response,
+        true,
+      )) {
+        messages.push(message);
+      }
+      expect(messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "",
+        metadata: { finishReason: stopReason },
+        usage: {
+          promptTokens: 11,
+          completionTokens: 17,
+          promptTokensDetails: { cachedTokens: 2 },
+        },
+      });
+    },
+  );
+
   test("streamChat should send a valid request", async () => {
     const anthropic = new Anthropic({
       apiKey: "test-api-key",

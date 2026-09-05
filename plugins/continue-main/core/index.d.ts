@@ -384,6 +384,7 @@ export interface UserChatMessage {
 export interface ThinkingChatMessage {
   role: "thinking";
   content: MessageContent;
+  usage?: Usage;
   signature?: string;
   redactedThinking?: string;
   toolCalls?: ToolCallDelta[];

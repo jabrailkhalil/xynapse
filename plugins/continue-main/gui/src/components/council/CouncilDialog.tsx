@@ -44,7 +44,11 @@ interface CouncilDialogProps {
   onSubmit: (config: CouncilConfig) => void;
 }
 
-function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogProps) {
+function CouncilDialog({
+  mode = "council",
+  onClose,
+  onSubmit,
+}: CouncilDialogProps) {
   const isBvc = mode === "bvc";
   const config = useAppSelector((state) => state.config.config);
 
@@ -133,15 +137,15 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
       </h2>
 
       <div className="mb-2.5 min-w-0">
-        <label className="text-description mb-1 block text-2xs uppercase tracking-wider">
-          {isBvc ? "Candidate / claim to verify" : "Task"}
+        <label className="text-description text-2xs mb-1 block uppercase tracking-wider">
+          {isBvc ? "Task to Plan" : "Task"}
         </label>
         <textarea
-          className="bg-input text-input-foreground border-input-border box-border w-full max-w-full rounded border border-solid p-2 text-xs leading-relaxed placeholder:text-input-placeholder focus:border-border-focus focus:outline-none"
+          className="bg-input text-input-foreground border-input-border placeholder:text-input-placeholder focus:border-border-focus box-border w-full max-w-full rounded border border-solid p-2 text-xs leading-relaxed focus:outline-none"
           rows={2}
           placeholder={
             isBvc
-              ? "Paste the answer, decision, or claim that BVC should verify..."
+              ? "Describe the change and attach relevant files or selected code..."
               : "Describe the task for discussion..."
           }
           value={task}
@@ -156,11 +160,11 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
       </div>
 
       <div className="mb-2.5 min-w-0">
-        <label className="text-description mb-1 block text-2xs uppercase tracking-wider">
-          {isBvc ? "Verification Budget" : "Discussion Depth"}
+        <label className="text-description text-2xs mb-1 block uppercase tracking-wider">
+          {isBvc ? "Planning Budget" : "Discussion Depth"}
         </label>
         <select
-          className="bg-input text-input-foreground border-input-border box-border w-full max-w-full cursor-pointer rounded border border-solid px-2 py-1.5 text-xs focus:border-border-focus focus:outline-none"
+          className="bg-input text-input-foreground border-input-border focus:border-border-focus box-border w-full max-w-full cursor-pointer rounded border border-solid px-2 py-1.5 text-xs focus:outline-none"
           value={difficulty}
           onChange={(e) => setDifficulty(e.target.value as any)}
         >
@@ -173,10 +177,10 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
       </div>
 
       {isBvc && (
-        <div className="mb-2.5 rounded border border-solid border-input-border bg-input/50 p-2 text-2xs leading-relaxed text-description">
-          BVC runs a budgeted verification pass: roles inspect the candidate,
-          check criteria and contradictions, then return confidence and a final
-          verdict. Detailed thresholds come from BVC settings.
+        <div className="border-input-border bg-input/50 text-2xs text-description mb-2.5 rounded border border-solid p-2 leading-relaxed">
+          BVC gathers independent proposals, critiques disputed decisions within
+          your budget, and produces an implementation plan. The plan still needs
+          to be implemented and tested.
         </div>
       )}
 
@@ -187,7 +191,7 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
           </label>
           {allModels.length > 1 && (
             <select
-              className="bg-input text-input-foreground border-input-border box-border max-w-[50%] cursor-pointer truncate rounded border border-solid px-1 py-0.5 text-2xs focus:outline-none"
+              className="bg-input text-input-foreground border-input-border text-2xs box-border max-w-[50%] cursor-pointer truncate rounded border border-solid px-1 py-0.5 focus:outline-none"
               value=""
               onChange={(e) => {
                 if (e.target.value) handleSetAllModels(e.target.value);
@@ -207,13 +211,13 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
           {roles.map((role, i) => (
             <div key={i} className="flex min-w-0 items-center gap-1">
               <span
-                className="text-foreground min-w-[80px] shrink-0 truncate text-2xs font-medium"
+                className="text-foreground text-2xs min-w-[80px] shrink-0 truncate font-medium"
                 title={role.name}
               >
                 {role.name}
               </span>
               <select
-                className="bg-input text-input-foreground border-input-border box-border min-w-0 flex-1 cursor-pointer rounded border border-solid px-1 py-0.5 text-2xs focus:border-border-focus focus:outline-none"
+                className="bg-input text-input-foreground border-input-border text-2xs focus:border-border-focus box-border min-w-0 flex-1 cursor-pointer rounded border border-solid px-1 py-0.5 focus:outline-none"
                 value={role.modelTitle}
                 onChange={(e) => handleModelChange(i, e.target.value)}
               >
@@ -222,13 +226,11 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
                     {m.title}
                   </option>
                 ))}
-                {allModels.length === 0 && (
-                  <option value="">No models</option>
-                )}
+                {allModels.length === 0 && <option value="">No models</option>}
               </select>
               {canRemoveRole && (
                 <button
-                  className="ml-0.5 shrink-0 cursor-pointer border-none bg-transparent p-0 leading-none text-error opacity-50 transition-opacity duration-100 hover:opacity-100"
+                  className="text-error ml-0.5 shrink-0 cursor-pointer border-none bg-transparent p-0 leading-none opacity-50 transition-opacity duration-100 hover:opacity-100"
                   onClick={() => handleRemoveRole(i)}
                   title="Remove role"
                   style={{ fontSize: "10px", lineHeight: 1 }}
@@ -244,14 +246,14 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
       {/* Add role */}
       <div className="mb-2.5 flex min-w-0 gap-1">
         <input
-          className="bg-input text-input-foreground border-input-border box-border min-w-0 flex-1 rounded border border-solid px-2 py-0.5 text-2xs placeholder:text-input-placeholder focus:border-border-focus focus:outline-none"
+          className="bg-input text-input-foreground border-input-border text-2xs placeholder:text-input-placeholder focus:border-border-focus box-border min-w-0 flex-1 rounded border border-solid px-2 py-0.5 focus:outline-none"
           placeholder="Add role..."
           value={newRoleName}
           onChange={(e) => setNewRoleName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddRole()}
         />
         <button
-          className="text-description border-input-border bg-input flex shrink-0 items-center justify-center rounded border border-solid px-1.5 py-0.5 text-2xs transition-colors duration-100 hover:enabled:text-foreground disabled:opacity-30"
+          className="text-description border-input-border bg-input text-2xs hover:enabled:text-foreground flex shrink-0 items-center justify-center rounded border border-solid px-1.5 py-0.5 transition-colors duration-100 disabled:opacity-30"
           onClick={handleAddRole}
           disabled={!newRoleName.trim()}
         >
@@ -268,9 +270,7 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
             onChange={(e) => setSaveDiscussion(e.target.checked)}
             className="accent-primary h-3 w-3 cursor-pointer"
           />
-          <span className="text-description text-2xs">
-            Save discussion
-          </span>
+          <span className="text-description text-2xs">Save discussion</span>
         </label>
       </div>
 
@@ -278,9 +278,7 @@ function CouncilDialog({ mode = "council", onClose, onSubmit }: CouncilDialogPro
       <div className="flex items-center justify-between gap-2">
         <div>
           {allModels.length === 0 && (
-            <span className="text-warning text-2xs">
-              No models
-            </span>
+            <span className="text-warning text-2xs">No models</span>
           )}
         </div>
         <div className="flex gap-1.5">
