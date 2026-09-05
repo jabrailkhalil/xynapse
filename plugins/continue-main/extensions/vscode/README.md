@@ -1,59 +1,39 @@
-<div align="center">
+# Xynapse Assistant
 
-![Continue logo](media/readme.png)
+Xynapse Assistant provides chat, editing, autocomplete, and multi-role planning for coding projects. This build includes BVC 0.1.0, a reusable planning core with bounded model calls and an auditable discussion.
 
-<div align="center">
+## BVC planning
 
-<a target="_blank" href="https://opensource.org/licenses/Apache-2.0" style="background:none">
-    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" style="height: 22px;" />
-</a>
-<a target="_blank" href="https://docs.continue.dev" style="background:none">
-    <img src="https://img.shields.io/badge/Continue-docs-%23BE1B55.svg?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNiAyNCIgZmlsbD0id2hpdGUiPgogIDxwYXRoIGQ9Ik0yMC41Mjg2IDMuMjY4MTFMMTkuMTUxMiA1LjY1Njk0TDIyLjYzMjggMTEuNjg0OUMyMi42NTgyIDExLjczMDYgMjIuNjczNSAxMS43ODY2IDIyLjY3MzUgMTEuODM3NEMyMi42NzM1IDExLjg4ODIgMjIuNjU4MiAxMS45NDQxIDIyLjYzMjggMTEuOTg5OUwxOS4xNTEyIDE4LjAyMjlMMjAuNTI4NiAyMC40MTE3TDI1LjQ3OTEgMTEuODM3NEwyMC41Mjg2IDMuMjYzMDNWMy4yNjgxMVpNMTguNjE3NiA1LjM0NjlMMTkuOTk1IDIuOTU4MDdIMTcuMjQwMkwxNS44NjI4IDUuMzQ2OUgxOC42MjI3SDE4LjYxNzZaTTE1Ljg1NzcgNS45NjY5N0wxOS4wNzUgMTEuNTMyNEgyMS44Mjk4TDE4LjYxNzYgNS45NjY5N0gxNS44NTc3Wk0xOC42MTc2IDE3LjcxNzlMMjEuODI5OCAxMi4xNDc0SDE5LjA3NUwxNS44NTc3IDE3LjcxNzlIMTguNjE3NlpNMTUuODU3NyAxOC4zMzhMMTcuMjM1MSAyMC43MTY3SDE5Ljk4OTlMMTguNjEyNSAxOC4zMzhIMTUuODUyNkgxNS44NTc3Wk02LjUyMDk4IDIxLjMwNjNDNi40NjUwNyAyMS4zMDYzIDYuNDE0MjQgMjEuMjkxIDYuMzY4NSAyMS4yNjU2QzYuMzIyNzYgMjEuMjQwMiA2LjI4MjA5IDIxLjE5OTUgNi4yNTY2OCAyMS4xNTM4TDIuNzcwMDIgMTUuMTIwN0gwLjAxNTI0ODJMNC45NjU3IDIzLjY5SDE0Ljg2MTVMMTMuNDg0MSAyMS4zMDYzSDYuNTI2MDZINi41MjA5OFpNMTQuMDE3OCAyMC45OTYyTDE1LjM5NTIgMjMuMzhMMTYuNzcyNiAyMC45OTExTDE1LjM5NTIgMTguNjAyM0wxNC4wMTc4IDIwLjk5MTFWMjAuOTk2MlpNMTQuODYxNSAxOC4yOTc0SDguNDM3MTJMNy4wNTk3MyAyMC42ODYySDEzLjQ4NDFMMTQuODYxNSAxOC4yOTc0Wk03Ljg5ODM2IDE3Ljk5MjRMNC42ODEwOCAxMi40MjE5TDMuMzAzNjkgMTQuODEwN0w2LjUyMDk4IDIwLjM4MTJMNy44OTgzNiAxNy45OTI0Wk0wLjAxMDE2NTQgMTQuNTAwN0gyLjc2NDk0TDQuMTQyMzIgMTIuMTExOEgxLjM5MjYzTDAuMDEwMTY1NCAxNC41MDA3Wk02LjI0MTQzIDIuNTQxM0M2LjI2Njg1IDIuNDk1NTYgNi4zMDc1MSAyLjQ1NDkgNi4zNTMyNSAyLjQyOTQ4QzYuMzk5IDIuNDA0MDcgNi40NTQ5IDIuMzg4ODIgNi41MDU3MyAyLjM4ODgySDEzLjQ3NEwxNC44NTE0IDBINC45NTA0NUwwIDguNTc0MzVIMi43NTQ3N0w2LjIzMTI3IDIuNTQ2MzhMNi4yNDE0MyAyLjU0MTNaTTQuMTQyMzIgMTEuNTc4MkwyLjc2NDk0IDkuMTg5MzRIMC4wMTAxNjU0TDEuMzg3NTUgMTEuNTc4Mkg0LjE0MjMyWk02LjUxMDgxIDMuMzEzODZMMy4yOTg2MSA4Ljg3OTNMNC42NzU5OSAxMS4yNjgxTDcuODg4MiA1LjcwMjY4TDYuNTEwODEgMy4zMTM4NlpNMTMuNDc5MSAzLjAwMzgySDcuMDQ0NDhMOC40MjE4NyA1LjM5MjY0SDE0Ljg1NjRMMTMuNDc5MSAzLjAwMzgyWk0xNS4zOTUyIDUuMDgyNkwxNi43Njc1IDIuNjk4ODZMMTUuMzk1MiAwLjMxMDAzOEwxNC4wMTc4IDIuNjkzNzhMMTUuMzk1MiA1LjA4MjZaIi8+Cjwvc3ZnPg==" style="height: 22px;" />
-</a>
-<a target="_blank" href="https://discord.gg/vapESyrFmJ" style="background:none">
-    <img src="https://img.shields.io/badge/discord-join-continue.svg?labelColor=191937&color=6F6FF7&logo=discord" style="height: 22px;" />
-</a>
+Attach relevant files or select code, then run:
 
-<p></p>
+```text
+/bvc easy Fix the parser regression
+/bvc medium Plan the authentication refactor
+/bvc hard Compare migration approaches across the affected services
+```
 
-</div>
+You can also use the BVC button to choose roles, configured models, and the planning budget.
 
-<h1 align="center">Continue</h1>
+BVC collects independent proposals, measures disagreement on four decision axes, and spends remaining calls on critique when needed. It preserves unresolved objections and produces `bvc-plan.md`. When discussion saving is enabled, `bvc-discussion.md` includes the reports and a trace of calls, outcomes, usage, and context omissions.
 
-<div align="center">
+With four roles, the text-command defaults allow at most 5, 9, or 13 model calls. Calls can end early when no critique is needed. Timeouts, cancellation, refusals, and known output truncation prevent partial responses from being accepted as the final plan.
 
-**Ship faster with Continuous AI**
+A plan still needs implementation and executable tests. BVC records this as `verification: "not_run"`. It does not assign a correctness score from model agreement.
 
-**Build and run custom agents across your IDE, terminal, and CI**
+## Installation
 
-</div>
+The Windows preview is distributed as a VSIX. In the editor's Extensions view, choose **Install from VSIX**, select the archive, then reload the window. Configure your model provider and credentials in the assistant settings before sending a task.
 
-## Agent
+The extension is free and open source. Model-provider charges depend on the provider you configure; the BVC call counter does not cap provider retries or monetary cost.
 
-[Agent](https://docs.continue.dev/features/agent/quick-start) to work on development tasks together with AI
+## Integrate the core in another project
 
-![agent](docs/images/agent.gif)
+The `@xynapse/bvc` package has no runtime dependencies on this extension, VS Code, Continue, or a model SDK. A host supplies a small streaming adapter and retains control over credentials, model choice, tools, and saving files.
 
-## Chat
+Open `README.md` in the `@xynapse/bvc` package archive for the adapter contract and integration example. The archive also contains research notes, TypeScript declarations, and an offline demo.
 
-[Chat](https://docs.continue.dev/features/chat/quick-start) to ask general questions and clarify code sections
+## Source and attribution
 
-![chat](docs/images/chat.gif)
+Developed as part of [Xynapse](https://github.com/jabrailkhalil/xynapse) by Dzhabrail Khalilov.
 
-## Edit
-
-[Edit](https://docs.continue.dev/features/edit/quick-start) to modify a code section without leaving your current file
-
-![edit](docs/images/edit.gif)
-
-## Autocomplete
-
-[Autocomplete](https://docs.continue.dev/features/autocomplete/quick-start) to receive inline code suggestions as you type
-
-![autocomplete](docs/images/autocomplete.gif)
-
-</div>
-
-## License
-
-[Apache 2.0 © 2023-2025 Xynapse Dev](./LICENSE)
+Xynapse Assistant is based on [Continue](https://github.com/continuedev/continue). The upstream copyright and license notices are retained. Distributed under [Apache-2.0](./LICENSE.txt).
