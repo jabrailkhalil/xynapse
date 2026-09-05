@@ -34,6 +34,8 @@ import { promisify } from 'util';
 import globCallback from 'glob';
 import rceditCallback from 'rcedit';
 import type { IExtensionDefinition } from './lib/builtInExtensions.ts';
+import { packageXynapseAssistant } from './lib/xynapseAssistant.ts';
+import xynapseAssistantBundle from './xynapse-assistant.json' with { type: 'json' };
 
 
 const glob = promisify(globCallback);
@@ -243,7 +245,15 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			return !set.has(platform);
 		}).map(ext => `!.build/extensions/${ext.name}/**`);
 
-		const extensions = gulp.src(['.build/extensions/**', ...platformSpecificBuiltInExtensionsExclusions], { base: '.build', dot: true });
+		const usePinnedAssistant = `${platform}-${arch}` === xynapseAssistantBundle.target;
+		const assistantExclusions = usePinnedAssistant ? ['!.build/extensions/xynapse-assistant/**'] : [];
+		const extensions = gulp.src(['.build/extensions/**', ...platformSpecificBuiltInExtensionsExclusions, ...assistantExclusions], { base: '.build', dot: true });
+		const pinnedAssistant = usePinnedAssistant
+			? packageXynapseAssistant(
+				path.resolve(import.meta.dirname, '../..', process.env.XYNAPSE_ASSISTANT_VSIX || xynapseAssistantBundle.vsix),
+				xynapseAssistantBundle.sha256
+			)
+			: es.readArray([]);
 
 		const sources = es.merge(src, extensions)
 			.pipe(filter(['**', '!**/*.{js,css}.map'], { dot: true }));
@@ -320,6 +330,8 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			api,
 			telemetry,
 			sources,
+			// Preserve the complete VSIX payload, including its bundled dependency maps.
+			pinnedAssistant,
 			deps
 		);
 
