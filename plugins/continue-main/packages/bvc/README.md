@@ -64,6 +64,8 @@ Every adapter should forward the provider's terminal reason when it is available
 
 Known partial or refused responses are excluded from decisions and cannot be saved as the final plan. Unknown metadata remains visible in `completionConfirmed` and `usageComplete` instead of being presented as verified.
 
+Set `options.requireConfirmedSynthesis: true` for production host integrations. This rejects the final plan unless the provider explicitly confirms normal completion. Xynapse Assistant enables this policy. The SDK keeps the option off by default for compatibility with adapters that do not expose terminal metadata; those results remain unconfirmed.
+
 ## Modes
 
 | Mode       | Behavior                                                                                                        |

@@ -1,8 +1,8 @@
 {
 	"extension": "xynapse.xynapse-assistant",
-	"extensionVersion": "1.0.0",
-	"bvcVersion": "0.1.0",
+	"extensionVersion": "1.0.1",
+	"bvcVersion": "0.1.1",
 	"target": "win32-x64",
-	"vsix": "artifacts/bvc-0.1.0-20260905/xynapse-assistant-bvc-0.1.0-win32-x64.vsix",
-	"sha256": "e3f4698ca2a6459e29e94e11b5d132eac8c835ef903574cf88d8427a6e831360"
+	"vsix": "artifacts/release-candidate-20260906/xynapse-assistant-1.0.1-win32-x64.vsix",
+	"sha256": "dbd3dd96a8c27b7f09e6459a51bee21b5ab0bfeb69c4011e102693041a3021dd"
 }

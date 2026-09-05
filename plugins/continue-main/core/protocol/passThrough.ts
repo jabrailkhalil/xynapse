@@ -18,6 +18,7 @@ export const WEBVIEW_TO_CORE_PASS_THROUGH: (keyof ToCoreFromWebviewProtocol)[] =
     "history/clear",
     "devdata/log",
     "config/addModel",
+    "config/importYandexCloud",
     "config/newPromptFile",
     "config/newAssistantFile",
     "config/ideSettingsUpdate",

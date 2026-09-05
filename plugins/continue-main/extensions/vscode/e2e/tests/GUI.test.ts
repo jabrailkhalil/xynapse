@@ -7,6 +7,7 @@ import {
   WebDriver,
   WebElement,
   WebView,
+  Workbench,
   until,
 } from "vscode-extension-tester";
 
@@ -16,7 +17,7 @@ import { DEFAULT_TIMEOUT } from "../constants";
 import { GUISelectors } from "../selectors/GUI.selectors";
 import { TestUtils } from "../TestUtils";
 
-describe.skip("GUI Test", () => {
+describe("GUI Test", () => {
   let view: WebView;
   let driver: WebDriver;
 
@@ -42,10 +43,7 @@ describe.skip("GUI Test", () => {
     this.timeout(DEFAULT_TIMEOUT.XL);
 
     await view.switchBack();
-    await TestUtils.waitForSuccess(
-      async () => (await GUISelectors.getXynapseExtensionBadge(view)).click(),
-      DEFAULT_TIMEOUT.XS,
-    );
+    await new Workbench().executeCommand("View: Close Secondary Side Bar");
     await new EditorView().closeAllEditors();
   });
 

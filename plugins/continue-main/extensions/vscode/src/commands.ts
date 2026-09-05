@@ -50,6 +50,11 @@ import {
   addHighlightedCodeToContext,
 } from "./util/addCode";
 import { Battery } from "./util/battery";
+import {
+  planResolvedRuntimeModel,
+  toYandexOpenAiModelUri,
+} from "./runtimeModel";
+import { PublicError } from "core/util/publicError";
 import { getMetaKeyLabel } from "./util/util";
 import { openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeIde } from "./VsCodeIde";
@@ -2364,7 +2369,7 @@ function setRuntimeEnv(
   env[key] = value.trim();
 }
 
-const YANDEX_OPENAI_BASE_URL = "https://llm.api.cloud.yandex.net/v1";
+const YANDEX_OPENAI_BASE_URL = "https://ai.api.cloud.yandex.net/v1";
 
 function collectRuntimeEnvFromObject(
   value: unknown,
@@ -2381,7 +2386,7 @@ function collectRuntimeEnvFromObject(
 
   const record = value as Record<string, unknown>;
   const provider = normalizeXynapseEnvironmentProviderName(
-    record.provider ?? record.name ?? record.uses,
+    record.providerName ?? record.provider ?? record.name ?? record.uses,
   );
   const model = String(record.model ?? record.title ?? "").toLowerCase();
   const withEnv = record.with;
@@ -2480,308 +2485,10 @@ function getConfiguredRuntimeModelOverride() {
   return configured;
 }
 
-function getModelIdentity(value: unknown) {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-
-  const record = value as Record<string, unknown>;
-  const model = typeof record.model === "string" ? record.model.trim() : "";
-  const title =
-    typeof record.title === "string"
-      ? record.title.trim()
-      : typeof record.name === "string"
-        ? record.name.trim()
-        : "";
-  const provider = normalizeXynapseEnvironmentProviderName(record.provider);
-  const folderId =
-    typeof record.folderId === "string"
-      ? record.folderId.trim()
-      : typeof (record.requestOptions as any)?.extraBodyProperties?.folderId ===
-          "string"
-        ? (record.requestOptions as any).extraBodyProperties.folderId.trim()
-        : "";
-
-  if (!model && !title) {
-    return undefined;
-  }
-
-  return { model, title, provider, folderId };
-}
-
-function flattenConfigModels(config: any): ILLM[] {
-  const roles = config?.modelsByRole ?? {};
-  const seen = new Set<string>();
-  const models: ILLM[] = [];
-
-  const addModel = (model: unknown) => {
-    const identity = getModelIdentity(model);
-    if (!identity) {
-      return;
-    }
-    const key = `${identity.provider}:${identity.title}:${identity.model}`;
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    models.push(model as ILLM);
-  };
-
-  if (Array.isArray(config?.models)) {
-    config.models.forEach(addModel);
-  }
-
-  for (const value of Object.values(roles)) {
-    if (!Array.isArray(value)) {
-      continue;
-    }
-    value.forEach(addModel);
-  }
-
-  return models;
-}
-
-function loadRawConfigModels(): ILLM[] {
-  const models: ILLM[] = [];
-
-  for (const configPath of [getConfigYamlPath("vscode"), getConfigJsonPath()]) {
-    try {
-      if (!fs.existsSync(configPath)) {
-        continue;
-      }
-      const raw = fs.readFileSync(configPath, "utf8");
-      const parsed = configPath.endsWith(".json")
-        ? JSON.parse(raw)
-        : YAML.parse(raw);
-      models.push(...flattenConfigModels(parsed));
-    } catch (error) {
-      console.warn(
-        `Failed to read ${configPath} for Xynapse runtime models`,
-        error,
-      );
-    }
-  }
-
-  return models;
-}
-
-function findRequestedModel(
-  config: any,
-  request?: RuntimePromptRequest,
-  rawModels: ILLM[] = [],
-) {
-  const data = typeof request === "object" ? request : undefined;
-  const requestedTitle = data?.modelTitle?.trim();
-  const requestedModel = data?.model?.trim();
-  const requestedProvider = normalizeXynapseEnvironmentProviderName(
-    data?.provider,
-  );
-  const models = [...rawModels, ...flattenConfigModels(config)];
-
-  if (requestedTitle || requestedModel) {
-    const requestedMatches = models.filter((model) => {
-      const identity = getModelIdentity(model);
-      if (!identity) {
-        return false;
-      }
-      const titleMatches =
-        !requestedTitle ||
-        identity.title === requestedTitle ||
-        identity.model === requestedTitle;
-      const modelMatches =
-        !requestedModel ||
-        identity.model === requestedModel ||
-        identity.title === requestedModel;
-      return titleMatches && modelMatches;
-    });
-
-    if (requestedMatches.length > 0) {
-      return requestedMatches[0];
-    }
-  }
-
-  if (requestedProvider) {
-    const match = models.find((model) => {
-      const identity = getModelIdentity(model);
-      return !!identity && identity.provider === requestedProvider;
-    });
-
-    if (match) {
-      return match;
-    }
-  }
-
-  return (
-    config?.selectedModelByRole?.chat ??
-    config?.selectedModelByRole?.edit ??
-    config?.modelsByRole?.chat?.[0] ??
-    models[0]
-  );
-}
-
-function ensureOpenAiRoutingPrefix(model: string) {
-  if (/^(openai|qwen|kimi|grok|xai|yandex)\//i.test(model)) {
-    return model;
-  }
-  if (/^(gpt-|o1|o3|o4)/i.test(model)) {
-    return model;
-  }
-  return `openai/${model}`;
-}
-
-function toYandexOpenAiModelUri(modelName: string, folderId: string) {
-  if (modelName.startsWith("gpt:///") && folderId) {
-    return `gpt://${folderId}/${modelName.slice("gpt:///".length)}`;
-  }
-  if (modelName.startsWith("gpt://")) {
-    return modelName;
-  }
-  if (!folderId) {
-    return undefined;
-  }
-  if (modelName.includes("/")) {
-    return `gpt://${folderId}/${modelName}`;
-  }
-  return `gpt://${folderId}/${modelName}/latest`;
-}
-
-function toRuntimeModelRoute(model: ILLM | undefined) {
-  const identity = getModelIdentity(model);
-  if (!identity) {
-    return undefined;
-  }
-
-  const provider = identity.provider;
-  const modelName = identity.model || identity.title;
-  const loweredModel = modelName.toLowerCase();
-
-  if (
-    provider.includes("yandex") ||
-    !!identity.folderId ||
-    modelName.startsWith("gpt://")
-  ) {
-    const yandexModel = toYandexOpenAiModelUri(modelName, identity.folderId);
-    return yandexModel ? `yandex/${yandexModel}` : undefined;
-  }
-
-  if (provider.includes("anthropic")) {
-    return modelName;
-  }
-
-  if (
-    provider.includes("openai") ||
-    provider.includes("openai-compatible") ||
-    provider.includes("deepseek") ||
-    loweredModel.includes("deepseek")
-  ) {
-    return ensureOpenAiRoutingPrefix(modelName);
-  }
-
-  if (
-    provider.includes("xai") ||
-    provider.includes("grok") ||
-    loweredModel.includes("grok")
-  ) {
-    return /^grok/i.test(modelName) ? modelName : `grok/${modelName}`;
-  }
-
-  if (
-    provider.includes("dashscope") ||
-    provider === "qwen" ||
-    provider === "kimi"
-  ) {
-    if (/^(qwen|kimi)[/-]/i.test(modelName)) {
-      return modelName;
-    }
-    return `qwen/${modelName}`;
-  }
-
-  return undefined;
-}
-
-function hasExplicitRuntimeModelRequest(request?: RuntimePromptRequest) {
-  const data = typeof request === "object" ? request : undefined;
-  return Boolean(
-    data?.modelTitle?.trim() ||
-      data?.model?.trim() ||
-      normalizeXynapseEnvironmentProviderName(data?.provider),
-  );
-}
-
-function findRuntimeSupportedModel(config: any, rawModels: ILLM[] = []) {
-  const candidates = [
-    config?.selectedModelByRole?.edit,
-    config?.selectedModelByRole?.apply,
-    config?.selectedModelByRole?.chat,
-    ...(Array.isArray(config?.modelsByRole?.edit)
-      ? config.modelsByRole.edit
-      : []),
-    ...(Array.isArray(config?.modelsByRole?.apply)
-      ? config.modelsByRole.apply
-      : []),
-    ...(Array.isArray(config?.modelsByRole?.chat)
-      ? config.modelsByRole.chat
-      : []),
-    ...rawModels,
-    ...flattenConfigModels(config),
-  ];
-
-  const seen = new Set<string>();
-  for (const candidate of candidates) {
-    const identity = getModelIdentity(candidate);
-    if (!identity) {
-      continue;
-    }
-    const key = `${identity.provider}:${identity.title}:${identity.model}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    if (toRuntimeModelRoute(candidate as ILLM)) {
-      return candidate as ILLM;
-    }
-  }
-
-  return undefined;
-}
-
-async function collectRuntimeEnv(
-  configHandler: ConfigHandler,
-  preferredModel?: ILLM,
-) {
-  const env: Record<string, string> = {};
-
-  collectRuntimeEnvFromObject(preferredModel, env);
-
-  try {
-    const { config } = await configHandler.loadConfig();
-    collectRuntimeEnvFromObject(config, env);
-  } catch (error) {
-    console.warn(
-      "Failed to read Xynapse config for Xynapse runtime env",
-      error,
-    );
-  }
-
-  for (const configPath of [getConfigYamlPath("vscode"), getConfigJsonPath()]) {
-    try {
-      if (!fs.existsSync(configPath)) {
-        continue;
-      }
-      const raw = fs.readFileSync(configPath, "utf8");
-      const parsed = configPath.endsWith(".json")
-        ? JSON.parse(raw)
-        : YAML.parse(raw);
-      collectRuntimeEnvFromObject(parsed, env);
-    } catch (error) {
-      console.warn(
-        `Failed to scan ${configPath} for Xynapse runtime env`,
-        error,
-      );
-    }
-  }
-
-  return env;
+async function collectRuntimeEnv(configHandler: ConfigHandler) {
+  await configHandler.isInitialized;
+  const { config } = await configHandler.loadConfig();
+  return config ? (planResolvedRuntimeModel(config)?.env ?? {}) : {};
 }
 
 function collectRuntimeEnvFromLocalFiles(preferredModel?: ILLM) {
@@ -2801,8 +2508,7 @@ function collectRuntimeEnvFromLocalFiles(preferredModel?: ILLM) {
       collectRuntimeEnvFromObject(parsed, env);
     } catch (error) {
       console.warn(
-        `Failed to scan ${configPath} for Xynapse runtime env`,
-        error,
+        "Could not read local model configuration for the environment bridge.",
       );
     }
   }
@@ -2814,62 +2520,24 @@ async function getRuntimeRunPlan(
   configHandler: ConfigHandler,
   request?: RuntimePromptRequest,
 ): Promise<RuntimeRunPlan | undefined> {
+  await configHandler.isInitialized;
   let config: any;
   try {
     ({ config } = await configHandler.loadConfig());
-  } catch (error) {
-    console.warn("Failed to load Xynapse config for Xynapse runtime", error);
-  }
-
-  const rawModels = loadRawConfigModels();
-  let selectedModel = findRequestedModel(config, request, rawModels);
-  const override = getConfiguredRuntimeModelOverride();
-  let selectedRoute = toRuntimeModelRoute(selectedModel);
-  if (!selectedRoute && !override && !hasExplicitRuntimeModelRequest(request)) {
-    selectedModel = findRuntimeSupportedModel(config, rawModels);
-    selectedRoute = toRuntimeModelRoute(selectedModel);
-  }
-  const model = selectedRoute ?? override;
-
-  if (!model) {
-    const identity = getModelIdentity(selectedModel);
-    const label = identity?.title || identity?.model || "selected model";
-    void vscode.window.showErrorMessage(
-      `Xynapse Core runtime cannot run with ${label} yet. Select an OpenAI-compatible, xAI/Grok, Yandex, or DashScope/Qwen model, or use Lab modes for non-coding reasoning.`,
+  } catch {
+    throw new PublicError(
+      "Could not load the active model configuration. Fix its configuration errors before starting the runtime.",
     );
-    return undefined;
   }
-
-  return {
-    model,
-    env: await collectRuntimeEnv(configHandler, selectedModel),
-    label: getModelIdentity(selectedModel)?.title ?? model,
-  };
-}
-
-function getFastRuntimeRunPlan(
-  request?: RuntimePromptRequest,
-): RuntimeRunPlan | undefined {
-  const rawModels = loadRawConfigModels();
-  let selectedModel = findRequestedModel(undefined, request, rawModels);
-  const override = getConfiguredRuntimeModelOverride();
-  let selectedRoute = toRuntimeModelRoute(selectedModel);
-
-  if (!selectedRoute && !override && !hasExplicitRuntimeModelRequest(request)) {
-    selectedModel = findRuntimeSupportedModel(undefined, rawModels);
-    selectedRoute = toRuntimeModelRoute(selectedModel);
-  }
-
-  const model = selectedRoute ?? override;
-  if (!model) {
-    return undefined;
-  }
-
-  return {
-    model,
-    env: collectRuntimeEnvFromLocalFiles(selectedModel),
-    label: getModelIdentity(selectedModel)?.title ?? model,
-  };
+  if (!config)
+    throw new PublicError(
+      "The active model configuration is not ready. Check its errors and try again.",
+    );
+  return planResolvedRuntimeModel(
+    config,
+    typeof request === "object" ? request : {},
+    getConfiguredRuntimeModelOverride(),
+  );
 }
 
 function quotePowerShellArg(value: string) {
@@ -3373,7 +3041,7 @@ function collectEnvironmentProviderEnvFromObject(
 
   const record = value as Record<string, unknown>;
   const provider = normalizeXynapseEnvironmentProviderName(
-    record.provider ?? record.name ?? record.uses,
+    record.providerName ?? record.provider ?? record.name ?? record.uses,
   );
   const model = String(record.model ?? record.title ?? "").toLowerCase();
   const withEnv = record.with;
@@ -4408,9 +4076,8 @@ async function callYandexOpenAiBridge(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Yandex Cloud API error (${response.status}): ${errorText}`,
+    throw new PublicError(
+      `Yandex Cloud API request failed (HTTP ${response.status}). Check provider access and try again.`,
     );
   }
 
@@ -5755,6 +5422,14 @@ const getCommandsMap: (
     },
     "xynapse.applyCodeFromChat": () => {
       void sidebar.webviewProtocol.request("applyCodeFromChat", undefined);
+    },
+    "xynapse.connectYandexCloud": async () => {
+      await vscode.commands.executeCommand("xynapse.xynapseGUIView.focus");
+      await vscode.commands.executeCommand(
+        "xynapse.navigateTo",
+        "/config?tab=yandex-cloud",
+        false,
+      );
     },
     "xynapse.openConfigPage": () => {
       vscode.commands.executeCommand(

@@ -275,4 +275,11 @@ describe("BVC slash-command integration", () => {
     expect(ide.showVirtualFile).toHaveBeenCalledWith("bvc-plan.md", plan);
     expect(ide.writeFile).not.toHaveBeenCalled();
   });
+  it("does not save a final plan with unknown completion metadata", async () => {
+    const { sdk, ide } = fixture(async function* ({ isPlan }) {
+      yield { role: "assistant", content: isPlan ? plan : decisions };
+    });
+    expect(await consume(sdk)).toContain("unconfirmed provider completion");
+    expect(ide.writeFile).not.toHaveBeenCalled();
+  });
 });

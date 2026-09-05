@@ -1,8 +1,4 @@
-import {
-  CheckIcon,
-  ChevronUpDownIcon,
-  CubeIcon,
-} from "@heroicons/react/24/outline";
+import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/outline";
 import { ModelDescription } from "core";
 import { LLMConfigurationStatuses } from "core/llm/constants";
 import { MouseEvent, ReactNode, useContext } from "react";
@@ -17,6 +13,7 @@ import {
 } from "../../../components/ui";
 import { IdeMessengerContext } from "../../../context/IdeMessenger";
 import { fontSize } from "../../../util";
+import { ModelIcon } from "../../../components/modelSelection/ModelIcon";
 
 interface ModelRoleSelectorProps {
   models: ModelDescription[];
@@ -93,9 +90,13 @@ const ModelRoleSelector = ({
                   </span>
                 ) : (
                   <span
-                    className="line-clamp-1"
+                    className="flex items-center gap-2"
                     style={{ fontSize: fontSize(-1) }}
                   >
+                    <ModelIcon
+                      model={selectedModel?.model}
+                      provider={selectedModel?.provider}
+                    />
                     {selectedModel?.title ?? `Select ${displayName} model`}
                   </span>
                 )}
@@ -143,7 +144,10 @@ const ModelRoleSelector = ({
                         >
                           <div className="flex w-full items-center justify-between gap-2">
                             <div className="flex min-w-0 flex-1 items-center gap-2">
-                              <CubeIcon className="h-3 w-3 flex-shrink-0" />
+                              <ModelIcon
+                                model={option.model}
+                                provider={option.provider}
+                              />
                               <span
                                 className="line-clamp-1 truncate"
                                 style={{ fontSize: fontSize(-1) }}

@@ -173,6 +173,6 @@ export class GUISelectors {
   }
 
   public static getXynapseExtensionBadge(view: WebView) {
-    return SelectorUtils.getElementByAriaLabel(view, "Continue");
+    return SelectorUtils.getElementByAriaLabel(view, "Xynapse");
   }
 }

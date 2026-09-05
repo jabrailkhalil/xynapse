@@ -783,7 +783,7 @@ export class DefaultSettings extends Disposable {
 
 	private compareGroups(c1: ISettingsGroup, c2: ISettingsGroup): number {
 		if (typeof c1?.order !== 'number') {
-			return 1;
+			return typeof c2?.order !== 'number' ? 0 : 1;
 		}
 		if (typeof c2?.order !== 'number') {
 			return -1;

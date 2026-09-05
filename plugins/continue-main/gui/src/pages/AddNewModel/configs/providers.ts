@@ -84,13 +84,13 @@ export const apiBaseInput: InputDescriptor = {
 
 export const providers: Partial<Record<string, ProviderInfo>> = {
   yandex_gpt: {
-    title: "YandexGPT",
+    title: "Yandex Cloud",
     provider: "yandex_gpt",
     description:
       "Yandex Cloud AI Studio — 10 current language models with tool calling",
     longDescription:
       "10 current language models via Yandex Cloud: YandexGPT 5, Alice AI, DeepSeek V4 Flash, Qwen3/3.6, and gpt-oss. Get API credentials in [Yandex Cloud Console](https://console.yandex.cloud/).",
-    icon: "yandexgpt.png",
+    icon: "yandex-cloud.png",
     tags: [ModelProviderTags.RequiresApiKey],
     collectInputFor: [
       {
@@ -124,13 +124,13 @@ export const providers: Partial<Record<string, ProviderInfo>> = {
     apiKeyUrl: "https://console.yandex.cloud/",
   },
   yandexgpt: {
-    title: "YandexGPT",
+    title: "Yandex Cloud",
     provider: "yandex_gpt",
     description:
       "Yandex Cloud AI Studio — 10 current language models with tool calling",
     longDescription:
       "10 current language models via Yandex Cloud: YandexGPT 5, Alice AI, DeepSeek V4 Flash, Qwen3/3.6, and gpt-oss. Get API credentials in [Yandex Cloud Console](https://console.yandex.cloud/).",
-    icon: "yandexgpt.png",
+    icon: "yandex-cloud.png",
     tags: [ModelProviderTags.RequiresApiKey],
     collectInputFor: [
       {

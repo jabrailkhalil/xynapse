@@ -267,12 +267,12 @@ async function runTestsInBrowser(testModules, browserType, browserChannel) {
 
 	await page.goto(target.href);
 
-	if (args.build) {
-		const nlsMessages = await fs.promises.readFile(path.join(out, 'nls.messages.json'), 'utf8');
+	const nlsMessagesPath = path.join(out, 'nls.messages.json');
+	if (fs.existsSync(nlsMessagesPath)) {
+		const nlsMessages = await fs.promises.readFile(nlsMessagesPath, 'utf8');
 		await page.evaluate(value => {
-			// when running from `out-build`, ensure to load the default
-			// messages file, because all `nls.localize` calls have their
-			// english values removed and replaced by an index.
+			// Xynapse's regular compile also replaces English messages with
+			// indexes. Load the table for both out and out-build, as in Node tests.
 			// @ts-ignore
 			globalThis._VSCODE_NLS_MESSAGES = JSON.parse(value);
 		}, nlsMessages);

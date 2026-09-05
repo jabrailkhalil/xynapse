@@ -1,0 +1,398 @@
+{
+  "description": "Local Xynapse-modified Claw Code workspace snapshot imported for reproducible builds. Not asserted to equal an upstream commit.",
+  "upstream": "https://github.com/ultraworkers/claw-code",
+  "files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "e0f9a81b9447dccc4cae3c92d45a9adc9aac1c83988579e28c6cad974455ab8e"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "4e52bcdbe15ae385cb5c58f22cac80c7d8bee66fd56b65fadd17408d40590f57"
+    },
+    {
+      "path": "mock_parity_scenarios.json",
+      "sha256": "b0ae69a508e0da80a60578501896d305687dad631afdef1ab906c05c96abec3d"
+    },
+    {
+      "path": "crates/api/Cargo.toml",
+      "sha256": "fa4a46576db5c727e98043c79540fc5ed997393e9c0e5d508bb01bc1d409fa89"
+    },
+    {
+      "path": "crates/commands/Cargo.toml",
+      "sha256": "cd4ff47665240f92c3b4ed0a0d5485372461b3c5dd18c63f948b5dc66aeab5ff"
+    },
+    {
+      "path": "crates/compat-harness/Cargo.toml",
+      "sha256": "c610aacb69df609d5bac0076fc910294abaf5951c7b50b306470aa77589271b2"
+    },
+    {
+      "path": "crates/mock-anthropic-service/Cargo.toml",
+      "sha256": "cfaa4a8beeea4bd65e5643d3fc6f83953bc46a6807a97315749edb6ea2d54346"
+    },
+    {
+      "path": "crates/plugins/Cargo.toml",
+      "sha256": "7774b0ae254354e80b01bd30cc15fb33a7fbfa5b5e04bdf84fc528f10c070a4d"
+    },
+    {
+      "path": "crates/runtime/Cargo.toml",
+      "sha256": "ab35733bb8c1bb12ec23c5d288edf90550c18ec0fb9994fff31aceb8ef715440"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/build.rs",
+      "sha256": "c4babf060ebee798b1b1ae00f505fa6df722c55d26358bdbfc7bc41f4ae6139a"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/Cargo.toml",
+      "sha256": "96bdb845237104e670c60a7145789cb1891a75ddf570f1c2cffa6b50af636c7c"
+    },
+    {
+      "path": "crates/telemetry/Cargo.toml",
+      "sha256": "3bb790d6874cb09c2891a8d4cb24f8a5a051971cb9e059d26112998ec6787f18"
+    },
+    {
+      "path": "crates/tools/Cargo.toml",
+      "sha256": "32aa0558bca104395defbfa761f429a1902d02635c4ad94bec7fb85b095e88d0"
+    },
+    {
+      "path": "crates/api/benches/request_building.rs",
+      "sha256": "83b4c911b8efd1183c81e1f1ca1b4d599781bcc0b9e560124c403e7e314e9a22"
+    },
+    {
+      "path": "crates/api/src/client.rs",
+      "sha256": "89b1247a144aff02b583fe9e3358dd4e8243513d98c707b09d6a96a3217d201d"
+    },
+    {
+      "path": "crates/api/src/error.rs",
+      "sha256": "cb30c719f2a45dcb7529287e9715a9751549d1715419f395aa9bd4e7f145520d"
+    },
+    {
+      "path": "crates/api/src/http_client.rs",
+      "sha256": "55ccd2f235284facb3896ee834890e62039d2b6dab864b4a0ee1b3ee30f1ffca"
+    },
+    {
+      "path": "crates/api/src/lib.rs",
+      "sha256": "cdf4bbed908a6b4d28603d692b1015df357460bea2467f6f30ebaf6220a84a26"
+    },
+    {
+      "path": "crates/api/src/prompt_cache.rs",
+      "sha256": "4ed27d32d567c1a751b2089f9dd8ebfb16f07f7bb56cbbe5ee1819801eaef13e"
+    },
+    {
+      "path": "crates/api/src/sse.rs",
+      "sha256": "49c14c9fb0d328657c51cf444642c3ba89770df22fddee8c8e8d0968767be3d8"
+    },
+    {
+      "path": "crates/api/src/types.rs",
+      "sha256": "064063ccc08e0667563dbe69cbc1af62cf59d61a2dc77767cbd9440c8fe79520"
+    },
+    {
+      "path": "crates/api/tests/client_integration.rs",
+      "sha256": "c2d747cb53d930b2b63e95acd2754109bb320e0f0cddd761502d7f5159c28b09"
+    },
+    {
+      "path": "crates/api/tests/openai_compat_integration.rs",
+      "sha256": "06d35a2d23dbc1e7ef6e257db904e6e1357f54e5d436f6671629b3af2bd0b8c1"
+    },
+    {
+      "path": "crates/api/tests/provider_client_integration.rs",
+      "sha256": "4a1e0aa54216c2e9d6138c992a4c8f27d62504742a5e0ba36848cecb9d4d5a70"
+    },
+    {
+      "path": "crates/api/tests/proxy_integration.rs",
+      "sha256": "5ae447a180b96a9a2ffee85c5907d97dbd7f25523037328d5b90efda5a6d188f"
+    },
+    {
+      "path": "crates/api/src/providers/anthropic.rs",
+      "sha256": "c8563c316070fe3f35f7974edfbe90431200f487560c31abcdda1a343d613209"
+    },
+    {
+      "path": "crates/api/src/providers/mod.rs",
+      "sha256": "67d23eafd4ba286f5a586b4920a3549596dd5fcfa8aa79d20affa39ad91e5743"
+    },
+    {
+      "path": "crates/api/src/providers/openai_compat.rs",
+      "sha256": "8bcbc853ec09422d2d7a5c6ccdfe99772a4023f2a0658937069b909bb0ed3ec4"
+    },
+    {
+      "path": "crates/commands/src/lib.rs",
+      "sha256": "1844661b547dca83d57063e86c9242d8126fcd569b4a368ebbf97d244d723e35"
+    },
+    {
+      "path": "crates/compat-harness/src/lib.rs",
+      "sha256": "d72dccad012243d6a334964c063246c26d069fad832e44f28b121691ed78ba64"
+    },
+    {
+      "path": "crates/mock-anthropic-service/src/lib.rs",
+      "sha256": "b3f51f04a693b1efe2eb944863c4bf080fa8f253354ee1126ba4baaf30a10428"
+    },
+    {
+      "path": "crates/mock-anthropic-service/src/main.rs",
+      "sha256": "b9f3add78d53f9c9bb8135bcc97aa98ad7656c1639da59a1fd54f81f4195e3ac"
+    },
+    {
+      "path": "crates/plugins/src/hooks.rs",
+      "sha256": "83a565ce27ad59d633c534f32f2b862741ac444313bd5c2224a46c0c8abbc802"
+    },
+    {
+      "path": "crates/plugins/src/lib.rs",
+      "sha256": "63e7233a64f693d8612c20095f15509884ba607c66e2b9fe9f989d6303318425"
+    },
+    {
+      "path": "crates/plugins/src/test_isolation.rs",
+      "sha256": "9612e96a5209dea014b9b3fc4c457f279a4b74398b1327630079fe89169b8073"
+    },
+    {
+      "path": "crates/plugins/bundled/example-bundled/.xynapse-plugin/plugin.json",
+      "sha256": "a10bae998b08736e00909c40765b710d862aa720ecac67abd56a006e85cc5fb6"
+    },
+    {
+      "path": "crates/plugins/bundled/example-bundled/hooks/post.sh",
+      "sha256": "f4824ffd9486514375039bf5b1801815315b5f60e890a7046da2c2df2a1eafea"
+    },
+    {
+      "path": "crates/plugins/bundled/example-bundled/hooks/pre.sh",
+      "sha256": "360e54cac2c7651e62e2825275316f26ac1d098868b26db508c45b38ccbe8e51"
+    },
+    {
+      "path": "crates/plugins/bundled/sample-hooks/.xynapse-plugin/plugin.json",
+      "sha256": "5a91c453ff96a9bba339dc744614c816877e2e42b1939426a1e3b4e97a1e41c7"
+    },
+    {
+      "path": "crates/plugins/bundled/sample-hooks/hooks/post.sh",
+      "sha256": "5f2765ad9c489af9eabe7b86f4067c5b2feea033f900d3ef03e7b849b451c818"
+    },
+    {
+      "path": "crates/plugins/bundled/sample-hooks/hooks/pre.sh",
+      "sha256": "3a0ba3725c6d80b446bd233396ee5f45bcbfd9eefd21d5c4fbb71ef879dc8774"
+    },
+    {
+      "path": "crates/runtime/src/bash.rs",
+      "sha256": "601a271fbf3a1838995034ab783f55236882222076dd64a88669caa960ecb93b"
+    },
+    {
+      "path": "crates/runtime/src/bash_validation.rs",
+      "sha256": "f5b3b5eeeaaceb422a5a9c52eb77333fda034f2c0ca6b0d5cb4803e397a278f3"
+    },
+    {
+      "path": "crates/runtime/src/bootstrap.rs",
+      "sha256": "89945cb11c946df08508a6536eebf7a15d82c049494a8857bf37ecb47ac836f1"
+    },
+    {
+      "path": "crates/runtime/src/branch_lock.rs",
+      "sha256": "042f6269d0df05244332f11c05a323cdce74544cb55d2b1aae276fdb3f9b9c16"
+    },
+    {
+      "path": "crates/runtime/src/compact.rs",
+      "sha256": "1ceeabb728e986066e6afa8601128337a0701182a9081292200a3ea56585bc82"
+    },
+    {
+      "path": "crates/runtime/src/config.rs",
+      "sha256": "4f54a16001da7b67dd7b4ce244c373953618ff07e4141f74b8d859028a3422a5"
+    },
+    {
+      "path": "crates/runtime/src/config_validate.rs",
+      "sha256": "e105081e81788df1fa97249f741d8d20f95029b8e4f3b528243bae31fbc72a7e"
+    },
+    {
+      "path": "crates/runtime/src/conversation.rs",
+      "sha256": "f65141bc640b338429f9b6e37d7ef2b3d210503efb28a5e5f2cf87283ef28223"
+    },
+    {
+      "path": "crates/runtime/src/file_ops.rs",
+      "sha256": "c1a4212c0946d49efe626d7070c57e5fef04ffe90d66b0cc320b7393608454c4"
+    },
+    {
+      "path": "crates/runtime/src/git_context.rs",
+      "sha256": "da23a98498e5a7da3ef46cea5e039d491361a6bc3578c7886d2dc2dd4b9c484a"
+    },
+    {
+      "path": "crates/runtime/src/green_contract.rs",
+      "sha256": "6fdfb2bab13c287d4ccd90ec54c7abab57a402cf4385c8a00d75b5a42adb4e66"
+    },
+    {
+      "path": "crates/runtime/src/hooks.rs",
+      "sha256": "b0b05e451a5335f36382427fd537466740ac478aa2c79be4d4638ce193ea5795"
+    },
+    {
+      "path": "crates/runtime/src/json.rs",
+      "sha256": "94946d19372460cd029a80078d07ec5f2c72873d8c0425aaf842c6c0ee48a039"
+    },
+    {
+      "path": "crates/runtime/src/lane_events.rs",
+      "sha256": "3d6726a290b8f6783a0bd20177c763e83b79668180552a2cc43337c4f8fc3561"
+    },
+    {
+      "path": "crates/runtime/src/lib.rs",
+      "sha256": "fcd28e644666d6dace2cd4fbd5a3c15b0d173ffe9a80fa68f3f8c2e2a011b1a2"
+    },
+    {
+      "path": "crates/runtime/src/lsp_client.rs",
+      "sha256": "5e1ca773a5bbfa54cb7b369d37c8eb5c01e0042f96c4d9975bb2294c7ad9000c"
+    },
+    {
+      "path": "crates/runtime/src/mcp.rs",
+      "sha256": "48e88cb0c10945eb042bb69e4c5241aa00b594d23840c48e04c846e910fb2d84"
+    },
+    {
+      "path": "crates/runtime/src/mcp_client.rs",
+      "sha256": "514bbf0378194d3ec8bf8b18e89f84fb1f823d848835607c2932490976c7c791"
+    },
+    {
+      "path": "crates/runtime/src/mcp_lifecycle_hardened.rs",
+      "sha256": "e74893e51c919092f912950253099227dc21819746eced56ab6e90840b522748"
+    },
+    {
+      "path": "crates/runtime/src/mcp_server.rs",
+      "sha256": "bc5f07e3adf9b7b8b2b8406819cdea3234f40a8196a86e5acf37421d41f4f291"
+    },
+    {
+      "path": "crates/runtime/src/mcp_stdio.rs",
+      "sha256": "191e0f8155fdd3e5ea4417945553f7eb4984c7ba21cf08878956d487fb1f0153"
+    },
+    {
+      "path": "crates/runtime/src/mcp_tool_bridge.rs",
+      "sha256": "ac1dde1323bdc8c853f11693476f8750e7bcfc610ff47999be64968acc6ac1c2"
+    },
+    {
+      "path": "crates/runtime/src/oauth.rs",
+      "sha256": "928eb2a8303849913a7cba96fa1746710924c5951de1d4c59475fd4869704662"
+    },
+    {
+      "path": "crates/runtime/src/permissions.rs",
+      "sha256": "97734346e3f3763a2408cb56007fcab8107ea3f658ff6ebd00df0d76fef3128d"
+    },
+    {
+      "path": "crates/runtime/src/permission_enforcer.rs",
+      "sha256": "d7d1146c8a6c18ecf54c8d5c3cc56a12d02742e3d5c063b823bcd46ec1b2d756"
+    },
+    {
+      "path": "crates/runtime/src/plugin_lifecycle.rs",
+      "sha256": "c82e3b2df4c28cfdbb174d2645f5979c29ca459f5df05947a65097dc61114945"
+    },
+    {
+      "path": "crates/runtime/src/policy_engine.rs",
+      "sha256": "4da7ba1c6d7570d3d89d549b1f52a702a9aef7abe67b839a4c443172a8ff6f86"
+    },
+    {
+      "path": "crates/runtime/src/prompt.rs",
+      "sha256": "0532294677bc007543cf38a8e0cb31ac7834e6d4063f4aa37021cef2b7d60b61"
+    },
+    {
+      "path": "crates/runtime/src/recovery_recipes.rs",
+      "sha256": "bf8507d1d95f1b9ac1f7497629550a0dd060b62fa7e2895f50a021724ad40435"
+    },
+    {
+      "path": "crates/runtime/src/remote.rs",
+      "sha256": "b93eca9e386da17419480227ce39a12fcd182a7332035e785f93a3dac4dbd3c4"
+    },
+    {
+      "path": "crates/runtime/src/sandbox.rs",
+      "sha256": "842152344694732c1e31ece5537a6f4c427f18e1c2184d8afc3facce8b203d3c"
+    },
+    {
+      "path": "crates/runtime/src/session.rs",
+      "sha256": "44ccf6335db5f178d481bff9b2a1e6079879e0fcde2b0cbdccf247e094b884aa"
+    },
+    {
+      "path": "crates/runtime/src/session_control.rs",
+      "sha256": "2f43dc5e2b2c123828f8e53e2aedf9c2df27e93e281e6028c74a5567f95e648a"
+    },
+    {
+      "path": "crates/runtime/src/sse.rs",
+      "sha256": "9a6e382fdf95b54a4a3929e0933593a9a9221a19b1fe8b928a490577d8150f86"
+    },
+    {
+      "path": "crates/runtime/src/stale_base.rs",
+      "sha256": "b158ed83e7ced86597b0bd7d1784a9a5dea11c8b7ead281c3e19ca522d37c617"
+    },
+    {
+      "path": "crates/runtime/src/stale_branch.rs",
+      "sha256": "25e11aa4c530c4a40b7e46f20d3228438dc6fffd5bafdb324ab7e574231f5a79"
+    },
+    {
+      "path": "crates/runtime/src/summary_compression.rs",
+      "sha256": "c30f1ec5396839f4a3a9856a3c9404a5ac69a998c2ea22244d2528315749c59d"
+    },
+    {
+      "path": "crates/runtime/src/task_packet.rs",
+      "sha256": "e79de2ea7d3f94feeea84ae8a6a4ce98e3f63b78c575a5bf4d51ea72f16d11a2"
+    },
+    {
+      "path": "crates/runtime/src/task_registry.rs",
+      "sha256": "db01329f40020cf293c743c0d852e90c49cad51dd49bab793f0c2d3ab87464d3"
+    },
+    {
+      "path": "crates/runtime/src/team_cron_registry.rs",
+      "sha256": "c1c4f99dcf81cd908aa8838ea39a94fc7300d2af482fd26d09d327be6dca566e"
+    },
+    {
+      "path": "crates/runtime/src/trust_resolver.rs",
+      "sha256": "c30dc7e5c19f5aea32b608e0e92d8472bdd095d3cdce0e37006f5f58376d10af"
+    },
+    {
+      "path": "crates/runtime/src/usage.rs",
+      "sha256": "544598a97a8b7f968d2997d36b7884b1f2250e1a2216a94e62a0c59ebe1bc6c3"
+    },
+    {
+      "path": "crates/runtime/src/worker_boot.rs",
+      "sha256": "e22b18d2d97d3685221cf016e49c7184f2a62eee2cd242acfbe661d5309d1400"
+    },
+    {
+      "path": "crates/runtime/tests/integration_tests.rs",
+      "sha256": "b5c3653ea33b0930028c39bb1bd2e30ce1b4c989db672fc8becacc94b9792f2e"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/src/init.rs",
+      "sha256": "aee23cad96f741b797caf6d59392c3ad09690ff096a5d61153a8bc412cf723a0"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/src/input.rs",
+      "sha256": "2c1b1adfd82ee12b8cd1b8843c7a3a73589ff5da9cf074e2b3dd926d0068e3f5"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/src/main.rs",
+      "sha256": "c61446a40af3a8590c59595d66c2a43d271db816b43e8e36c572ff1d62a509b8"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/src/render.rs",
+      "sha256": "1fa9630595923dd5066dfeeaf484d25f95efb0fbbd811d47f1e928eb724900b3"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/tests/cli_flags_and_config_defaults.rs",
+      "sha256": "3a472b22e2b61064ed3807381f0bd0ac5096aa5893119f208889a7e72896a4f0"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/tests/compact_output.rs",
+      "sha256": "ba3650bb3be574329b9f25a376fd4180051088374547b9e9f8d1852db411a3a2"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/tests/mock_parity_harness.rs",
+      "sha256": "fc05c2c348d1191db237f198cc70d418f1eca410be70fde2adbc1bbf4683a52f"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/tests/output_format_contract.rs",
+      "sha256": "5a2a45705f6ecca0cce0b269c1a5e028892c9ce87f7e66256ff88831e6139efe"
+    },
+    {
+      "path": "crates/rusty-xynapse-cli/tests/resume_slash_commands.rs",
+      "sha256": "83ae2a35b0eb8c2f844ad9fe9417197453d95e2e7408e36dc1e8899a8dc519cf"
+    },
+    {
+      "path": "crates/telemetry/src/lib.rs",
+      "sha256": "45c0066a342c7b6f8329f13794c8e02742eeaf16fb4b160ae7930a7f3733c5e1"
+    },
+    {
+      "path": "crates/tools/src/lane_completion.rs",
+      "sha256": "9a88c901d51bd2487823059220b69089084606a19df68b7c9158be92fb4479b8"
+    },
+    {
+      "path": "crates/tools/src/lib.rs",
+      "sha256": "c614ae600f5be56986256b9d3b03e2bac4fa2aa17bc6bdf569828b55ce414b58"
+    },
+    {
+      "path": "crates/tools/src/pdf_extract.rs",
+      "sha256": "9d87f194968c943070cdf23f59236414fafc1478992f417427f41ed579046399"
+    }
+  ]
+}

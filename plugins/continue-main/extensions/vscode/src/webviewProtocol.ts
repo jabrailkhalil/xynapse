@@ -1,13 +1,11 @@
 import { FromWebviewProtocol, ToWebviewProtocol } from "core/protocol";
 import { Message } from "core/protocol/messenger";
-import { extractMinimalStackTraceInfo } from "core/util/extractMinimalStackTraceInfo";
+import { publicErrorMessage } from "core/util/publicError";
 import { Telemetry } from "core/util/posthog";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 import { IMessenger } from "../../../core/protocol/messenger";
-
-import { handleLLMError } from "./util/errorHandling";
 
 export class VsCodeWebviewProtocol
   implements IMessenger<FromWebviewProtocol, ToWebviewProtocol>
@@ -52,7 +50,7 @@ export class VsCodeWebviewProtocol
 
     const handleMessage = async (msg: Message): Promise<void> => {
       if (!("messageType" in msg) || !("messageId" in msg)) {
-        throw new Error(`Invalid webview protocol msg: ${JSON.stringify(msg)}`);
+        throw new Error("Invalid webview protocol message");
       }
 
       const respond = (message: any) =>
@@ -85,84 +83,24 @@ export class VsCodeWebviewProtocol
           } else {
             respond({ done: true, content: response, status: "success" });
           }
-        } catch (e: any) {
-          if (await handleLLMError(e)) {
-            // Respond without an error, so the UI doesn't show the error component
-            respond({ done: true, status: "error" });
-          }
-          let message =
-            typeof e?.message === "string"
-              ? e.message
-              : typeof e === "string"
-                ? e
-                : JSON.stringify(e);
+        } catch (error: unknown) {
+          const message = publicErrorMessage(error);
           respond({ done: true, error: message, status: "error" });
-
-          const stringified = JSON.stringify({ msg }, null, 2);
-          const isExpectedCliCheckFailure =
-            stringified.includes(`"messageType": "subprocess"`) &&
-            (stringified.includes(`"command": "where cn"`) ||
-              stringified.includes(`"command": "which cn"`) ||
-              stringified.includes(`"command": "command -v cn || true"`) ||
-              stringified.includes(`Get-Command cn`));
-
-          if (isExpectedCliCheckFailure) {
-            return;
-          }
-
-          console.error(
-            `Error handling webview message: ${stringified}\n\n${e}`,
-          );
-
-          if (
-            stringified.includes("llm/streamChat") ||
-            stringified.includes("chatDescriber/describe")
-          ) {
-            return;
-          }
-
-          if (e.cause) {
-            if (e.cause.name === "ConnectTimeoutError") {
-              message = `Connection timed out. If you expect it to take a long time to connect, you can increase the timeout in your config by setting "requestOptions": { "timeout": 10000 }. You can find the full config reference in the Xynapse documentation`;
-            } else if (e.cause.code === "ECONNREFUSED") {
-              message = `Connection was refused. This likely means that there is no server running at the specified URL. If you are running your own server you may need to set the "apiBase" parameter in config.json. For example, you can set up an OpenAI-compatible server. See the Xynapse documentation for details`;
-            } else {
-              message = `The request failed with "${e.cause.name}": ${e.cause.message}. If you're having trouble setting up Xynapse, please see the troubleshooting guide for help.`;
-            }
-          }
-
-          if (
-            typeof message === "string" &&
-            message.includes("https://proxy-server")
-          ) {
-            message = message.split("\n").filter((l: string) => l !== "")[1];
-            try {
-              message = JSON.parse(message).message;
-            } catch {}
-            if (typeof message === "string" && message.includes("exceeded")) {
-              message +=
-                " To keep using Xynapse, you can set up a local model or use your own API key.";
-            }
-
-            vscode.window
-              .showInformationMessage(message, "Add API Key", "Use Local Model")
-              .then((selection) => {
-                if (selection === "Add API Key") {
-                  this.request("setupApiKey", undefined);
-                } else if (selection === "Use Local Model") {
-                  this.request("setupLocalConfig", undefined);
-                }
-              });
-          } else {
-            Telemetry.capture(
+          const expectedProbe =
+            msg.messageType === "subprocess" &&
+            ["where cn", "which cn", "command -v cn || true"].includes(
+              (msg.data as { command?: string })?.command ?? "",
+            );
+          if (!expectedProbe) {
+            // Request bodies, errors and stacks can contain credentials or source text.
+            // Only the registered protocol name is safe to record here.
+            console.error("Xynapse request failed", {
+              messageType: msg.messageType,
+            });
+            void Telemetry.capture(
               "webview_protocol_error",
               {
                 messageType: msg.messageType,
-                errorMsg:
-                  typeof message === "string"
-                    ? message.split("\n\n")[0]
-                    : String(message),
-                stack: extractMinimalStackTraceInfo(e.stack),
               },
               false,
             );

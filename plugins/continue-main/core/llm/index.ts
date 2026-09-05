@@ -1,3 +1,4 @@
+import { PublicError, publicErrorMessage } from "../util/publicError.js";
 import { ModelRole } from "@xynapse/config-yaml";
 import { fetchwithRequestOptions } from "@xynapse/fetch";
 import { findLlmInfo } from "@xynapse/llm-info";
@@ -470,33 +471,29 @@ export abstract class BaseLLM implements ILLM {
           }
 
           const error = await this.parseError(resp);
-          throw error;
+          throw Object.assign(error, { status: resp.status });
         }
 
         return resp;
       } catch (e: any) {
         // Capture all fetch errors to Sentry for monitoring
-        Logger.error(e, {
+        Logger.error(new Error(publicErrorMessage(e)), {
           context: "llm_fetch",
-          url: String(input),
           method: init?.method || "GET",
-          model: this.model,
           provider: this.providerName,
         });
 
         // Errors to ignore
         if (e.message.includes("/api/tags")) {
-          throw new Error(`Error fetching tags: ${e.message}`);
-        } else if (e.message.includes("/api/show")) {
-          throw new Error(
-            `HTTP ${e.response.status} ${e.response.statusText} from ${e.response.url}\n\n${e.response.body}`,
+          throw new PublicError(
+            "Could not fetch local model tags. Check the model server.",
           );
+        } else if (e.message.includes("/api/show")) {
+          throw new PublicError("Could not load the local model metadata.");
         } else {
           if (e.name !== "AbortError") {
             // Don't pollute console with abort errors. Check on name instead of instanceof, to avoid importing node-fetch here
-            console.debug(
-              `${e.message}\n\nCode: ${e.code}\nError number: ${e.errno}\nSyscall: ${e.erroredSysCall}\nType: ${e.type}\n\n${e.stack}`,
-            );
+            console.debug(publicErrorMessage(e));
           }
           if (
             e.code === "ECONNREFUSED" &&
@@ -526,7 +523,10 @@ export abstract class BaseLLM implements ILLM {
             throw new Error(message);
           }
         }
-        throw e;
+        throw Object.assign(new PublicError(publicErrorMessage(e)), {
+          name: e?.name === "AbortError" ? "AbortError" : "Error",
+          status: e?.status,
+        });
       }
     };
     return withExponentialBackoff<Response>(

@@ -532,3 +532,15 @@ test("explicit synthesis model reaches the provider unchanged", async () => {
   const { requests } = await run({ synthesisModelId: "my-selected-model" });
   assert.equal(requests.at(-1).modelId, "my-selected-model");
 });
+
+test("production synthesis policy rejects unknown terminal metadata", async () => {
+  const { result } = await run(
+    { options: { mode: "single", requireConfirmedSynthesis: true } },
+    async function* () {
+      yield { text: plan };
+    },
+  );
+  assert.equal(result.status, "failed");
+  assert.equal(result.plan, undefined);
+  assert.match(result.reason, /unconfirmed provider completion/);
+});

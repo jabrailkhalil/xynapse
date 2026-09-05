@@ -1,0 +1,5 @@
+/target/
+/.clawd-agents/
+**/.xynapse/
+!crates/plugins/bundled/*/.xynapse-plugin/
+!crates/plugins/bundled/*/.xynapse-plugin/plugin.json

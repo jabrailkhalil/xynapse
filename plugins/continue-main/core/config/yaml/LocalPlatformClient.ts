@@ -47,9 +47,7 @@ export class LocalPlatformClient implements PlatformClient {
       const dotEnv = getXynapseDotEnv();
       return dotEnv[fqsn.secretName];
     } catch (error) {
-      console.warn(
-        `Error reading ~/.xynapse/.env file: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      console.warn("Could not read the local secrets file.");
       return undefined;
     }
   }
@@ -76,18 +74,14 @@ export class LocalPlatformClient implements PlatformClient {
             }
           }
         } catch (error) {
-          console.warn(
-            `Error reading workspace .env file at ${envFilePath}: ${error instanceof Error ? error.message : String(error)}`,
-          );
+          console.warn("Could not read a workspace secrets file.");
           // Xynapse to next workspace folder
         }
       }
 
       return undefined;
     } catch (error) {
-      console.warn(
-        `Error searching workspace .env files: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      console.warn("Could not search workspace secrets files.");
       return undefined;
     }
   }
@@ -101,11 +95,14 @@ export class LocalPlatformClient implements PlatformClient {
     try {
       results = await this.client.resolveFQSNs(fqsns, this.orgScopeId);
     } catch (e) {
-      console.error("Error getting secrets from control plane", e);
+      console.error(
+        "Could not resolve secrets through the control plane; checking local configuration.",
+      );
     }
 
     // For any secret that isn't found, look in .env files, then process.env
-    for (let i = 0; i < results.length; i++) {
+    results = fqsns.map((_, index) => results[index]);
+    for (let i = 0; i < fqsns.length; i++) {
       if (!results[i]?.found) {
         let secretResult = await this.findSecretInEnvFiles(fqsns[i]);
 

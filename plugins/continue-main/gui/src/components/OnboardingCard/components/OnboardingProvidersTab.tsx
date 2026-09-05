@@ -3,6 +3,7 @@ import {
   ChevronLeftIcon,
   KeyIcon,
   ShieldCheckIcon,
+  CloudIcon,
 } from "@heroicons/react/24/outline";
 import { OnboardingModes } from "core/protocol/core";
 import { useContext, useState } from "react";
@@ -14,6 +15,8 @@ import { useAppDispatch } from "../../../redux/hooks";
 import { setDialogMessage, setShowDialog } from "../../../redux/slices/uiSlice";
 import { Button, Input, SecondaryButton } from "../../index";
 import { useSubmitOnboarding } from "../hooks/useSubmitOnboarding";
+import { useOnboardingCard } from "../hooks/useOnboardingCard";
+import { YandexCloudForm } from "../../../forms/YandexCloudForm";
 
 interface OnboardingProvidersTabProps {
   /** Whether this is being shown in a dialog context */
@@ -36,7 +39,7 @@ const onboardingTranslations: Record<string, Record<string, string>> = {
     "Enter your Yandex Folder ID": "Введите Yandex Folder ID",
     "Click here": "Нажмите здесь",
     "to create a {provider} API key": "чтобы создать API-ключ {provider}",
-    "Connect": "Подключить",
+    Connect: "Подключить",
     "to view more providers": "чтобы посмотреть других провайдеров",
   },
   ja: {
@@ -54,7 +57,7 @@ const onboardingTranslations: Record<string, Record<string, string>> = {
     "Enter your Yandex Folder ID": "Yandex Folder ID を入力",
     "Click here": "ここをクリック",
     "to create a {provider} API key": "{provider} の API キーを作成",
-    "Connect": "接続",
+    Connect: "接続",
     "to view more providers": "他のプロバイダーを表示",
   },
 };
@@ -77,7 +80,10 @@ export function OnboardingProvidersTab({
 }: OnboardingProvidersTabProps) {
   const formMethods = useForm();
   const ideMessenger = useContext(IdeMessengerContext);
-  const [setupMode, setSetupMode] = useState<"choice" | "manual">("choice");
+  const [setupMode, setSetupMode] = useState<"choice" | "manual" | "yandex">(
+    "choice",
+  );
+  const { close: closeOnboarding } = useOnboardingCard();
   const dispatch = useAppDispatch();
   const { submitOnboarding } = useSubmitOnboarding(
     OnboardingModes.API_KEY,
@@ -163,6 +169,19 @@ export function OnboardingProvidersTab({
       <div className="w-full max-w-md">
         {setupMode === "choice" && (
           <div className="mt-5 space-y-4">
+            <button
+              type="button"
+              onClick={() => setSetupMode("yandex")}
+              className="border-border text-foreground hover:bg-input/60 flex w-full cursor-pointer items-start gap-3 rounded-lg border border-solid bg-transparent p-3 text-left"
+            >
+              <CloudIcon className="h-6 w-6 flex-shrink-0" />
+              <div>
+                <div className="text-base font-semibold">Yandex Cloud</div>
+                <div className="text-description mt-1 text-sm leading-5">
+                  Connect one API key and import all available chat models.
+                </div>
+              </div>
+            </button>
             <div className="border-border bg-input/40 rounded-lg border border-solid p-3">
               <div className="flex items-start gap-3">
                 <div className="bg-foreground/10 rounded-lg p-2">
@@ -192,7 +211,7 @@ export function OnboardingProvidersTab({
             <button
               type="button"
               onClick={() => setSetupMode("manual")}
-              className="border-border bg-transparent text-foreground hover:bg-input/60 flex w-full cursor-pointer items-start gap-3 rounded-lg border border-solid p-3 text-left transition-colors"
+              className="border-border text-foreground hover:bg-input/60 flex w-full cursor-pointer items-start gap-3 rounded-lg border border-solid bg-transparent p-3 text-left transition-colors"
             >
               <div className="bg-foreground/10 rounded-lg p-2">
                 <KeyIcon className="h-5 w-5" />
@@ -202,9 +221,7 @@ export function OnboardingProvidersTab({
                   {t("Configure manually")}
                 </div>
                 <div className="text-description mt-1 text-sm leading-5">
-                  {t(
-                    "Add provider keys in this IDE.",
-                  )}
+                  {t("Add provider keys in this IDE.")}
                 </div>
               </div>
             </button>
@@ -217,6 +234,19 @@ export function OnboardingProvidersTab({
           </div>
         )}
 
+        {setupMode === "yandex" && (
+          <div className="mt-5 space-y-5">
+            <SecondaryButton
+              type="button"
+              onClick={() => setSetupMode("choice")}
+              className="!m-0 inline-flex items-center gap-1"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+              Connection options
+            </SecondaryButton>
+            <YandexCloudForm onDone={() => closeOnboarding(isDialog)} />
+          </div>
+        )}
         {setupMode === "manual" && (
           <FormProvider {...formMethods}>
             <div className="mt-5 space-y-6">

@@ -71,6 +71,11 @@ const isMacTarget = target?.startsWith("darwin");
 
 void (async () => {
   const startTime = Date.now();
+  const noticesDir = path.join(__dirname, "..", "licenses");
+  fs.mkdirSync(noticesDir, { recursive: true });
+  fs.copyFileSync(path.join(continueDir, "LICENSE"), path.join(noticesDir, "Continue-Apache-2.0.txt"));
+  fs.copyFileSync(path.join(continueDir, "..", "..", "runtime", "LICENSE"), path.join(noticesDir, "Runtime-MIT.txt"));
+  fs.copyFileSync(path.join(continueDir, "..", "..", "NOTICE"), path.join(__dirname, "..", "NOTICE"));
   console.log(
     `[info] Packaging extension for target ${target} - started at ${new Date().toISOString()}`,
   );

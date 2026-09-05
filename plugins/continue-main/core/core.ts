@@ -9,6 +9,8 @@ import {
 } from "./autocomplete/util/openedFilesLruCache";
 import { ConfigHandler } from "./config/ConfigHandler";
 import { addModel, deleteModel } from "./config/util";
+import { importYandexCloudModels } from "./config/yandexCloud";
+import { getPrimaryConfigFilePath } from "./util/paths";
 import { getAuthUrlForTokenPage } from "./control-plane/auth/index";
 import { getControlPlaneEnv } from "./control-plane/env";
 import { DevDataSqliteDb } from "./data/devdataSqlite";
@@ -378,6 +380,26 @@ export class Core {
       void DataLogger.getInstance().logDevData(msg.data);
     });
 
+    on("config/importYandexCloud", async (msg) => {
+      const result = await importYandexCloudModels(
+        msg.data,
+        getPrimaryConfigFilePath,
+      );
+      if (result.ok) {
+        try {
+          await this.configHandler.setSelectedProfileId("local");
+          await this.configHandler.reloadConfig("Yandex Cloud models imported");
+        } catch {
+          return {
+            ...result,
+            warning:
+              "Models were saved. Reload the IDE window to refresh the model list.",
+          };
+        }
+      }
+      return result;
+    });
+
     on("config/addModel", (msg) => {
       const model = msg.data.model;
       addModel(model, msg.data.role);
@@ -582,7 +604,12 @@ export class Core {
 
     on("config/getSerializedProfileInfo", async (msg) => {
       const serializedResult = await this.configHandler.getSerializedConfig();
-      console.log("[Xynapse] getSerializedProfileInfo - hasConfig:", !!serializedResult.config, "chatModels:", serializedResult.config?.modelsByRole?.chat?.length ?? 0);
+      console.log(
+        "[Xynapse] getSerializedProfileInfo - hasConfig:",
+        !!serializedResult.config,
+        "chatModels:",
+        serializedResult.config?.modelsByRole?.chat?.length ?? 0,
+      );
       return {
         result: serializedResult,
         profileId:
@@ -625,8 +652,10 @@ export class Core {
       console.log(
         "[Xynapse compileChat] tools in options:",
         options?.tools?.length ?? "NONE",
-        "| messages count:", messages?.length,
-        "| tool names:", options?.tools?.map((t: any) => t.function?.name).join(", ") || "none",
+        "| messages count:",
+        messages?.length,
+        "| tool names:",
+        options?.tools?.map((t: any) => t.function?.name).join(", ") || "none",
       );
       const model = (await this.configHandler.loadConfig()).config
         ?.selectedModelByRole.chat;

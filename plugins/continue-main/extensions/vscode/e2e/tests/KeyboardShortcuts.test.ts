@@ -46,7 +46,7 @@ describe("Keyboard Shortcuts", () => {
   });
 
   afterEach(async function () {
-    this.timeout(DEFAULT_TIMEOUT.XL * 1000);
+    this.timeout(DEFAULT_TIMEOUT.XL);
     await cleanupChat();
     await view.switchBack();
     await editor.clearText();

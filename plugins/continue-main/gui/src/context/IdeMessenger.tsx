@@ -86,18 +86,13 @@ export class IdeMessenger implements IIdeMessenger {
           console.log(
             "Unable to send message: postIntellijMessage is undefined. ",
             messageType,
-            data,
           );
           throw new Error("postIntellijMessage is undefined");
         }
         window.postIntellijMessage?.(messageType, data, messageId);
         return;
       } else {
-        console.log(
-          "Unable to send message: vscode is undefined",
-          messageType,
-          data,
-        );
+        console.log("Unable to send message: vscode is undefined", messageType);
         return;
       }
     }

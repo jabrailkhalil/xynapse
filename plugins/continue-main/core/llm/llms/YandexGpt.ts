@@ -6,6 +6,7 @@ import {
   LLMOptions,
 } from "../../index.js";
 import { BaseLLM } from "../index.js";
+import { PublicError } from "../../util/publicError.js";
 import { fromChatCompletionChunk } from "../openaiTypeConverters.js";
 
 const YANDEX_OPENAI_API_BASE = "https://ai.api.cloud.yandex.net/v1";
@@ -192,9 +193,8 @@ class YandexGptLLM extends BaseLLM {
     });
 
     if (!response.ok) {
-      const details = (await response.text()).slice(0, 2000);
-      throw new Error(
-        `Yandex Cloud API request failed (${response.status}): ${details}`,
+      throw new PublicError(
+        `Yandex Cloud API request failed (HTTP ${response.status}). Check provider access and try again.`,
       );
     }
 

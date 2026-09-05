@@ -301,15 +301,15 @@ describe("YandexGpt OpenAI-compatible transport", () => {
     );
   });
 
-  test("throws an actionable HTTP error", async () => {
+  test("throws a public HTTP error without echoing the response", async () => {
     const llm = createLlm();
     (llm as any).fetch = vi.fn().mockResolvedValue(
-      new Response('{"error":{"message":"invalid model"}}', {
+      new Response('{"error":{"message":"FAKE-KEY-IN-PROVIDER-ERROR"}}', {
         status: 400,
       }),
     );
     await expect(collect(llm)).rejects.toThrow(
-      "Yandex Cloud API request failed (400)",
+      "Yandex Cloud API request failed (HTTP 400). Check provider access and try again.",
     );
   });
 });

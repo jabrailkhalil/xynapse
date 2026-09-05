@@ -91,12 +91,11 @@ export function parseDataLine(line: string): any {
         typeof data.error === "object" &&
         "message" in data.error
       ) {
-        console.error("Error in streamed response:", data.error);
-        throw new Error(`Error streaming response: ${data.error.message}`);
+        throw new Error(
+          "Error streaming response: provider reported a failure",
+        );
       }
-      throw new Error(
-        `Error streaming response: ${JSON.stringify(data.error)}`,
-      );
+      throw new Error("Error streaming response: provider reported a failure");
     }
 
     return data;
@@ -109,7 +108,7 @@ export function parseDataLine(line: string): any {
       throw e;
     }
     // Otherwise it's a JSON parsing error
-    throw new Error(`Malformed JSON sent from server: ${json}`);
+    throw new Error("Malformed JSON sent from server");
   }
 }
 

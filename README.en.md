@@ -9,8 +9,8 @@
 A Windows IDE built on Code - OSS, with Xynapse Assistant and BVC planning included.
 
 [![IDE 1.108.0](https://img.shields.io/badge/IDE-1.108.0-6366f1?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/v1.108.0)
-[![Assistant 1.0.0](https://img.shields.io/badge/Assistant-1.0.0-8b5cf6?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/assistant-v1.0.0-bvc.0.1.0)
-[![BVC 0.1.0](https://img.shields.io/badge/BVC-0.1.0-0891b2?style=flat-square)](./plugins/continue-main/packages/bvc/README.md)
+[![Assistant 1.0.1](https://img.shields.io/badge/Assistant-1.0.1-8b5cf6?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/assistant-v1.0.1-bvc.0.1.1)
+[![BVC 0.1.1](https://img.shields.io/badge/BVC-0.1.1-0891b2?style=flat-square)](./plugins/continue-main/packages/bvc/README.md)
 [![Windows x64](https://img.shields.io/badge/Windows-x64-0078d4?style=flat-square)](#download)
 
 [Download](#download) · [Quick start](#quick-start) · [BVC planning](#bvc-planning) · [Русский](./README.ru.md)
@@ -24,9 +24,9 @@ Two releases, one project. Choose the complete IDE or add the assistant to a com
 | Package | Includes | Download · Windows x64 |
 | --- | --- | --- |
 | **Xynapse IDE 1.108.0** | Editor + Assistant 1.0.0 + BVC 0.1.0 | [Installer](https://github.com/jabrailkhalil/xynapse/releases/download/v1.108.0/XynapseSetup-x64-1.108.0.exe) · [Portable ZIP](https://github.com/jabrailkhalil/xynapse/releases/download/v1.108.0/Xynapse-portable-win32-x64-1.108.0.zip) |
-| **Xynapse Assistant 1.0.0** | Standalone extension + BVC 0.1.0 | [VSIX](https://github.com/jabrailkhalil/xynapse/releases/download/assistant-v1.0.0-bvc.0.1.0/xynapse-assistant-bvc-0.1.0-win32-x64.vsix) |
+| **Xynapse Assistant 1.0.1** | Standalone extension + BVC 0.1.1 | [VSIX](https://github.com/jabrailkhalil/xynapse/releases/download/assistant-v1.0.1-bvc.0.1.1/xynapse-assistant-1.0.1-win32-x64.vsix) |
 
-The IDE already includes the assistant. Each release provides `SHA256SUMS.txt`; Windows executables are currently unsigned.
+The IDE 1.108.0 installer still includes Assistant 1.0.0; install the new VSIX to update it to 1.0.1. See [release verification and known limits](./docs/ASSISTANT-1.0.1.md). Each release provides `SHA256SUMS.txt`; Windows executables are currently unsigned.
 
 ## Quick start
 

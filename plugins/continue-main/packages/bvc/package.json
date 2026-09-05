@@ -1,6 +1,6 @@
 {
   "name": "@xynapse/bvc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Provider-independent, bounded multi-role planning for coding assistants",
   "type": "module",
   "main": "./dist/index.js",

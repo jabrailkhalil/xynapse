@@ -8,6 +8,7 @@ import { getExtensionVersion, isUnsupportedPlatform } from "../util/util";
 import { GlobalContext } from "core/util/GlobalContext";
 import { VsCodeXynapseApi } from "./api";
 import setupInlineTips from "./InlineTipManager";
+import { mergeXynapseYamlSchema } from "./yamlSchemas";
 
 export async function activateExtension(context: vscode.ExtensionContext) {
   const platformCheck = isUnsupportedPlatform();
@@ -63,7 +64,6 @@ export async function activateExtension(context: vscode.ExtensionContext) {
   }
 
   // Register config.yaml schema by removing old entries and adding new one (uri.fsPath changes with each version)
-  const yamlMatcher = ".xynapse/**/*.yaml";
   const yamlConfig = vscode.workspace.getConfiguration("yaml");
 
   const newPath = vscode.Uri.joinPath(
@@ -76,14 +76,14 @@ export async function activateExtension(context: vscode.ExtensionContext) {
     try {
       await yamlConfig.update(
         "schemas",
-        { [newPath]: [yamlMatcher] },
+        mergeXynapseYamlSchema(
+          yamlConfig.inspect<Record<string, unknown>>("schemas")?.globalValue,
+          newPath,
+        ),
         vscode.ConfigurationTarget.Global,
       );
     } catch (error) {
-      console.error(
-        "Failed to register Xynapse config.yaml schema",
-        error,
-      );
+      console.error("Failed to register Xynapse config.yaml schema", error);
     }
   }
 

@@ -11,17 +11,21 @@ import { DEFAULT_TIMEOUT } from "../constants";
 import { TestUtils } from "../TestUtils";
 
 export class GlobalActions {
-  static defaultFolder = "e2e/test-continue";
+  static defaultFolder = process.env.XYNAPSE_E2E_WORKSPACE ?? "e2e/test-xynapse";
   public static defaultNewFilename = "test.py";
+  private static workspaceOpened = false;
 
   public static async openTestWorkspace() {
-    await VSBrowser.instance.openResources(GlobalActions.defaultFolder);
-    await new Workbench().executeCommand(
-      "Notifications: Clear All Notifications",
-    );
+    // Reopening the folder between suites can replace the renderer and detach WebDriver.
+    if (!GlobalActions.workspaceOpened) {
+      await VSBrowser.instance.openResources(GlobalActions.defaultFolder);
+      GlobalActions.workspaceOpened = true;
+    }
+    await GlobalActions.clearAllNotifications();
   }
 
   public static async clearAllNotifications() {
+    await VSBrowser.instance.driver.switchTo().defaultContent();
     await new Workbench().executeCommand(
       "Notifications: Clear All Notifications",
     );
@@ -74,7 +78,7 @@ export class GlobalActions {
     const fs = require("fs");
     const path = require("path");
 
-    const folderPath = path.join(process.cwd(), folder);
+    const folderPath = path.resolve(folder);
     const filePath = path.join(folderPath, filename);
 
     try {
@@ -106,7 +110,7 @@ export class GlobalActions {
       }
 
       const element = await statusBar.findElement(
-        By.xpath("//*[contains(text(), 'Continue')]"),
+        By.xpath(".//*[contains(text(), 'Xynapse')]"),
       );
 
       // Validate we can get text

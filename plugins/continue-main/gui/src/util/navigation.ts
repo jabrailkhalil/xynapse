@@ -2,6 +2,7 @@
 export type ConfigTab =
   | "overview"
   | "models"
+  | "yandex-cloud"
   | "rules"
   | "tools"
   | "configs"
@@ -26,6 +27,7 @@ export const buildConfigRoute = (tab?: ConfigTab): string => {
 export const CONFIG_ROUTES = {
   OVERVIEW: buildConfigRoute("overview"),
   MODELS: buildConfigRoute("models"),
+  YANDEX_CLOUD: buildConfigRoute("yandex-cloud"),
   RULES: buildConfigRoute("rules"),
   TOOLS: buildConfigRoute("tools"),
   CONFIGS: buildConfigRoute("configs"),

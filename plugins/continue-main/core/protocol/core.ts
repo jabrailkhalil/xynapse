@@ -52,6 +52,10 @@ import { CreditStatus, RemoteSessionMetadata } from "../control-plane/client";
 import { ProcessedItem } from "../nextEdit/NextEditPrefetchQueue";
 import { NextEditOutcome } from "../nextEdit/types";
 import { XynapseErrorReason } from "../util/errors";
+import type {
+  YandexCloudCredentials,
+  YandexCloudImportResult,
+} from "../config/yandexCloud";
 
 export enum OnboardingModes {
   API_KEY = "API Key",
@@ -83,6 +87,7 @@ export type ToCoreFromIdeOrWebviewProtocol = {
   "history/clear": [undefined, void];
   "devdata/log": [DevDataLogEvent, void];
   "config/addOpenAiKey": [string, void];
+  "config/importYandexCloud": [YandexCloudCredentials, YandexCloudImportResult];
   "config/addModel": [
     {
       model: SerializedXynapseConfig["models"][number];

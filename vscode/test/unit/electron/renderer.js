@@ -104,11 +104,10 @@ let loadFn;
 const _loaderErrors = [];
 
 function initNls(opts) {
-	if (opts.build) {
-		// when running from `out-build`, ensure to load the default
-		// messages file, because all `nls.localize` calls have their
-		// english values removed and replaced by an index.
-		globalThis._VSCODE_NLS_MESSAGES = require(`../../../out-build/nls.messages.json`);
+	const nlsMessagesPath = path.join(__dirname, `../../../${opts.build ? 'out-build' : 'out'}/nls.messages.json`);
+	if (fs.existsSync(nlsMessagesPath)) {
+		// Both Xynapse build outputs can contain indexed localization calls.
+		globalThis._VSCODE_NLS_MESSAGES = require(nlsMessagesPath);
 	}
 }
 

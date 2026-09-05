@@ -62,6 +62,8 @@ export interface BvcModelAdapter {
 }
 
 export interface BvcOptions {
+  /** Reject final plans unless the host forwards an explicit normal completion. */
+  requireConfirmedSynthesis?: boolean;
   /** council: explicit multi-role request; adaptive: opt-in heuristic routing. */
   mode?: "council" | "adaptive" | "single" | "fixed";
   maxCalls?: number;

@@ -2,7 +2,6 @@ import {
   ArrowPathIcon,
   ChevronDownIcon,
   Cog6ToothIcon,
-  CubeIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +23,7 @@ import {
 } from "../ui";
 import { Divider } from "../ui/Divider";
 import { ModelRole } from "@xynapse/config-yaml";
+import { ModelIcon } from "./ModelIcon";
 
 interface ModelOptionProps {
   option: Option;
@@ -38,6 +38,8 @@ interface Option {
   apiKey?: string;
   sourceFile?: string;
   isAutoDetected?: boolean;
+  model?: string;
+  provider?: string;
 }
 
 function modelSelectTitle(model: any): string {
@@ -110,7 +112,7 @@ function ModelOption({
     >
       <div className="flex w-full items-center justify-between gap-5">
         <div className="flex items-center gap-2 py-0.5">
-          <CubeIcon className="h-3 w-3 flex-shrink-0" />
+          <ModelIcon model={option.model} provider={option.provider} />
           <span className="line-clamp-1">
             {option.title}
             {option.isAutoDetected && (
@@ -215,6 +217,8 @@ function ModelSelect() {
           return {
             value: modelOptionValue(model),
             title: modelSelectTitle(model),
+            model: model.model,
+            provider: model.provider,
             apiKey: model.apiKey,
             sourceFile: model.sourceFile,
             isAutoDetected: model.isFromAutoDetect,
@@ -306,6 +310,11 @@ function ModelSelect() {
           ref={buttonRef}
           className="text-description h-[18px] gap-1 border-none"
         >
+          <ModelIcon
+            model={selectedModel?.model}
+            provider={selectedModel?.provider}
+            className="h-3.5 w-3.5 flex-shrink-0"
+          />
           <span className="line-clamp-1 break-all hover:brightness-110">
             {modelSelectTitle(selectedModel) || "Select model"}
           </span>

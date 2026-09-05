@@ -1,11 +1,7 @@
 import * as fs from "fs";
 import { URL } from "node:url";
 
-import { Handler, HTTPResponse, Page } from "puppeteer";
-
-// @ts-ignore
-// @prettier-ignore
-import PCR from "puppeteer-chromium-resolver";
+import type { Handler, HTTPResponse, Page } from "puppeteer";
 
 import { XynapseConfig, IDE } from "../../..";
 import {
@@ -43,6 +39,9 @@ export class ChromiumCrawler {
       `[${(this.constructor as any).name}] Crawling site: ${this.startUrl}`,
     );
 
+    // Load the optional browser only when it is actually requested.
+    // @ts-expect-error The resolver does not publish TypeScript declarations.
+    const { default: PCR } = await import("puppeteer-chromium-resolver");
     const stats = await PCR(ChromiumInstaller.PCR_CONFIG);
     const browser = await stats.puppeteer.launch({
       args: [
@@ -242,6 +241,8 @@ export class ChromiumInstaller {
 
   async install() {
     try {
+      // @ts-expect-error The resolver does not publish TypeScript declarations.
+      const { default: PCR } = await import("puppeteer-chromium-resolver");
       await PCR(ChromiumInstaller.PCR_CONFIG);
 
       ChromiumCrawler.setUseChromiumForDocsCrawling(true);

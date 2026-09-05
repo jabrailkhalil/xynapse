@@ -227,6 +227,14 @@ export class Win32UpdateService extends AbstractUpdateService implements IRelaun
 	}
 
 	override async isLatestVersion(): Promise<boolean | undefined> {
+		if (!this.url) {
+			return undefined;
+		}
+
+		if (this.configurationService.getValue('update.mode') === 'none') {
+			return false;
+		}
+
 		if (!hasGitHubUpdateConfig(this.productService)) {
 			return super.isLatestVersion();
 		}

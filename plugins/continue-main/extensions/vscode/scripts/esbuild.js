@@ -14,6 +14,7 @@ const esbuildConfig = {
   external: ["vscode", "esbuild", "./xhr-sync-worker.js"],
   format: "cjs",
   platform: "node",
+  minify: flags.includes("--minify"),
   nodePaths: [path.join(__dirname, "..", "node_modules")],
   sourcemap: flags.includes("--sourcemap"),
   loader: {

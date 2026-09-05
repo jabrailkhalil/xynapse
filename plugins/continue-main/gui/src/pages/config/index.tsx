@@ -60,9 +60,9 @@ function ConfigPage() {
       </div>
 
       {/* Main content area */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Alert for small screens (sm and below) */}
-        <div className="block px-4 py-4 sm:hidden">
+        <div className={`${activeTab === "yandex-cloud" ? "hidden" : "block sm:hidden"} px-4 py-4`}>
           <Alert type="warning" className="max-w-md">
             <div className="flex flex-col">
               <div className="font-medium">Screen width too small</div>
@@ -75,7 +75,7 @@ function ConfigPage() {
         </div>
 
         {/* Tab Content for larger screens (md and above) */}
-        <div className="thin-scrollbar relative hidden flex-1 overflow-y-auto sm:block">
+        <div className={`thin-scrollbar relative flex-1 overflow-y-auto ${activeTab === "yandex-cloud" ? "block" : "hidden sm:block"}`}>
           <div className="space-y-6 px-4 py-4">
             {allTabs.find((tab) => tab.id === activeTab)?.component}
           </div>

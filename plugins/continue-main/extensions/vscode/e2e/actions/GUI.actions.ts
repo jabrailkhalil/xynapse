@@ -13,36 +13,23 @@ import { TestUtils } from "../TestUtils";
 
 export class GUIActions {
   public static moveXynapseToSidebar = async (driver: WebDriver) => {
-    await GUIActions.toggleGui();
-    await TestUtils.waitForSuccess(async () => {
-      await new Workbench().executeCommand("View: Move View");
-      await (
-        await InputBox.create(DEFAULT_TIMEOUT.MD)
-      ).selectQuickPick("Continue");
-      await (
-        await InputBox.create(DEFAULT_TIMEOUT.MD)
-      ).selectQuickPick("New Secondary Side Bar Entry");
-    });
-
-    // first call focuses the input
-    await TestUtils.waitForTimeout(DEFAULT_TIMEOUT.XS);
-    await GUIActions.executeFocusXynapseInputShortcut(driver);
-
-    // second call closes the gui
-    await TestUtils.waitForTimeout(DEFAULT_TIMEOUT.XS);
-    await GUIActions.executeFocusXynapseInputShortcut(driver);
+    // The extension now contributes its view to the secondary sidebar itself.
+    await driver.switchTo().defaultContent();
+    await new Workbench().executeCommand("View: Reset View Locations");
+    await new Workbench().executeCommand("View: Close Secondary Side Bar");
   };
 
   public static switchToReactIframe = async () => {
     const view = new WebView();
     const driver = view.getDriver();
+    await driver.switchTo().defaultContent();
 
     const iframes = await GUISelectors.getAllIframes(driver);
     let continueIFrame: WebElement | undefined = undefined;
     for (let i = 0; i < iframes.length; i++) {
       const iframe = iframes[i];
       const src = await iframe.getAttribute("src");
-      if (src.includes("extensionId=Xynapse.xynapse")) {
+      if (src.toLowerCase().includes("extensionid=xynapse.xynapse-assistant")) {
         continueIFrame = iframe;
         break;
       }
@@ -72,8 +59,9 @@ export class GUIActions {
   };
 
   public static toggleGui = async () => {
+    await new WebView().getDriver().switchTo().defaultContent();
     return TestUtils.waitForSuccess(() =>
-      new Workbench().executeCommand("continue.focusXynapseInput"),
+      new Workbench().executeCommand("xynapse.focusInput"),
     );
   };
 

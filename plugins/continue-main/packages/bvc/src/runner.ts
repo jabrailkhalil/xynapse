@@ -52,6 +52,12 @@ function numberOption(
 }
 
 function resolveOptions(options: BvcOptions = {}, roles: number) {
+  if (
+    options.requireConfirmedSynthesis !== undefined &&
+    typeof options.requireConfirmedSynthesis !== "boolean"
+  ) {
+    throw new RangeError("requireConfirmedSynthesis must be a boolean");
+  }
   const mode = options.mode ?? "council";
   if (!["council", "adaptive", "single", "fixed"].includes(mode))
     throw new RangeError("Invalid BVC mode");
@@ -68,6 +74,7 @@ function resolveOptions(options: BvcOptions = {}, roles: number) {
     throw new RangeError("tauCrit must be at least tauVote");
   return {
     mode,
+    requireConfirmedSynthesis: options.requireConfirmedSynthesis ?? false,
     maxCritiqueRounds,
     maxCalls: numberOption(
       options.maxCalls,
@@ -735,13 +742,14 @@ export async function* runBvc(input: BvcInput): AsyncGenerator<BvcEvent> {
     };
   } else if (
     final.call.status !== "complete" ||
-    !isValidPlanContent(final.content)
+    !isValidPlanContent(final.content) ||
+    (options.requireConfirmedSynthesis && !final.call.completionConfirmed)
   ) {
     yield {
       type: "complete",
       result: result(
         "failed",
-        `plan rejected: ${final.call.status === "complete" ? "invalid plan structure" : final.call.status}`,
+        `plan rejected: ${final.call.status !== "complete" ? final.call.status : options.requireConfirmedSynthesis && !final.call.completionConfirmed ? "unconfirmed provider completion" : "invalid plan structure"}`,
       ),
     };
   } else {

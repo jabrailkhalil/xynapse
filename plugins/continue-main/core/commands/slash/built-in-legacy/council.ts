@@ -1070,6 +1070,7 @@ export const BvcCommand: SlashCommand = {
         synthesisModelId: roles[0].modelId,
         signal: abortController.signal,
         options: {
+          requireConfirmedSynthesis: true,
           mode: params.MODE,
           maxCalls: callLimit,
           maxCritiqueRounds: params.K_MAX,

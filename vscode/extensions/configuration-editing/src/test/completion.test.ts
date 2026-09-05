@@ -295,6 +295,8 @@ suite('Completions in settings.json', () => {
 
 suite('Completions in extensions.json', () => {
 	const testFile = 'extensions.json';
+	// Test the extension shipped by Xynapse; Microsoft's debugger is optional here.
+	const recommendedExtension = 'xynapse.xynapse-assistant';
 	test('change recommendation', async () => {
 		{
 			const content = [
@@ -307,11 +309,11 @@ suite('Completions in extensions.json', () => {
 			const resultText = [
 				'{',
 				'  "recommendations": [',
-				'    "ms-vscode.js-debug"',
+				`    "${recommendedExtension}"`,
 				'  ]',
 				'}',
 			].join('\n');
-			const expected = { label: 'ms-vscode.js-debug', resultText };
+			const expected = { label: recommendedExtension, resultText };
 			await testCompletion(testFile, 'jsonc', content, expected);
 		}
 	});
@@ -327,11 +329,11 @@ suite('Completions in extensions.json', () => {
 			const resultText = [
 				'{',
 				'  "recommendations": [',
-				'    "ms-vscode.js-debug"',
+				`    "${recommendedExtension}"`,
 				'  ]',
 				'}',
 			].join('\n');
-			const expected = { label: 'ms-vscode.js-debug', resultText };
+			const expected = { label: recommendedExtension, resultText };
 			await testCompletion(testFile, 'jsonc', content, expected);
 		}
 	});

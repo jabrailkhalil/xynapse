@@ -43,6 +43,9 @@ export class TestUtils {
     while (Date.now() - startTime < timeout) {
       try {
         const result = await locatorFn();
+        if (result === false) {
+          throw new Error("Condition is not satisfied yet");
+        }
         return result;
       } catch (e) {
         if (Date.now() - startTime >= timeout) {

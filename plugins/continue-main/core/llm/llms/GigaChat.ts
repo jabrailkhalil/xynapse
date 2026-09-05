@@ -1,321 +1,300 @@
+import { randomUUID } from "node:crypto";
+import type { IncomingMessage } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { StringDecoder } from "node:string_decoder";
 import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js";
+import { PublicError } from "../../util/publicError.js";
 import { BaseLLM } from "../index.js";
-import { request as httpsRequest } from "https";
+import { fromChatCompletionChunk } from "../openaiTypeConverters.js";
 
-/**
- * GigaChat Provider for Xynapse Assistant
- *
- * Uses Sber GigaChat API with OAuth 2.0 authentication
- * API Documentation: https://developers.sber.ru/docs/ru/gigachat/
- *
- * Required config:
- * - apiKey: Authorization credentials (Client ID:Client Secret in Base64 or access token)
- * - requestOptions.extraBodyProperties.scope: API scope (GIGACHAT_API_PERS or GIGACHAT_API_CORP)
- *
- * Available models:
- * - GigaChat - base model
- * - GigaChat-Plus - enhanced model
- * - GigaChat-Pro - professional model
- */
 class GigaChatLLM extends BaseLLM {
-    static providerName = "gigachat";
-    static defaultOptions: Partial<LLMOptions> = {
-        model: "GigaChat",
-        apiBase: "https://gigachat.devices.sberbank.ru/api/v1/",
-        contextLength: 8192,
-        completionOptions: {
-            model: "GigaChat",
-            maxTokens: 2048,
-            temperature: 0.7,
-        },
+  static providerName = "gigachat";
+  static defaultOptions: Partial<LLMOptions> = {
+    model: "GigaChat",
+    apiBase: "https://gigachat.devices.sberbank.ru/api/v1/",
+    contextLength: 8192,
+    completionOptions: { model: "GigaChat", maxTokens: 2048, temperature: 0.7 },
+  };
+  private static readonly OAUTH_URL =
+    "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
+  private accessToken: string | null = null;
+  private tokenExpiry = 0;
+  private scope: string;
+
+  constructor(options: LLMOptions) {
+    super(options);
+    this.scope =
+      options.requestOptions?.extraBodyProperties?.scope || "GIGACHAT_API_PERS";
+    this.requestOptions = {
+      ...this.requestOptions,
+      verifySsl: this.requestOptions?.verifySsl ?? true,
     };
+    this.apiBase ||= GigaChatLLM.defaultOptions.apiBase;
+  }
 
-    private static readonly OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
-    private accessToken: string | null = null;
-    private tokenExpiry: number = 0;
-    private scope: string;
+  private getVerifySsl(): boolean {
+    return this.requestOptions?.verifySsl ?? true;
+  }
 
-    constructor(options: LLMOptions) {
-        super(options);
-        this.scope = options.requestOptions?.extraBodyProperties?.scope || "GIGACHAT_API_PERS";
-        this.requestOptions = {
-            ...this.requestOptions,
-            verifySsl: this.requestOptions?.verifySsl ?? true,
-        };
-
-        if (!this.apiBase) {
-            this.apiBase = "https://gigachat.devices.sberbank.ru/api/v1/";
-        }
-    }
-
-    private getVerifySsl(): boolean {
-        return this.requestOptions?.verifySsl ?? true;
-    }
-
-    private async requestText(
-        url: URL | string,
-        init: {
-            method: string;
-            headers: Record<string, string>;
-            body?: string;
-            signal?: AbortSignal;
+  private async request(
+    url: URL | string,
+    body: string,
+    headers: Record<string, string>,
+    signal: AbortSignal,
+  ): Promise<IncomingMessage> {
+    signal.throwIfAborted();
+    return await new Promise((resolve, reject) => {
+      const req = httpsRequest(
+        url,
+        {
+          method: "POST",
+          headers,
+          signal,
+          rejectUnauthorized: this.getVerifySsl(),
         },
-    ): Promise<{ ok: boolean; status: number; statusText: string; text: string }> {
-        return await new Promise((resolve, reject) => {
-            const requestUrl = typeof url === "string" ? new URL(url) : url;
-            const req = httpsRequest(
-                requestUrl,
-                {
-                    method: init.method,
-                    headers: init.headers,
-                    rejectUnauthorized: this.getVerifySsl(),
-                    signal: init.signal,
-                } as any,
-                (res) => {
-                    const chunks: Uint8Array[] = [];
-                    res.on("data", (chunk) =>
-                        chunks.push(new Uint8Array(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))),
-                    );
-                    res.on("end", () => {
-                        const status = res.statusCode ?? 0;
-                        resolve({
-                            ok: status >= 200 && status < 300,
-                            status,
-                            statusText: res.statusMessage ?? "",
-                            text: Buffer.concat(chunks as any).toString("utf8"),
-                        });
-                    });
-                },
+        resolve,
+      );
+      // requestOptions.timeout uses seconds, consistently with other providers.
+      req.setTimeout((this.requestOptions?.timeout ?? 30) * 1000, () => {
+        req.destroy(new PublicError("GigaChat request timed out. Try again."));
+      });
+      req.on("error", reject);
+      req.end(body);
+    });
+  }
+
+  private checkStatus(response: IncomingMessage, phase: string): void {
+    const status = response.statusCode ?? 0;
+    if (status >= 200 && status < 300) return;
+    response.destroy();
+    if (status === 401 || status === 403) {
+      this.accessToken = null;
+      this.tokenExpiry = 0;
+      throw new PublicError(
+        `GigaChat ${phase}: access denied. Check the API key and scope.`,
+      );
+    }
+    if (status === 429)
+      throw new PublicError("GigaChat rate limit reached. Try again later.");
+    throw new PublicError(
+      `GigaChat ${phase} failed (HTTP ${status}). Try again.`,
+    );
+  }
+
+  private async getAccessToken(signal: AbortSignal): Promise<string> {
+    signal.throwIfAborted();
+    if (this.accessToken && Date.now() < this.tokenExpiry - 60000)
+      return this.accessToken;
+    if (!this.apiKey)
+      throw new PublicError(
+        "GigaChat API key is missing. Configure the authorization key.",
+      );
+    // Preserve direct-token compatibility. Ordinary authorization keys use OAuth.
+    if (
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        this.apiKey,
+      )
+    )
+      return this.apiKey;
+    const response = await this.request(
+      GigaChatLLM.OAUTH_URL,
+      `scope=${encodeURIComponent(this.scope)}`,
+      {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+        Authorization: `Basic ${this.apiKey}`,
+        RqUID: randomUUID(),
+      },
+      signal,
+    );
+    this.checkStatus(response, "authorization");
+    let body = "";
+    for await (const part of response) {
+      signal.throwIfAborted();
+      body += part.toString("utf8");
+      if (body.length > 64000)
+        throw new PublicError(
+          "GigaChat returned an invalid authorization response.",
+        );
+    }
+    let data: { access_token?: unknown; expires_at?: unknown };
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new PublicError(
+        "GigaChat returned an invalid authorization response.",
+      );
+    }
+    if (
+      typeof data.access_token !== "string" ||
+      !data.access_token ||
+      typeof data.expires_at !== "number" ||
+      !Number.isFinite(data.expires_at) ||
+      data.expires_at <= Date.now()
+    ) {
+      throw new PublicError(
+        "GigaChat returned an invalid or expired access token.",
+      );
+    }
+    this.accessToken = data.access_token;
+    // The API returns the Unix expiration timestamp in milliseconds.
+    this.tokenExpiry = data.expires_at;
+    return this.accessToken;
+  }
+
+  private convertMessages(messages: ChatMessage[]) {
+    return messages
+      .filter((msg) => msg.role !== "thinking")
+      .map((msg) => ({
+        role: ["system", "user", "assistant"].includes(msg.role)
+          ? msg.role
+          : "user",
+        content:
+          typeof msg.content === "string"
+            ? msg.content
+            : Array.isArray(msg.content)
+              ? msg.content
+                  .filter((part) => part.type === "text")
+                  .map((part) => (part as { text: string }).text)
+                  .join("\n")
+              : "",
+      }));
+  }
+
+  protected async *_streamChat(
+    messages: ChatMessage[],
+    signal: AbortSignal,
+    options: CompletionOptions,
+  ): AsyncGenerator<ChatMessage> {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+    let response: IncomingMessage | undefined;
+    try {
+      const accessToken = await this.getAccessToken(controller.signal);
+      const body = JSON.stringify({
+        model: this.model || "GigaChat",
+        messages: this.convertMessages(messages),
+        stream: true,
+        temperature: options.temperature ?? 0.7,
+        max_tokens: options.maxTokens ?? 2048,
+      });
+      response = await this.request(
+        new URL("chat/completions", this.apiBase),
+        body,
+        {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        controller.signal,
+      );
+      this.checkStatus(response, "completion");
+      let terminal = false;
+      for await (const value of this.parseSSE(response)) {
+        controller.signal.throwIfAborted();
+        const reason = value.choices?.[0]?.finish_reason;
+        if (value.error || reason === "error")
+          throw new PublicError(
+            "GigaChat reported a failed completion. Try again.",
+          );
+        if (reason) {
+          if (
+            ![
+              "stop",
+              "length",
+              "blacklist",
+              "content_filter",
+              "refusal",
+            ].includes(reason)
+          ) {
+            throw new PublicError(
+              "GigaChat did not return a completed text response.",
             );
-
-            req.on("error", reject);
-
-            if (init.body) {
-                req.write(init.body);
-            }
-            req.end();
-        });
+          }
+          terminal = true;
+          if (reason === "blacklist")
+            value.choices[0].finish_reason = "refusal";
+        }
+        const chunk = fromChatCompletionChunk(value);
+        if (chunk) yield chunk;
+      }
+      controller.signal.throwIfAborted();
+      if (!terminal)
+        throw new PublicError(
+          "GigaChat stream ended before completion was confirmed. Try again.",
+        );
+    } catch (error) {
+      if (signal.aborted) {
+        const cancelled = new Error("The request was cancelled.");
+        cancelled.name = "AbortError";
+        throw cancelled;
+      }
+      if (error instanceof PublicError) throw error;
+      throw new PublicError(
+        "GigaChat connection failed. Check the connection and TLS certificates, then try again.",
+      );
+    } finally {
+      signal.removeEventListener("abort", abort);
+      controller.abort();
+      response?.destroy();
     }
+  }
 
-    /**
-     * Get OAuth access token from GigaChat
-     * Token is cached and refreshed when expired
-     */
-    private async getAccessToken(): Promise<string> {
-        // Check if we have a valid cached token
-        if (this.accessToken && Date.now() < this.tokenExpiry - 60000) {
-            return this.accessToken;
-        }
-
-        if (!this.apiKey) {
-            throw new Error("API key is required. Use 'Client ID:Client Secret' in Base64 format.");
-        }
-
-        // If apiKey looks like a UUID (access token), use it directly
-        if (this.apiKey.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            return this.apiKey;
-        }
-
+  private async *parseSSE(response: IncomingMessage): AsyncGenerator<any> {
+    const decoder = new StringDecoder("utf8");
+    let buffer = "";
+    for await (const part of response) {
+      buffer += decoder.write(Buffer.isBuffer(part) ? part : Buffer.from(part));
+      if (buffer.length > 1000000)
+        throw new PublicError("GigaChat returned an oversized stream event.");
+      let position: number;
+      while ((position = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, position).trimEnd();
+        buffer = buffer.slice(position + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (data === "[DONE]") return;
+        if (!data) continue;
+        let value: any;
         try {
-            const body = `scope=${this.scope}`;
-            const response = await this.requestText(GigaChatLLM.OAUTH_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "application/json",
-                    "Authorization": `Basic ${this.apiKey}`,
-                    "RqUID": this.generateRqUID(),
-                    "Content-Length": Buffer.byteLength(body).toString(),
-                },
-                body,
-            });
-
-            if (!response.ok) {
-                const errorText = response.text;
-                throw new Error(`OAuth error (${response.status}): ${errorText}`);
-            }
-
-            const data = JSON.parse(response.text);
-            this.accessToken = data.access_token;
-            // Token expires in 30 minutes by default
-            this.tokenExpiry = Date.now() + (data.expires_at ? data.expires_at * 1000 - Date.now() : 30 * 60 * 1000);
-
-            return this.accessToken!;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to get GigaChat access token: ${errorMessage}`);
+          value = JSON.parse(data);
+        } catch {
+          throw new PublicError("GigaChat returned an invalid stream event.");
         }
+        if (!value || typeof value !== "object")
+          throw new PublicError("GigaChat returned an invalid stream event.");
+        yield value;
+      }
     }
+    buffer += decoder.end();
+    if (buffer.trim())
+      throw new PublicError("GigaChat stream ended with an incomplete event.");
+  }
 
-    /**
-     * Generate unique request ID for GigaChat API
-     */
-    private generateRqUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
+  protected async *_streamComplete(
+    prompt: string,
+    signal: AbortSignal,
+    options: CompletionOptions,
+  ): AsyncGenerator<string> {
+    for await (const chunk of this._streamChat(
+      [{ role: "user", content: prompt }],
+      signal,
+      options,
+    )) {
+      if (typeof chunk.content === "string") yield chunk.content;
     }
-
-    /**
-     * Convert Xynapse messages to GigaChat format (OpenAI-compatible)
-     */
-    private convertMessages(messages: ChatMessage[]): Array<{ role: string; content: string }> {
-        // Filter out thinking/reasoning messages — GigaChat API only accepts
-        // system, user, assistant roles.
-        return messages
-            .filter(msg => msg.role !== "thinking")
-            .map(msg => {
-                const content = typeof msg.content === "string"
-                    ? msg.content
-                    : Array.isArray(msg.content)
-                        ? msg.content
-                            .filter((p): p is { type: "text"; text: string } => p.type === "text")
-                            .map(p => p.text)
-                            .join("\n")
-                        : "";
-
-                // Ensure only valid roles reach the API
-                let role = msg.role;
-                if (role !== "system" && role !== "user" && role !== "assistant") {
-                    role = "user";
-                }
-
-                return { role, content };
-            });
-    }
-
-    protected async *_streamComplete(
-        prompt: string,
-        signal: AbortSignal,
-        options: CompletionOptions,
-    ): AsyncGenerator<string> {
-        for await (const chunk of this._streamChat(
-            [{ role: "user", content: prompt }],
-            signal,
-            options,
-        )) {
-            if (typeof chunk.content === "string") {
-                yield chunk.content;
-            }
-        }
-    }
-
-    protected async *_streamChat(
-        messages: ChatMessage[],
-        signal: AbortSignal,
-        options: CompletionOptions,
-    ): AsyncGenerator<ChatMessage> {
-        if (!this.apiKey) {
-            yield {
-                role: "assistant",
-                content: "Error: API key not specified. Add apiKey to config.yaml.\n\nFormat: Base64 of 'ClientID:ClientSecret' or access token.",
-            };
-            return;
-        }
-
-        let accessToken: string;
-        try {
-            accessToken = await this.getAccessToken();
-        } catch (error) {
-            yield {
-                role: "assistant",
-                content: `GigaChat authorization error: ${error instanceof Error ? error.message : String(error)}`,
-            };
-            return;
-        }
-
-        const endpoint = new URL("chat/completions", this.apiBase);
-
-        const body = {
-            model: this.model || "GigaChat",
-            messages: this.convertMessages(messages),
-            stream: true,
-            temperature: options.temperature ?? 0.7,
-            max_tokens: options.maxTokens ?? 2048,
-        };
-
-        try {
-            const response = await this.requestText(endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "text/event-stream",
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Length": Buffer.byteLength(JSON.stringify(body)).toString(),
-                },
-                body: JSON.stringify(body),
-                signal,
-            });
-
-            if (!response.ok) {
-                const errorText = response.text;
-
-                // If unauthorized, clear token and retry once
-                if (response.status === 401) {
-                    this.accessToken = null;
-                    this.tokenExpiry = 0;
-                }
-
-                yield {
-                    role: "assistant",
-                    content: `GigaChat API error (${response.status}): ${errorText}`,
-                };
-                return;
-            }
-
-            // GigaChat uses SSE format like OpenAI
-            for await (const chunk of this.parseSSE(response.text)) {
-                if (chunk.choices?.[0]?.delta?.content) {
-                    yield {
-                        role: "assistant",
-                        content: chunk.choices[0].delta.content,
-                    };
-                }
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            yield {
-                role: "assistant",
-                content: `GigaChat request error: ${errorMessage}`,
-            };
-        }
-    }
-
-    /**
-     * Stream SSE response from GigaChat (OpenAI-compatible format)
-     */
-    private async *parseSSE(text: string): AsyncGenerator<any> {
-        for (const line of text.split("\n")) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed === "data: [DONE]") continue;
-
-            if (trimmed.startsWith("data: ")) {
-                const jsonStr = trimmed.slice(6);
-                try {
-                    yield JSON.parse(jsonStr);
-                } catch {
-                    // Skip invalid JSON lines
-                }
-            }
-        }
-    }
-
-    /**
-     * Non-streaming completion
-     */
-    protected async _complete(
-        prompt: string,
-        signal: AbortSignal,
-        options: CompletionOptions,
-    ): Promise<string> {
-        let result = "";
-        for await (const chunk of this._streamComplete(prompt, signal, options)) {
-            result += chunk;
-        }
-        return result;
-    }
+  }
+  protected async _complete(
+    prompt: string,
+    signal: AbortSignal,
+    options: CompletionOptions,
+  ): Promise<string> {
+    let result = "";
+    for await (const chunk of this._streamComplete(prompt, signal, options))
+      result += chunk;
+    return result;
+  }
 }
-
 export default GigaChatLLM;

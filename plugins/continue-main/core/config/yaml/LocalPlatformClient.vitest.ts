@@ -111,6 +111,31 @@ describe("LocalPlatformClient", () => {
       utilPaths.getXynapseDotEnv = getXynapseDotEnv;
     });
 
+    for (const unavailable of ["empty", "throws"]) {
+      test(`resolves local secrets when the control plane ${unavailable}`, async () => {
+        testControlPlaneClient.resolveFQSNs = vi.fn(async () => {
+          if (unavailable === "throws")
+            throw new Error("test-private-provider-detail");
+          return [];
+        });
+        const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+        const client = new LocalPlatformClient(
+          null,
+          testControlPlaneClient,
+          testIde,
+        );
+        const values = await client.resolveFQSNs([testFQSN, testFQSN2]);
+        expect(values).toHaveLength(2);
+        expect(values.map((value) => (value as any)?.value)).toEqual([
+          secretValue,
+          secretValue + "-workspace",
+        ]);
+        expect(JSON.stringify(errors.mock.calls)).not.toContain(
+          "test-private-provider-detail",
+        );
+      });
+    }
+
     test("should be able to get secrets from ~/.xynapse/.env files", async () => {
       const localPlatformClient = new LocalPlatformClient(
         null,

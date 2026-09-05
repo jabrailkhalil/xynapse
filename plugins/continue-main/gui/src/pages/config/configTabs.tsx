@@ -1,6 +1,7 @@
 import {
   ArrowLeftIcon,
   Cog6ToothIcon,
+  CloudIcon,
   CubeIcon,
   DocumentIcon,
   PencilIcon,
@@ -13,6 +14,7 @@ import { RulesSection } from "./sections/RulesSection";
 import { SettingsOverviewSection } from "./sections/SettingsOverviewSection";
 import { ToolsSection } from "./sections/ToolsSection";
 import { UserSettingsSection } from "./sections/UserSettingsSection";
+import { YandexCloudForm } from "../../forms/YandexCloudForm";
 
 interface TabOption {
   id: string;
@@ -74,6 +76,16 @@ export const topTabSections: TabSection[] = [
           </ConfigSection>
         ),
         icon: <PencilIcon className="xs:h-4 xs:w-4 h-3 w-3 flex-shrink-0" />,
+      },
+      {
+        id: "yandex-cloud",
+        label: "Yandex Cloud",
+        component: (
+          <ConfigSection>
+            <YandexCloudForm />
+          </ConfigSection>
+        ),
+        icon: <CloudIcon className="xs:h-4 xs:w-4 h-3 w-3 flex-shrink-0" />,
       },
       {
         id: "tools",

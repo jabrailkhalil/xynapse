@@ -14,6 +14,7 @@ import {
 } from "../pages/AddNewModel/configs/providers";
 import { useAppDispatch } from "../redux/hooks";
 import { updateSelectedModelByRole } from "../redux/thunks/updateSelectedModelByRole";
+import { YandexCloudForm } from "./YandexCloudForm";
 
 interface AddModelFormProps {
   onDone: () => void;
@@ -26,7 +27,36 @@ const MODEL_PROVIDERS_URL =
 const CODESTRAL_URL = "https://console.mistral.ai/codestral";
 const XYNAPSE_SETUP_URL = "https://docs.continue.dev/setup/overview";
 
-export function AddModelForm({
+export function AddModelForm(props: AddModelFormProps) {
+  const [tab, setTab] = useState<"yandex" | "manual">("yandex");
+  return (
+    <div className="mx-auto max-w-md p-4">
+      <div className="mb-5 flex gap-2" aria-label="Connection options">
+        <Button
+          type="button"
+          aria-pressed={tab === "yandex"}
+          onClick={() => setTab("yandex")}
+        >
+          Yandex Cloud
+        </Button>
+        <Button
+          type="button"
+          aria-pressed={tab === "manual"}
+          onClick={() => setTab("manual")}
+        >
+          Single model
+        </Button>
+      </div>
+      {tab === "yandex" ? (
+        <YandexCloudForm onDone={props.onDone} />
+      ) : (
+        <SingleModelForm {...props} />
+      )}
+    </div>
+  );
+}
+
+function SingleModelForm({
   onDone,
   hideFreeTrialLimitMessage,
 }: AddModelFormProps) {
@@ -43,10 +73,7 @@ export function AddModelForm({
   const ideMessenger = useContext(IdeMessengerContext);
 
   // Xynapse: featured providers
-  const popularProviderTitles = [
-    "YandexGPT",
-    "GigaChat",
-  ];
+  const popularProviderTitles = ["Yandex Cloud", "GigaChat"];
 
   const allProviders = Object.entries(providers)
     .filter(([key]) => !["openai-aiohttp"].includes(key))
@@ -56,7 +83,7 @@ export function AddModelForm({
 
   // Xynapse: preserve order from popularProviderTitles
   const popularProviders = popularProviderTitles
-    .map(title => allProviders.find(p => p.title === title))
+    .map((title) => allProviders.find((p) => p.title === title))
     .filter((provider): provider is ProviderInfo => !!provider);
 
   const otherProviders = allProviders

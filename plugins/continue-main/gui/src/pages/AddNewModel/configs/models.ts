@@ -109,7 +109,7 @@ export const models: { [key: string]: ModelPackage } = {
       title: "DeepSeek V4 Flash",
     },
     providerOptions: ["yandex_gpt"],
-    icon: "yandexgpt.png",
+    icon: "deepseek.png",
     isOpenSource: true,
   },
   qwen3235b: {
@@ -121,7 +121,7 @@ export const models: { [key: string]: ModelPackage } = {
       title: "Qwen3 235B",
     },
     providerOptions: ["yandex_gpt"],
-    icon: "yandexgpt.png",
+    icon: "qwen.png",
     isOpenSource: true,
   },
   qwen3635b: {
@@ -134,7 +134,7 @@ export const models: { [key: string]: ModelPackage } = {
       title: "Qwen3.6 35B",
     },
     providerOptions: ["yandex_gpt"],
-    icon: "yandexgpt.png",
+    icon: "qwen.png",
     isOpenSource: true,
   },
   gptOss120b: {
@@ -146,7 +146,7 @@ export const models: { [key: string]: ModelPackage } = {
       title: "gpt-oss-120b",
     },
     providerOptions: ["yandex_gpt", "sambanova"],
-    icon: "yandexgpt.png",
+    icon: "openai.png",
     isOpenSource: true,
   },
   gptOss20b: {
@@ -158,7 +158,7 @@ export const models: { [key: string]: ModelPackage } = {
       title: "gpt-oss-20b",
     },
     providerOptions: ["yandex_gpt"],
-    icon: "yandexgpt.png",
+    icon: "openai.png",
     isOpenSource: true,
   },
   gigachat: {
