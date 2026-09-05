@@ -1,110 +1,134 @@
 <div align="center">
-  <img src="./Pics/logo.png" alt="Xynapse IDE" width="320">
 
-# Xynapse IDE
+<img src="./Pics/logo.png" alt="Xynapse logo" width="120">
 
-**A complete Windows IDE with an AI coding system built into the workbench.**
+# Xynapse
 
-[![Release](https://img.shields.io/github/v/release/jabrailkhalil/xynapse?display_name=tag)](https://github.com/jabrailkhalil/xynapse/releases/latest)
-[![Windows](https://img.shields.io/badge/Windows-x64-0078D4?logo=windows)](https://github.com/jabrailkhalil/xynapse/releases/latest)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+**Your editor, terminal, Git, and AI assistant — in one workspace.**
 
-[Download](https://github.com/jabrailkhalil/xynapse/releases/latest) · [Website](https://xynapse.online) · [English](./README.en.md) · [Русский](./README.ru.md)
+A Windows IDE built on Code - OSS, with Xynapse Assistant and BVC planning included.
+
+[![IDE 1.108.0](https://img.shields.io/badge/IDE-1.108.0-6366f1?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/v1.108.0)
+[![Assistant 1.0.0](https://img.shields.io/badge/Assistant-1.0.0-8b5cf6?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/assistant-v1.0.0-bvc.0.1.0)
+[![BVC 0.1.0](https://img.shields.io/badge/BVC-0.1.0-0891b2?style=flat-square)](./plugins/continue-main/packages/bvc/README.md)
+[![Windows x64](https://img.shields.io/badge/Windows-x64-0078d4?style=flat-square)](#download)
+
+[Download](#download) · [Quick start](#quick-start) · [BVC planning](#bvc-planning) · [Русский](./README.ru.md)
+
 </div>
 
-Xynapse combines the Code - OSS 1.108.0 editor, terminal, Git workflow, extensions, and a built-in AI assistant in one desktop application. The assistant can explain a codebase, make scoped edits, run tools, plan before changing files, and execute multi-step development tasks without switching to a separate chat window.
+## Download
 
-![Xynapse Assistant](./Pics/Assistants.png)
+Two releases, one project. Choose the complete IDE or add the assistant to a compatible VS Code editor.
 
-## What makes it useful
+| Package | Includes | Download · Windows x64 |
+| --- | --- | --- |
+| **Xynapse IDE 1.108.0** | Editor + Assistant 1.0.0 + BVC 0.1.0 | [Installer](https://github.com/jabrailkhalil/xynapse/releases/download/v1.108.0/XynapseSetup-x64-1.108.0.exe) · [Portable ZIP](https://github.com/jabrailkhalil/xynapse/releases/download/v1.108.0/Xynapse-portable-win32-x64-1.108.0.zip) |
+| **Xynapse Assistant 1.0.0** | Standalone extension + BVC 0.1.0 | [VSIX](https://github.com/jabrailkhalil/xynapse/releases/download/assistant-v1.0.0-bvc.0.1.0/xynapse-assistant-bvc-0.1.0-win32-x64.vsix) |
 
-- **One workbench, four levels of autonomy.** Chat answers questions; Plan inspects the workspace with read-only permissions; Agent works inside the workspace; Full mode is an explicit elevated mode for tasks that require unrestricted local actions.
-- **Project-aware coding.** Files, folders, diffs, terminal output, diagnostics, selected code, and indexed codebase context can be attached to a request.
-- **Editing that stays reviewable.** Inline Edit and agent tool calls produce concrete file changes that remain visible in the editor and source-control diff.
-- **Autocomplete and next-edit workflows.** A separate autocomplete role can use a faster model without forcing the chat model to handle every keystroke.
-- **Tool calling and MCP.** Compatible models can call workspace tools and configured MCP servers; parallel tool-call streaming is covered by regression tests.
-- **Council and BVC planning.** Council provides a practical multi-role discussion. BVC adds a structured, budget-aware verification stage intended for tasks where planning before implementation is valuable.
-- **Local credentials.** API keys are entered locally or supplied through environment variables. Profile metadata never duplicates their contents; encrypted backups use AES-256-GCM with a password-derived key.
-- **Telemetry off by default.** Xynapse disables the assistant telemetry path in this distribution.
+The IDE already includes the assistant. Each release provides `SHA256SUMS.txt`; Windows executables are currently unsigned.
 
-## Verified Yandex Cloud model catalog
+## Quick start
 
-The bundled onboarding catalog contains ten Yandex model identifiers checked on August 16, 2026:
+### Complete IDE
 
-| Role | Models |
-|---|---|
-| Chat / Edit | `yandexgpt-5-pro`, `yandexgpt-5.1`, `deepseek-v4-flash`, `qwen3.6-35b-a3b` |
-| Chat | `aliceai-llm`, `aliceai-llm-flash`, `qwen3-235b-a22b-fp8`, `gpt-oss-120b` |
-| Autocomplete | `yandexgpt-5-lite`, `gpt-oss-20b` |
+1. Run the installer, or extract the portable ZIP into a new folder and launch `Xynapse.exe`.
+2. Open your project folder.
+3. Configure a model in Assistant. For Yandex Cloud onboarding, enter your API key and folder ID, then select a model.
+4. Attach a file or select code, choose a mode, and describe your task.
 
-All ten identifiers passed live non-streaming compatibility checks with Yandex Cloud on August 16, 2026. Tool calling was also exercised against the live provider, and streaming was checked with a reasoning-capable Qwen model. API access, quotas, and model availability remain controlled by the user's Yandex Cloud account.
+### Standalone extension
 
-## Modes and permissions
+1. Download the VSIX from the table above.
+2. In your editor, open **Extensions → Install from VSIX…**, select the file, and reload the window.
+3. Open Xynapse Assistant and configure your model provider.
 
-| Mode | Intended use | Runtime permission profile |
-|---|---|---|
-| Chat | Explain, review, ask questions | No workspace tool execution |
-| Plan | Inspect and prepare an implementation plan | `read-only` |
-| Agent | Implement ordinary repository tasks | `workspace-write` |
-| Full | Explicitly authorized system-level work | `danger-full-access` |
+Yandex configuration also supports `YANDEX_API_KEY` and `YANDEX_FOLDER_ID`. See the bundled [configuration template](./vscode/extensions/xynapse-assistant/xynapse-config.yaml). Model usage is billed by your selected provider.
 
-The permission mapping is asserted in GUI regression tests. Full mode should be selected only for a task that genuinely needs elevated access.
+## Work with your code
 
-## Install
+- **Bring project context.** Attach files, folders, diffs, diagnostics, selected code, and terminal output; use indexed codebase search for wider context.
+- **Review changes in the editor.** Ask for an inline edit or let the agent make changes you can inspect in Source Control.
+- **Choose models by role.** Configure chat, editing, and autocomplete independently.
+- **Connect tools.** Use workspace tools and configured MCP servers with compatible models.
+- **Plan with several perspectives.** Council and BVC collect proposals and critiques before implementation.
 
-1. Open the [latest GitHub release](https://github.com/jabrailkhalil/xynapse/releases/latest).
-2. Choose the Windows x64 installer or the portable ZIP.
-3. Start Xynapse and open a project folder.
-4. In onboarding, enter a Yandex API key and folder ID, then select a model.
+| Mode | What it does | Workspace access |
+| --- | --- | --- |
+| **Chat** | Explain code, answer questions, review attached context | No workspace tools |
+| **Plan** | Inspect the project and prepare a plan | Read only |
+| **Agent** | Implement tasks within the project | Read and write |
+| **Full** | Perform explicitly authorized system tasks | Unrestricted local access |
 
-For environment-based configuration, set `YANDEX_API_KEY` and `YANDEX_FOLDER_ID`. The example configuration at [`vscode/extensions/xynapse-assistant/xynapse-config.yaml`](./vscode/extensions/xynapse-assistant/xynapse-config.yaml) contains placeholders only.
+## BVC planning
 
-## Release verification
+BVC 0.1.0 coordinates independent proposals, targeted critique, and a final plan within a model-call budget. Attach relevant files or select code, then try:
 
-This release is not based on a single smoke test. The verification matrix includes:
+```text
+/bvc easy Fix the parser regression
+/bvc medium Plan the authentication refactor
+/bvc hard Compare migration approaches across services
+```
 
-- core Vitest and Jest suites for the assistant;
-- GUI and VS Code extension regression suites;
-- configuration, transport, provider-adapter, and terminal-security packages;
-- Code - OSS compile, type/layer/lint checks, and native Node tests;
-- production builds of the assistant core, GUI, extension, and Windows x64 application;
-- isolated-profile application launch and packaged-extension parity checks;
-- secret scanning, dependency audit review, SHA-256 generation, release download, and checksum re-verification.
+The result is saved to `bvc-plan.md`. Optional discussion logging adds `bvc-discussion.md` with proposals, objections, and a call trace. You can also choose roles, models, and a budget through the BVC button.
 
-<!-- RELEASE_RESULTS_START -->
-Recorded results: 6,175 Code OSS Node tests and 13,697 production Chromium tests passed. The additional Firefox suite has three recorded failures; WebKit is not claimed as complete. Installation, isolated-profile startup, and uninstall were checked on September 5. See [`RELEASE-VERIFICATION.md`](./RELEASE-VERIFICATION.md) for dates, scope, and limitations.
-<!-- RELEASE_RESULTS_END -->
+The plan still needs implementation and tests. Read the [Assistant guide](./plugins/continue-main/extensions/vscode/README.md) or explore the [standalone BVC core](./plugins/continue-main/packages/bvc/README.md).
 
-The old synthetic `TEST-REPORT-500.md` has been replaced because its manually assigned cases were not an honest substitute for executable test output.
+## Release checks
 
-## Build from source
+The September 5, 2026 build passed installation, isolated-profile startup, extension activation, and uninstall checks. All **405 extension files** match the pinned VSIX in the installed IDE and portable archive. TypeScript, targeted ESLint, and **131 build tests** passed; all **8 published assets** were downloaded again and their SHA-256 hashes matched.
 
-Requirements: Windows x64, Git with Git LFS, Node.js 22.21.1, Python 3, and Visual Studio 2022 Build Tools with the C++ workload. Regenerating the bundled command-line runtime additionally requires Rust; the release was verified with Rust 1.95.0.
+See the [release verification report](https://github.com/jabrailkhalil/xynapse/releases/download/v1.108.0/RELEASE-VERIFICATION.md) for the full scope and limitations, including the separately dated browser-test results.
+
+## Development and research
+
+<details>
+<summary><strong>Build the Windows IDE from source</strong></summary>
+
+Requires Windows x64, Git with Git LFS, Node.js **22.21.1**, Python 3, and Visual Studio 2022 Build Tools with the C++ workload. Rebuilding the bundled CLI additionally requires Rust; the release used Rust 1.95.0.
+
+Clone the repository and fetch its LFS files:
 
 ```powershell
+git clone https://github.com/jabrailkhalil/xynapse.git
+cd xynapse
 git lfs pull
+```
+
+Download the release VSIX into the location pinned by the packager:
+
+```powershell
+$bundleDir = "artifacts/bvc-0.1.0-20260905"
+New-Item -ItemType Directory -Force $bundleDir | Out-Null
+$vsixName = "xynapse-assistant-bvc-0.1.0-win32-x64.vsix"
+$releaseUrl = "https://github.com/jabrailkhalil/xynapse/releases/download/assistant-v1.0.0-bvc.0.1.0"
+Invoke-WebRequest "$releaseUrl/$vsixName" -OutFile "$bundleDir/$vsixName"
+
 cd vscode
 npm ci
 npm run gulp compile-build-without-mangling
 npm run gulp vscode-win32-x64
 ```
 
-The root `.gitignore` intentionally keeps the Code - OSS build sources, safe `.npmrc` runtime-target files, and the assistant source tree. Generated `node_modules`, `out`, packaged application, and portable output remain ignored.
+The packager checks the VSIX against [`xynapse-assistant.json`](./vscode/build/xynapse-assistant.json) and copies its exact payload into `resources/app/extensions/xynapse-assistant`. A missing or changed VSIX fails the build. To use another local path, set `XYNAPSE_ASSISTANT_VSIX`; the required checksum remains the same.
 
-## Research
+</details>
 
-Xynapse includes the implementation used to study budget-aware verification before coding. The repository contains a 60-task evaluation and three LaTeX articles, each citing the author's diploma:
+<details>
+<summary><strong>BVC evaluation and papers</strong></summary>
+
+The repository includes a 60-task evaluation and three research articles:
 
 - [Adaptive budget allocation in BVC](./research/bvc-evaluation/main60/articles/latex/01_adaptive_budget_bvc.tex)
 - [Reproducible evaluation of BVC](./research/bvc-evaluation/main60/articles/latex/02_reproducible_evaluation_bvc.tex)
 - [Upfront BVC for programming and vibe coding](./research/bvc-evaluation/main60/articles/latex/03_upfront_bvc_vibecoding.tex)
 
-The papers distinguish measured results from interpretation; this README does not turn partial quality effects into broader claims.
+The measured results describe the evaluated sample. The BVC 0.1.0 release did not include a new benchmark run on paid models.
 
-![Xynapse Council](./Pics/Council.png)
+</details>
 
-## Project and licensing
+## Project
 
-Xynapse is maintained by **Dzhabrail Khalilov**. Issues and reproducible bug reports are welcome in the [GitHub tracker](https://github.com/jabrailkhalil/xynapse/issues).
+Maintained by **Dzhabrail Khalilov**. [Report an issue](https://github.com/jabrailkhalil/xynapse/issues) with steps to reproduce and the affected IDE or extension version.
 
-Xynapse-specific code is released under the [MIT License](./LICENSE). The distribution is based on Microsoft Code - OSS (MIT) and includes a modified Continue-derived assistant (Apache License 2.0). Component licenses and third-party notices are preserved; see [`NOTICE`](./NOTICE), [`vscode/LICENSE.txt`](./vscode/LICENSE.txt), [`vscode/ThirdPartyNotices.txt`](./vscode/ThirdPartyNotices.txt), and [`plugins/continue-main/LICENSE`](./plugins/continue-main/LICENSE).
+Xynapse-specific code is [MIT-licensed](./LICENSE). The distribution includes Code - OSS (MIT), a Continue-derived assistant (Apache-2.0), and the Claw Code runtime (MIT). Component licenses and third-party notices are retained; see [NOTICE](./NOTICE).
