@@ -1439,7 +1439,7 @@ export class GettingStartedPage extends EditorPane {
 				}, null, this.detailsPageDisposables);
 
 				if (isCommand) {
-					// Показываем совет с горячими клавишами только для команды выбора темы
+					// Show the shortcut tip only for the theme picker command.
 					if (node.href.includes('selectTheme')) {
 						const terminalBinding = this.keybindingService.lookupKeybinding('workbench.action.terminal.toggleTerminal');
 						const chatBinding = this.keybindingService.lookupKeybinding('workbench.action.chat.open');
@@ -1448,14 +1448,14 @@ export class GettingStartedPage extends EditorPane {
 							const tipBox = $('div.shortcut-message');
 							container.appendChild(tipBox);
 
-							// Заголовок с иконкой лампочки
-							const title = $('span.shortcut-title', {}, '💡 ' + localize('gettingStarted.keyboardTip', 'Полезные сочетания'));
+							// Header for the shortcut hint.
+							const title = $('span.shortcut-title', {}, localize('gettingStarted.keyboardTip', 'Useful shortcuts'));
 							tipBox.appendChild(title);
 
 							if (terminalBinding) {
 								const row1 = $('div.keybinding-row');
 								tipBox.appendChild(row1);
-								const terminalLabel = $('span.keybinding-item', {}, 'Открыть терминал');
+								const terminalLabel = $('span.keybinding-item', {}, localize('gettingStarted.openTerminal', 'Open Terminal'));
 								row1.appendChild(terminalLabel);
 								const label1 = new KeybindingLabel(row1, OS, { ...defaultKeybindingLabelStyles });
 								label1.set(terminalBinding);
@@ -1465,7 +1465,7 @@ export class GettingStartedPage extends EditorPane {
 							if (chatBinding) {
 								const row2 = $('div.keybinding-row');
 								tipBox.appendChild(row2);
-								const chatLabel = $('span.keybinding-item', {}, 'AI Помощник');
+								const chatLabel = $('span.keybinding-item', {}, localize('gettingStarted.aiAssistant', 'AI Assistant'));
 								row2.appendChild(chatLabel);
 								const label2 = new KeybindingLabel(row2, OS, { ...defaultKeybindingLabelStyles });
 								label2.set(chatBinding);

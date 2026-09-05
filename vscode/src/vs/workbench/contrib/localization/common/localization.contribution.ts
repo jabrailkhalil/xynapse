@@ -16,7 +16,6 @@ import { ExtensionsRegistry } from '../../../services/extensions/common/extensio
 import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
 import { ILocaleService } from '../../../services/localization/common/locale.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
-import './localeStatusBarItem.js';
 
 // Xynapse: programmatic locale setter (callable from extensions)
 CommandsRegistry.registerCommand('_xynapse.setLocale', async (accessor: ServicesAccessor, localeId: string, label?: string) => {

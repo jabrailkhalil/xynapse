@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Xynapse. All rights reserved.
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
@@ -9,7 +9,7 @@ import { ServicesAccessor } from '../../../../platform/instantiation/common/inst
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IXynapseProfileService } from '../../../services/xynapseProfile/common/xynapseProfile.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
-import { INativeEnvironmentService } from '../../../../platform/environment/common/environment.js';
+import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { joinPath } from '../../../../base/common/resources.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
@@ -19,9 +19,9 @@ import { ICommandService } from '../../../../platform/commands/common/commands.j
 import { encryptConfig, decryptConfig } from '../common/xynapseConfigCrypto.js';
 import { getXynapseDataDir, XYNAPSE_ACCOUNT_FILE, XYNAPSE_PROFILE_FILE } from '../../../services/xynapseProfile/common/xynapseProfilePaths.js';
 
-// в”Ђв”Ђв”Ђ helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-function xynapseDataDir(nativeEnv: INativeEnvironmentService, product: IProductService): ReturnType<typeof getXynapseDataDir> {
-	return getXynapseDataDir(nativeEnv, product.dataFolderName);
+// Helpers
+function xynapseDataDir(environmentService: IEnvironmentService, product: IProductService): ReturnType<typeof getXynapseDataDir> {
+	return getXynapseDataDir(environmentService, product.dataFolderName);
 }
 
 const EXPORTABLE_FILES = [
@@ -46,11 +46,9 @@ const KEY_FILE_NAMES = [
 	'out/config.js',
 ] as const;
 
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 //  Profile Management
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
-// в”Ђв”Ђв”Ђ Set Up Xynapse Profile в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Set up Xynapse Profile
 registerAction2(class SetUpXynapseProfileAction extends Action2 {
 	constructor() {
 		super({
@@ -89,7 +87,7 @@ registerAction2(class SetUpXynapseProfileAction extends Action2 {
 	}
 });
 
-// в”Ђв”Ђв”Ђ Edit Xynapse Profile в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Edit Xynapse Profile
 registerAction2(class EditXynapseProfileAction extends Action2 {
 	constructor() {
 		super({
@@ -132,7 +130,7 @@ registerAction2(class EditXynapseProfileAction extends Action2 {
 	}
 });
 
-// в”Ђв”Ђв”Ђ Clear Xynapse Profile (Sign Out) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Clear Xynapse Profile (sign out)
 registerAction2(class ClearXynapseProfileAction extends Action2 {
 	constructor() {
 		super({
@@ -154,7 +152,7 @@ registerAction2(class ClearXynapseProfileAction extends Action2 {
 
 // Encrypted Config Backup - Export / Import / Git Push / Git Pull
 //  All accounts are LOCAL. A single encrypted .enc file stores
-//  config.yaml, config.json, profile.json, and account.json (with keys bundle).
+//  credential files, profile.json, and metadata-only account.json.
 //  The user authenticates via built-in GitHub login (github-authentication
 //  extension) to push/pull the encrypted backup to/from their git repo.
 
@@ -185,6 +183,18 @@ async function promptPassword(quickInputService: IQuickInputService, prompt: str
 	});
 }
 
+function validateNewPassword(password: string, notificationService: INotificationService): boolean {
+	if (password.length >= 8) {
+		return true;
+	}
+
+	notificationService.notify({
+		severity: Severity.Error,
+		message: localize('xynapseConfigPasswordTooShort', 'Encryption password must be at least 8 characters.'),
+	});
+	return false;
+}
+
 type XynapseConfigPayload = { version: number; files: Record<string, string> };
 
 async function decryptBundlePayload(data: Uint8Array, passwordInput: string): Promise<XynapseConfigPayload> {
@@ -193,7 +203,19 @@ async function decryptBundlePayload(data: Uint8Array, passwordInput: string): Pr
 	for (const password of passwordInputCandidates(passwordInput)) {
 		try {
 			const text = await decryptConfig(data, password);
-			return JSON.parse(text) as XynapseConfigPayload;
+			const parsed = JSON.parse(text) as unknown;
+			if (
+				!parsed
+				|| typeof parsed !== 'object'
+				|| Array.isArray(parsed)
+				|| typeof (parsed as { version?: unknown }).version !== 'number'
+				|| !(parsed as { files?: unknown }).files
+				|| typeof (parsed as { files?: unknown }).files !== 'object'
+				|| Array.isArray((parsed as { files?: unknown }).files)
+			) {
+				throw new Error('Invalid backup payload');
+			}
+			return parsed as XynapseConfigPayload;
 		} catch (e) {
 			lastError = e;
 		}
@@ -332,7 +354,7 @@ async function clearRestoredKeyFiles(fileService: IFileService, dataDir: ReturnT
 	}
 }
 
-// в”Ђв”Ђв”Ђ Export Encrypted Config в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Export encrypted config
 registerAction2(class ExportXynapseConfigAction extends Action2 {
 	constructor() {
 		super({
@@ -345,7 +367,7 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 		const fileDialogService = accessor.get(IFileDialogService);
 		const notificationService = accessor.get(INotificationService);
 		const fileService = accessor.get(IFileService);
-		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const nativeEnv = accessor.get(IEnvironmentService);
 		const product = accessor.get(IProductService);
 		const dataDir = xynapseDataDir(nativeEnv, product);
 
@@ -374,6 +396,7 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 			});
 			return;
 		}
+		if (!validateNewPassword(password, notificationService)) { return; }
 
 		const payload = JSON.stringify({ version: 1, timestamp: new Date().toISOString(), files: bundle });
 		const encrypted = await encryptConfig(payload, password);
@@ -394,7 +417,7 @@ registerAction2(class ExportXynapseConfigAction extends Action2 {
 	}
 });
 
-// в”Ђв”Ђв”Ђ Import Encrypted Config в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Import encrypted config
 registerAction2(class ImportXynapseConfigAction extends Action2 {
 	constructor() {
 		super({
@@ -409,7 +432,7 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
 		const profileService = accessor.get(IXynapseProfileService);
-		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const nativeEnv = accessor.get(IEnvironmentService);
 		const product = accessor.get(IProductService);
 		const dataDir = xynapseDataDir(nativeEnv, product);
 
@@ -475,7 +498,7 @@ registerAction2(class ImportXynapseConfigAction extends Action2 {
 	}
 });
 
-// в”Ђв”Ђв”Ђ Push Encrypted Config to Git в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Push encrypted config to Git
 registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 	constructor() {
 		super({
@@ -488,7 +511,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 		const fileService = accessor.get(IFileService);
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
-		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const nativeEnv = accessor.get(IEnvironmentService);
 		const product = accessor.get(IProductService);
 		const dataDir = xynapseDataDir(nativeEnv, product);
 
@@ -517,6 +540,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 			});
 			return;
 		}
+		if (!validateNewPassword(password, notificationService)) { return; }
 
 		// Prompt for git repo URL
 		const repoUrl = await quickInputService.input({
@@ -550,7 +574,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 				'git add xynapse-backup.enc',
 				'git commit -m "Xynapse config backup"',
 				'git branch -M main',
-				'git push -u origin main --force',
+				'git push -u origin main',
 			].join(' && ');
 
 			await commandService.executeCommand('workbench.action.terminal.new');
@@ -569,7 +593,7 @@ registerAction2(class PushXynapseConfigToGitAction extends Action2 {
 	}
 });
 
-// в”Ђв”Ђв”Ђ Pull Encrypted Config from Git в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Pull encrypted config from Git
 registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 	constructor() {
 		super({
@@ -582,7 +606,7 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 		const fileService = accessor.get(IFileService);
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
-		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const nativeEnv = accessor.get(IEnvironmentService);
 		const product = accessor.get(IProductService);
 		const dataDir = xynapseDataDir(nativeEnv, product);
 
@@ -638,7 +662,7 @@ registerAction2(class PullXynapseConfigFromGitAction extends Action2 {
 	}
 });
 
-// в”Ђв”Ђв”Ђ Import from Git Sync folder (decrypt after pull) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Import from the Git Sync folder (decrypt after pull)
 registerAction2(class ImportFromGitSyncAction extends Action2 {
 	constructor() {
 		super({
@@ -652,7 +676,7 @@ registerAction2(class ImportFromGitSyncAction extends Action2 {
 		const notificationService = accessor.get(INotificationService);
 		const commandService = accessor.get(ICommandService);
 		const profileService = accessor.get(IXynapseProfileService);
-		const nativeEnv = accessor.get(INativeEnvironmentService);
+		const nativeEnv = accessor.get(IEnvironmentService);
 		const product = accessor.get(IProductService);
 		const dataDir = xynapseDataDir(nativeEnv, product);
 

@@ -664,7 +664,7 @@ export function registerChatActions() {
 					),
 					nonEnterpriseCopilotUsers
 				),
-				});
+			});
 		}
 
 		override async run(accessor: ServicesAccessor): Promise<void> {
@@ -702,7 +702,7 @@ export function registerChatActions() {
 					ChatContextKeys.Setup.disabled.negate(),
 					ChatContextKeys.Setup.untrusted.negate()
 				),
-				});
+			});
 		}
 
 		override async run(accessor: ServicesAccessor): Promise<void> {

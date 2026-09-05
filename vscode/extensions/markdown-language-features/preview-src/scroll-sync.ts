@@ -56,7 +56,7 @@ const getCodeLineElements = (() => {
 				}
 
 
-				if (element.tagName === 'CODE' && element.parentElement && element.parentElement.tagName === 'PRE') {
+				if (element.tagName === 'CODE' && element.parentElement?.tagName === 'PRE') {
 					// Fenced code blocks are a special case since the `code-line` can only be marked on
 					// the `<code>` element and not the parent `<pre>` element.
 					cachedElements.push(new CodeLineElement(element.parentElement, line, element));

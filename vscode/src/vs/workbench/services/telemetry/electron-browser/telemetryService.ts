@@ -37,7 +37,7 @@ export class TelemetryService extends Disposable implements ITelemetryService {
 	) {
 		super();
 
-		// Xynapse: telemetry completely disabled — always use NullTelemetryService
+		// Xynapse: telemetry completely disabled - always use NullTelemetryService
 		this.impl = NullTelemetryService;
 
 		this.sendErrorTelemetry = this.impl.sendErrorTelemetry;

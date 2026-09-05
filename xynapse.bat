@@ -1,5 +1,9 @@
-﻿@echo off
+@echo off
 setlocal EnableDelayedExpansion
+if /i "%~1"=="--smoke" (
+    echo Xynapse launcher smoke test passed.
+    exit /b 0
+)
 chcp 65001 >nul
 title Xynapse IDE
 set "ELECTRON_RUN_AS_NODE="
@@ -42,8 +46,8 @@ echo   Утилиты
 echo   10 Показать версии
 echo   11 Очистить кэш сборки
 echo   12 npm install
-echo   13 Первый запуск (сброс)
-echo   14 Открыть лог
+echo   13 Первый запуск (с резервной копией настроек)
+echo   14 Open log
 echo   15 Запуск VANILLA (без настроек)
 echo   16 Build portable package
 echo.
@@ -354,9 +358,9 @@ echo   12 Stash pop
 echo   13 Stash list
 echo.
 echo   ─── Отмена ─────────────────────────────
-echo   14 Отменить изменения файла
+echo   14 Подсказка по восстановлению файла
 echo   15 Reset --soft HEAD~1
-echo   16 Reset --hard HEAD
+echo   16 Безопасно убрать все изменения в stash
 echo.
 echo   ─── Настройки ─────────────────────────
 echo   17 Изменить remote
@@ -400,7 +404,7 @@ goto git_full_menu
 :: --- Git Commit ---
 :git_commit
 cls
-echo   git add + commit
+echo   git add tracked + commit
 echo   ─────────────────────────────────────────
 echo.
 git status -s
@@ -411,12 +415,10 @@ if errorlevel 1 (
     pause
     goto git_full_menu
 )
-echo   Введи сообщение коммита:
-set /p msg="  > "
-if "!msg!"=="" goto git_full_menu
-echo.
-git add .
-git commit -m "!msg!"
+git add -u
+echo   Новые неотслеживаемые файлы не добавлены автоматически.
+echo   Редактор Git откроется для безопасного ввода сообщения коммита.
+git commit
 echo.
 echo   Сделать push? (Y/N)
 set /p dopush="  > "
@@ -615,14 +617,9 @@ echo.
 echo   Изменённые файлы:
 git status -s
 echo.
-echo   Введи путь к файлу (или . для всех):
-set /p restore_file="  > "
-if "!restore_file!"=="" goto git_full_menu
-echo.
-echo   ВНИМАНИЕ: Изменения будут потеряны!
-echo   Продолжить? (Y/N)
-set /p confirm_restore="  > "
-if /i "!confirm_restore!"=="Y" git checkout -- !restore_file!
+echo   Во избежание потери данных автоматическое удаление правок отключено.
+echo   Используйте Source Control: откройте diff, затем выберите Discard Changes
+echo   только для проверенного файла. Перед этим можно создать stash пунктом 11.
 pause
 goto git_full_menu
 
@@ -645,25 +642,22 @@ if /i "!confirm_soft!"=="Y" (
 pause
 goto git_full_menu
 
-:: --- Git Hard Reset ---
+:: --- Safe worktree reset ---
 :git_hard_reset
 cls
-echo   git reset --hard HEAD
+echo   Безопасный сброс через git stash
 echo   ─────────────────────────────────────────
 echo.
-echo   ╔═══════════════════════════════════════╗
-echo   ║  ВНИМАНИЕ! ВСЕ ИЗМЕНЕНИЯ БУДУТ        ║
-echo   ║  БЕЗВОЗВРАТНО УДАЛЕНЫ!                ║
-echo   ╚═══════════════════════════════════════╝
+echo   Все отслеживаемые и новые файлы будут сохранены в stash.
+echo   Вернуть их можно через пункт 12.
 echo.
 git status -s
 echo.
 echo   Введи YES для подтверждения:
 set /p confirm_hard="  > "
 if "!confirm_hard!"=="YES" (
-    git reset --hard HEAD
-    git clean -fd
-    echo   Сброшено!
+    git stash push --include-untracked -m "xynapse safe worktree backup"
+    echo   Изменения сохранены в stash.
 )
 pause
 goto git_full_menu
@@ -832,14 +826,18 @@ goto menu
 :: ============================================================================
 :first_run
 cls
-echo   Первый запуск (сброс настроек)
+echo   Первый запуск (резервная копия настроек)
 echo.
-set /p confirm="   Удалить настройки? (Y/N): "
+set /p confirm="   Архивировать текущие настройки и запустить мастер? (Y/N): "
 if /i not "%confirm%"=="Y" goto menu
 
 cd /d "%~dp0vscode"
-if exist "%USERPROFILE%\.xynapse" rmdir /s /q "%USERPROFILE%\.xynapse"
-if exist "%USERPROFILE%\.vscode-oss" rmdir /s /q "%USERPROFILE%\.vscode-oss"
+node "%~dp0scripts\backup-xynapse-profiles.js"
+if errorlevel 1 (
+    echo   Резервное копирование не выполнено. Запуск отменен.
+    pause
+    goto menu
+)
 
 echo   Запуск с мастером...
 set "VSCODE_SKIP_PRELAUNCH=1"

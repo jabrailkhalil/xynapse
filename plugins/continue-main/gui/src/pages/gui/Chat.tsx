@@ -369,7 +369,10 @@ export function Chat() {
               },
             );
 
-            if (restoreResult.action === "cancel") {
+            if (
+              restoreResult.status === "error" ||
+              restoreResult.content.action === "cancel"
+            ) {
               return;
             }
           }

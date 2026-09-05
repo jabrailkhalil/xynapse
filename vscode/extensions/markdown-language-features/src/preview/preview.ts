@@ -262,7 +262,7 @@ class MarkdownPreview extends Disposable implements WebviewResourceProvider {
 			return;
 		}
 
-		const shouldReloadPage = forceUpdate || !this._currentVersion || this._currentVersion.resource.toString() !== pendingVersion.resource.toString() || !this._webviewPanel.visible;
+		const shouldReloadPage = forceUpdate || this._currentVersion?.resource.toString() !== pendingVersion.resource.toString() || !this._webviewPanel.visible;
 		this._currentVersion = pendingVersion;
 
 		let selectedLine: number | undefined = undefined;

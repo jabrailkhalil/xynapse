@@ -11,6 +11,9 @@
 **/extensions/markdown-language-features/notebook-out/**
 **/extensions/markdown-math/notebook-out/**
 **/extensions/mermaid-chat-features/chat-webview-out/**
+**/extensions/xynapse-assistant/gui/**
+**/extensions/xynapse-assistant/out/**
+**/extensions/material-icon-theme/**
 **/extensions/notebook-renderers/renderer-out/index.js
 **/extensions/simple-browser/media/index.js
 **/extensions/terminal-suggest/src/completions/upstream/**

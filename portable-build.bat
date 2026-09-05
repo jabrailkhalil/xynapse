@@ -24,6 +24,9 @@ if not exist "%SOURCE_EXE%" (
 	exit /b 1
 )
 
+node "%~dp0scripts\validate-portable-paths.js" "%SOURCE_DIR%" "%OUTPUT_ROOT%" "%OUTPUT_DIR%" "%PRESERVED_DATA_DIR%"
+if errorlevel 1 exit /b 1
+
 if /i "%PRESERVE_DATA_FLAG%"=="--preserve-data" (
 	if exist "%OUTPUT_DIR%\data" (
 		set "HAS_PRESERVED_DATA=1"
@@ -76,6 +79,7 @@ if exist "%SOURCE_NODE_MODULES%" (
 
 if exist "%~dp0scripts\audit-xynapse-connectors.js" (
 	echo Verifying Xynapse connector parity...
+	set "XYNAPSE_PORTABLE_EXTENSION_ROOT=%OUTPUT_DIR%\resources\app\extensions\xynapse-assistant"
 	node "%~dp0scripts\audit-xynapse-connectors.js"
 	if errorlevel 1 (
 		echo [ERROR] Xynapse connector parity verification failed.

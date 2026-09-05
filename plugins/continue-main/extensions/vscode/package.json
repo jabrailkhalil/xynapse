@@ -5,16 +5,16 @@
   "version": "1.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xynapse/xynapse-assistant"
+    "url": "https://github.com/jabrailkhalil/xynapse"
   },
   "extensionKind": [
     "ui",
     "workspace"
   ],
   "bugs": {
-    "url": "https://github.com/xynapse/xynapse-assistant/issues"
+    "url": "https://github.com/jabrailkhalil/xynapse/issues"
   },
-  "homepage": "https://xynapse.dev",
+  "homepage": "https://github.com/jabrailkhalil/xynapse#readme",
   "license": "Apache-2.0",
   "displayName": "Xynapse Assistant",
   "pricing": "Free",
@@ -111,17 +111,17 @@
         "xynapse.enableQuickActions": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable the experimental Quick Actions feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev › Walkthrough: Quick Actions (experimental)](https://docs.xynapse.dev/customize/deep-dives/vscode-actions#quick-actions)"
+          "markdownDescription": "Enable experimental Quick Actions. See [Xynapse capabilities and configuration](https://github.com/jabrailkhalil/xynapse#capabilities)."
         },
         "xynapse.enableTabAutocomplete": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable Xynapse tab autocomplete feature. Read our walkthrough to learn about configuration and how to share feedback: [xynapse.dev › Walkthrough: Tab Autocomplete (beta)](https://docs.xynapse.dev/features/tab-autocomplete)"
+          "markdownDescription": "Enable Xynapse tab autocomplete. See [Xynapse capabilities and configuration](https://github.com/jabrailkhalil/xynapse#capabilities)."
         },
         "xynapse.enableNextEdit": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable Xynapse next edit feature. Read our docs to learn about configuration and how to share feedback: [xynapse.dev › Features › Autocomplete › Next Edit (experimental)](https://docs.xynapse.dev/features/autocomplete/next-edit)"
+          "markdownDescription": "Enable experimental next-edit suggestions. See [Xynapse capabilities and configuration](https://github.com/jabrailkhalil/xynapse#capabilities)."
         },
         "xynapse.pauseTabAutocompleteOnBattery": {
           "type": "boolean",
@@ -782,6 +782,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.6.4",
+    "@electron/rebuild": "^4.2.0",
     "@nestjs/common": "^11.0.16",
     "@openapitools/openapi-generator-cli": "^2.23.1",
     "@types/chai": "^5.0.1",
@@ -792,8 +793,6 @@
     "@types/node": "16.x",
     "@types/node-fetch": "^2.6.12",
     "@types/react-dom": "^18.2.4",
-    "@types/request": "^2.48.8",
-    "@types/uuid": "^10.0.0",
     "@types/vscode": "1.70",
     "@types/ws": "^8.5.4",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
@@ -804,23 +803,23 @@
     "esbuild-visualizer": "^0.6.0",
     "eslint": "^8.28.0",
     "json-schema-to-typescript": "^12.0.0",
+    "mocha": "^11.7.5",
     "ovsx": "^0.8.3",
     "rimraf": "^5.0.5",
     "typescript": "^5.6.3",
+    "vitest": "^3.1.4",
     "vite": "^4.5.14",
     "vscode-extension-tester": "^8.14.1"
   },
   "dependencies": {
     "@xynapse/config-types": "file:../../packages/config-types",
     "@xynapse/fetch": "file:../../packages/fetch",
-    "@electron/rebuild": "^3.2.10",
     "@reduxjs/toolkit": "^1.9.3",
     "@vscode/ripgrep": "^1.15.9",
     "axios": "^1.13.1",
     "core": "file:../../core",
     "cors": "^2.8.5",
-    "dbinfoz": "^0.14.0",
-    "diff": "^7.0.0",
+    "diff": "^9.0.0",
     "downshift": "^7.6.0",
     "express": "^4.18.2",
     "fkill": "^8.1.0",
@@ -836,7 +835,6 @@
     "jsdom": "^24.0.0",
     "lru-cache": "^11.0.2",
     "minisearch": "^7.0.0",
-    "mocha": "^11.7.5",
     "monaco-editor": "^0.45.0",
     "monaco-vscode-textmate-theme-converter": "^0.1.7",
     "ncp": "^2.0.0",
@@ -845,22 +843,34 @@
     "react-markdown": "^8.0.7",
     "react-redux": "^8.0.5",
     "read-last-lines": "^1.8.0",
-    "request": "^2.88.2",
     "socket.io-client": "^4.7.2",
     "strip-ansi": "^7.1.0",
     "svg-builder": "^2.0.0",
     "systeminformation": "^5.27.11",
     "tailwindcss": "^3.3.2",
     "undici": "^6.21.3",
-    "uuid": "^9.0.1",
-    "uuidv4": "^6.2.13",
+    "uuid": "^11.1.1",
     "vectordb": "0.4.20",
-    "vitest": "^3.1.4",
     "vscode-languageclient": "^8.0.2",
     "ws": "^8.13.0",
     "yarn": "^1.22.21"
   },
   "overrides": {
+    "dbinfoz": {
+      "sqlite3": "^6.0.1"
+    },
+    "anymatch": {
+      "picomatch": "2.3.2"
+    },
+    "esbuild-visualizer": {
+      "picomatch": "2.3.2"
+    },
+    "micromatch": {
+      "picomatch": "2.3.2"
+    },
+    "readdirp": {
+      "picomatch": "2.3.2"
+    },
     "vitest": {
       "@types/node": "^16.18.119"
     }

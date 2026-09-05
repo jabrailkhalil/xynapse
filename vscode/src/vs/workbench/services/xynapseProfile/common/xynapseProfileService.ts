@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Xynapse. All rights reserved.
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
@@ -9,7 +9,7 @@ import { dirname, joinPath } from '../../../../base/common/resources.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { basename } from '../../../../base/common/path.js';
 import { URI } from '../../../../base/common/uri.js';
-import { INativeEnvironmentService } from '../../../../platform/environment/common/environment.js';
+import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
@@ -17,6 +17,11 @@ import { INotificationService } from '../../../../platform/notification/common/n
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { IXynapseAccount, IXynapseProfile, IXynapseProfileInput, IXynapseProfileService } from './xynapseProfile.js';
 import { getXynapseDataDir, XYNAPSE_ACCOUNT_FILE, XYNAPSE_PROFILE_FILE } from './xynapseProfilePaths.js';
+
+type LoadedXynapseAccount = IXynapseAccount & {
+	/** Accepted only to migrate account.json files written before 1.108.0. */
+	legacyKeys: Record<string, string>;
+};
 
 export class XynapseProfileService extends Disposable implements IXynapseProfileService {
 
@@ -36,7 +41,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 
 	constructor(
 		@IFileService private readonly fileService: IFileService,
-		environmentService: INativeEnvironmentService,
+		@IEnvironmentService environmentService: IEnvironmentService,
 		@IProductService productService: IProductService,
 		@ILogService private readonly logService: ILogService,
 		@INotificationService private readonly notificationService: INotificationService,
@@ -46,7 +51,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		this.profileResource = joinPath(this.profileFolder, XYNAPSE_PROFILE_FILE);
 		this.accountResource = joinPath(this.profileFolder, XYNAPSE_ACCOUNT_FILE);
 
-		const home = basename(environmentService.userHome.fsPath || environmentService.userHome.path || 'user') || 'user';
+		const home = basename(dirname(this.profileFolder).fsPath || dirname(this.profileFolder).path || 'user') || 'user';
 		this.defaultProfileName = `Local (${home})`;
 		this.defaultProfileEmail = `${home.toLowerCase()}@local.xynapse`;
 
@@ -72,7 +77,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 					email: payload.email,
 					isConfigured: true,
 					createdAt: new Date().toISOString(),
-					keys,
+					keyFiles: Object.keys(keys).sort(),
 				};
 				await this.fileService.writeFile(this.accountResource, VSBuffer.fromString(JSON.stringify(account, null, '\t')));
 				await this.materializeKeyFilesFromKeys(keys);
@@ -120,8 +125,10 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 			await this.ensureDataFolder();
 
 			const account = await this.loadAccount();
-			if (account && this.hasKeyMaterial(account.keys)) {
-				const normalizedKeys = this.pickKeyFiles(account.keys);
+			const localKeys = this.pickKeyFiles(await this.collectKeys());
+			const accountKeys = account ? { ...account.legacyKeys, ...localKeys } : localKeys;
+			if (account && this.hasKeyMaterial(accountKeys)) {
+				const normalizedKeys = this.pickKeyFiles(accountKeys);
 				const normalizedProfile: IXynapseProfile = {
 					name: account.name,
 					email: account.email,
@@ -132,7 +139,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 					email: account.email,
 					isConfigured: true,
 					createdAt: account.createdAt,
-					keys: normalizedKeys,
+					keyFiles: Object.keys(normalizedKeys).sort(),
 				};
 
 				await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(normalizedProfile, null, '\t')));
@@ -147,7 +154,6 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 				await this.clearKeyFiles();
 			}
 
-			const localKeys = this.pickKeyFiles(await this.collectKeys());
 			if (this.hasKeyMaterial(localKeys)) {
 				const existingProfile = await this.loadProfileFile();
 				const migratedProfile: IXynapseProfile = {
@@ -160,7 +166,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 					email: migratedProfile.email,
 					isConfigured: true,
 					createdAt: new Date().toISOString(),
-					keys: localKeys,
+					keyFiles: Object.keys(localKeys).sort(),
 				};
 
 				await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(migratedProfile, null, '\t')));
@@ -195,7 +201,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 			await this.fileService.writeFile(this.profileResource, VSBuffer.fromString(JSON.stringify(localProfile, null, '\t')));
 			this.cachedProfile = localProfile;
 			this.notificationService.info(
-				`Local Xynapse profile created (${localProfile.name}). Configure an account to enable encrypted sync.`,
+				`Local Xynapse profile created (${localProfile.name}). Configure credentials before creating an encrypted backup.`,
 			);
 		} catch (e) {
 			this.logService.error('[Xynapse] Failed to load profile:', e);
@@ -229,7 +235,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 		return undefined;
 	}
 
-	private async loadAccount(): Promise<IXynapseAccount | undefined> {
+	private async loadAccount(): Promise<LoadedXynapseAccount | undefined> {
 		const exists = await this.fileService.exists(this.accountResource);
 		if (!exists) {
 			return undefined;
@@ -247,7 +253,8 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 				email: data.email,
 				isConfigured: data.isConfigured === true,
 				createdAt: typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
-				keys: this.coerceKeys(data.keys),
+				keyFiles: this.coerceKeyFileNames(data.keyFiles),
+				legacyKeys: this.coerceKeys(data.keys),
 			};
 		} catch {
 			this.logService.error('[Xynapse] account.json contains invalid JSON');
@@ -263,6 +270,15 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 
 		const keys = this.pickKeyFiles(value as Record<string, unknown>);
 		return keys;
+	}
+
+	private coerceKeyFileNames(value: unknown): string[] {
+		if (!Array.isArray(value)) {
+			return [];
+		}
+
+		const allowed = new Set<string>(XynapseProfileService.KEY_FILES);
+		return [...new Set(value.filter((name): name is string => typeof name === 'string' && allowed.has(name)))].sort();
 	}
 
 	private pickKeyFiles(value: Record<string, unknown>): Record<string, string> {
@@ -303,7 +319,7 @@ export class XynapseProfileService extends Disposable implements IXynapseProfile
 	}
 
 	private hasKeyMaterial(keys: Record<string, string>): boolean {
-		return Object.keys(keys).length > 0;
+		return Object.values(keys).some(value => value.trim().length > 0);
 	}
 
 	private async materializeKeyFilesFromKeys(keys: Record<string, string>): Promise<void> {

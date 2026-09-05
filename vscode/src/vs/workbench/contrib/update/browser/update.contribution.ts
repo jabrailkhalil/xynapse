@@ -21,7 +21,7 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { URI } from '../../../../base/common/uri.js';
 import { ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
 
-// Xynapse: auto-update contributions disabled — no Microsoft update server
+// Xynapse: auto-update contributions disabled - no Microsoft update server
 
 // Release notes
 

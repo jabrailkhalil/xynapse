@@ -160,8 +160,8 @@ export class SetupAgent extends Disposable implements IChatAgentImplementation {
 	}
 
 	// Xynapse: Updated messages for multiple AI providers
-	private static readonly SETUP_NEEDED_MESSAGE = new MarkdownString(localize('settingUpCopilotNeeded', "Для использования Copilot чата необходимо войти в GitHub.\n\n**Альтернатива:** Используйте YandexGPT чат — нажмите `Ctrl+Alt+B` или откройте вкладку 'YandexGPT' в нижней панели."));
-	private static readonly TRUST_NEEDED_MESSAGE = new MarkdownString(localize('trustNeeded', "Для использования чата необходимо доверить этой рабочей области."));
+	private static readonly SETUP_NEEDED_MESSAGE = new MarkdownString(localize('settingUpCopilotNeeded', "Sign in to GitHub to use Copilot Chat.\n\n**Alternative:** open Xynapse Assistant from the Activity Bar."));
+	private static readonly TRUST_NEEDED_MESSAGE = new MarkdownString(localize('trustNeeded', "Trust this workspace to use chat."));
 
 	private readonly _onUnresolvableError = this._register(new Emitter<void>());
 	readonly onUnresolvableError = this._onUnresolvableError.event;
@@ -309,9 +309,9 @@ export class SetupAgent extends Disposable implements IChatAgentImplementation {
 					// Xynapse: Changed error message to not require Copilot
 					let warningMessage: string;
 					if (this.chatEntitlementService.anonymous) {
-						warningMessage = localize('chatTookLongWarningAnonymous', "Чат не смог подключиться к языковой модели. Выберите модель в настройках чата.");
+						warningMessage = localize('chatTookLongWarningAnonymous', "Chat could not connect to a language model. Select a model in chat settings.");
 					} else {
-						warningMessage = localize('chatTookLongWarning', "Чат не смог подключиться к языковой модели. Убедитесь что провайдер модели активирован.");
+						warningMessage = localize('chatTookLongWarning', "Chat could not connect to a language model. Make sure the model provider is active.");
 					}
 
 					this.logService.warn(warningMessage, {

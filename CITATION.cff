@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use Xynapse IDE or the Council/BVC implementation in research, please cite this software and the linked thesis."
+title: "Xynapse IDE"
+type: software
+version: 1.108.0
+date-released: 2026-08-16
+authors:
+  - family-names: Khalilov
+    given-names: Dzhabrail
+    email: jabrailkhalil@gmail.com
+    affiliation: "HSE University, Moscow"
+repository-code: "https://github.com/jabrailkhalil/xynapse"
+url: "https://xynapse.online"
+license: MIT
+keywords:
+  - AI-assisted programming
+  - coding agents
+  - multi-agent systems
+  - vibe coding
+  - IDE

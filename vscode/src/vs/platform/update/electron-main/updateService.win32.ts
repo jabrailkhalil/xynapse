@@ -93,7 +93,11 @@ export class Win32UpdateService extends AbstractUpdateService implements IRelaun
 	}
 
 	protected override async initialize(): Promise<void> {
-		if (this.environmentMainService.isBuilt) {
+		// The Electron `appUpdate` path exists only in Microsoft's patched build.
+		// Xynapse uses the independent GitHub Releases updater below, which manages
+		// its own cache, so calling app.setPath('appUpdate', ...) on stock Electron
+		// would throw and abort updater initialization.
+		if (this.environmentMainService.isBuilt && !hasGitHubUpdateConfig(this.productService)) {
 			const cachePath = await this.cachePath;
 			app.setPath('appUpdate', cachePath);
 			try {

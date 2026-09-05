@@ -5563,7 +5563,7 @@ const getCommandsMap: (
           hideGUI();
         } else {
           void sidebar.webviewProtocol?.request(
-            "focusInputWithNewSession",
+            "focusXynapseInputWithNewSession",
             undefined,
             false,
           );
@@ -5571,7 +5571,7 @@ const getCommandsMap: (
       } else {
         focusGUI();
         sidebar.webviewProtocol?.request(
-          "focusInputWithNewSession",
+          "focusXynapseInputWithNewSession",
           undefined,
           false,
         );
@@ -5601,7 +5601,10 @@ const getCommandsMap: (
       } else {
         focusGUI();
 
-        sidebar.webviewProtocol?.request("focusInputWithoutClear", undefined);
+        sidebar.webviewProtocol?.request(
+          "focusXynapseInputWithoutClear",
+          undefined,
+        );
 
         void addHighlightedCodeToContext(sidebar.webviewProtocol);
       }
@@ -6288,7 +6291,7 @@ const getCommandsMap: (
         .then(async (selection) => {
           if (selection === "Read the docs") {
             await vscode.env.openExternal(
-              vscode.Uri.parse("https://docs.xynapse.dev/yaml-migration"),
+              vscode.Uri.parse("https://docs.continue.dev/yaml-migration"),
             );
           }
         });

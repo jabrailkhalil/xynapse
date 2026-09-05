@@ -337,7 +337,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 							ChatContextKeys.Entitlement.planFree
 						)
 					),
-					});
+				});
 			}
 
 			override async run(accessor: ServicesAccessor): Promise<void> {
@@ -381,7 +381,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 							ChatContextKeys.Entitlement.planProPlus,
 						)
 					),
-					});
+				});
 			}
 
 			override async run(accessor: ServicesAccessor): Promise<void> {
@@ -701,7 +701,7 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
 					f1: true,
 					category: CHAT_CATEGORY,
 					precondition: ChatContextKeys.Setup.hidden.negate(),
-					});
+				});
 			}
 
 			override async run(accessor: ServicesAccessor): Promise<void> {

@@ -19,7 +19,7 @@ secrets.local.json
 secrets.json
 secrets.yaml
 secrets.yml
-**/secrets/
+/secrets/
 credentials.json
 credentials.yaml
 *.pem
@@ -30,7 +30,8 @@ credentials.yaml
 api_keys.json
 config.local.json
 *.secret
-.npmrc
+.npmrc.local
+*.npmrc.local
 .yarnrc
 
 # ===========================================
@@ -62,7 +63,7 @@ Xynapse.md
 # ===========================================
 # Logs
 # ===========================================
-logs/
+/logs/
 *.log
 xynapse.log
 .build/

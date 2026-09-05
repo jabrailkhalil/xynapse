@@ -66,12 +66,12 @@ const DEFAULT_MODEL: &str = "openai/gpt-4.1-mini";
 enum ModelSource {
     /// Explicit `--model` / `--model=` CLI flag.
     Flag,
-    /// ANTHROPIC_MODEL environment variable (when no flag was passed).
+    /// `ANTHROPIC_MODEL` environment variable (when no flag was passed).
     Env,
-    /// `model` key in `.claw.json` / `.claw/settings.json` (when neither
+    /// `model` key in `.xynapse/settings.json` (when neither
     /// flag nor env set it).
     Config,
-    /// Compiled-in DEFAULT_MODEL fallback.
+    /// Compiled-in `DEFAULT_MODEL` fallback.
     Default,
 }
 
@@ -259,7 +259,7 @@ Open Xynapse Lab help from the IDE for usage."
 
 /// #77: Classify a stringified error message into a machine-readable kind.
 ///
-/// Returns a snake_case token that downstream consumers can switch on instead
+/// Returns a `snake_case` token that downstream consumers can switch on instead
 /// of regex-scraping the prose. The classification is best-effort prefix/keyword
 /// matching against the error messages produced throughout the CLI surface.
 fn classify_error_kind(message: &str) -> &'static str {
@@ -293,9 +293,9 @@ fn classify_error_kind(message: &str) -> &'static str {
     }
 }
 
-/// #77: Split a multi-line error message into (short_reason, optional_hint).
+/// #77: Split a multi-line error message into (`short_reason`, `optional_hint`).
 ///
-/// The short_reason is the first line (up to the first newline), and the hint
+/// The `short_reason` is the first line (up to the first newline), and the hint
 /// is the remaining text or `None` if there's no newline. This prevents the
 /// runbook prose from being stuffed into the `error` field that downstream
 /// parsers expect to be the short reason alone.
@@ -345,6 +345,7 @@ fn merge_prompt_with_stdin(prompt: &str, stdin_content: Option<&str>) -> String 
     format!("{prompt}\n\n{trimmed}")
 }
 
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().skip(1).collect();
     match parse_args(&args)? {
@@ -1275,7 +1276,8 @@ fn format_unknown_direct_slash_command(name: &str) -> String {
         message.push('\n');
         message.push_str(note);
     }
-    message.push_str("\nRun Xynapse runtime help for CLI usage, or start Xynapse Core and use /help.");
+    message
+        .push_str("\nRun Xynapse runtime help for CLI usage, or start Xynapse Core and use /help.");
     message
 }
 
@@ -1295,13 +1297,13 @@ fn format_unknown_slash_command(name: &str) -> String {
 }
 
 fn omc_compatibility_note_for_unknown_slash_command(name: &str) -> Option<&'static str> {
-    name.starts_with("oh-my-code:").then_some(
+    (name.starts_with("oh-my-code:") || name.starts_with("oh-my-xynapsecode:")).then_some(
         "Compatibility note: this is an OMC plugin command. Xynapse Lab does not yet load plugin slash commands, statusline stdin, or OMC session hooks.",
     )
 }
 
 fn render_suggestion_line(label: &str, suggestions: &[String]) -> Option<String> {
-    (!suggestions.is_empty()).then(|| format!("  {label:<16} {}", suggestions.join(", "),))
+    (!suggestions.is_empty()).then(|| format!("  {label:<16} {}", suggestions.join(", ")))
 }
 
 fn suggest_slash_commands(input: &str) -> Vec<String> {
@@ -1468,8 +1470,7 @@ fn validate_model_syntax(model: &str) -> Result<(), String> {
     // Check for spaces (malformed)
     if trimmed.contains(' ') {
         return Err(format!(
-            "invalid model syntax: '{}' contains spaces. Use provider/model format or known alias",
-            trimmed
+            "invalid model syntax: '{trimmed}' contains spaces. Use provider/model format or known alias"
         ));
     }
     // Check provider/model format: provider_id/model_id. Yandex model IDs are
@@ -1477,8 +1478,7 @@ fn validate_model_syntax(model: &str) -> Result<(), String> {
     // exactly one slash in the entire string.
     let Some((provider_part, model_part)) = trimmed.split_once('/') else {
         let mut err_msg = format!(
-            "invalid model syntax: '{}'. Expected provider/model (for example openai/gpt-4.1-mini) or known alias (opus, sonnet, haiku)",
-            trimmed
+            "invalid model syntax: '{trimmed}'. Expected provider/model (for example openai/gpt-4.1-mini) or known alias (opus, sonnet, haiku)"
         );
         if trimmed.starts_with("gpt-") || trimmed.starts_with("gpt_") {
             err_msg.push_str("\nDid you mean `openai/");
@@ -1498,8 +1498,7 @@ fn validate_model_syntax(model: &str) -> Result<(), String> {
     if provider_part.is_empty() || model_part.is_empty() {
         // #154: hint if the model looks like it belongs to a different provider
         let mut err_msg = format!(
-            "invalid model syntax: '{}'. Expected provider/model (for example openai/gpt-4.1-mini) or known alias (opus, sonnet, haiku)",
-            trimmed
+            "invalid model syntax: '{trimmed}'. Expected provider/model (for example openai/gpt-4.1-mini) or known alias (opus, sonnet, haiku)"
         );
         if trimmed.starts_with("gpt-") || trimmed.starts_with("gpt_") {
             err_msg.push_str("\nDid you mean `openai/");
@@ -1582,6 +1581,7 @@ fn permission_mode_from_resolved(mode: ResolvedPermissionMode) -> PermissionMode
 
 fn default_permission_mode() -> PermissionMode {
     env::var("XYNAPSE_LAB_PERMISSION_MODE")
+        .or_else(|_| env::var("RUSTY_XYNAPSE_PERMISSION_MODE"))
         .ok()
         .as_deref()
         .and_then(normalize_permission_mode)
@@ -2025,13 +2025,13 @@ fn run_doctor(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::
 ///
 /// Tool descriptors come from [`tools::mvp_tool_specs`] and calls are
 /// dispatched through [`tools::execute_tool`], so this server exposes exactly
-/// Read `.claw/worker-state.json` from the current working directory and print it.
+/// Read `.xynapse/worker-state.json` from the current working directory and print it.
 /// This is the file-based worker observability surface: `push_event()` in `worker_boot.rs`
 /// atomically writes state transitions here so external observers (Xynapse/CI, orchestrators)
 /// can poll current `WorkerStatus` without needing an HTTP route on the opencode binary.
 fn run_worker_state(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
-    let state_path = cwd.join(".claw").join("worker-state.json");
+    let state_path = cwd.join(".xynapse").join("worker-state.json");
     if !state_path.exists() {
         // #139: this error used to say "run a worker first" without telling
         // callers how to run one. "worker" is an internal concept (there is
@@ -2324,8 +2324,7 @@ fn check_install_source_health() -> DiagnosticCheck {
     )
     .with_details(vec![
         format!("Official repo     {OFFICIAL_REPO_URL}"),
-        "Recommended path  use the bundled runtime shipped with Xynapse IDE"
-            .to_string(),
+        "Recommended path  use the bundled runtime shipped with Xynapse IDE".to_string(),
         "Legacy note       old standalone runtime crates are not the supported install path"
             .to_string(),
     ])
@@ -5479,7 +5478,7 @@ fn render_repl_help() -> String {
         "  Tab                  Complete commands, modes, and recent sessions".to_string(),
         "  Ctrl-C               Clear input (or exit on empty prompt)".to_string(),
         "  Shift+Enter/Ctrl+J   Insert a newline".to_string(),
-        "  Auto-save            .claw/sessions/<session-id>.jsonl".to_string(),
+        "  Auto-save            .xynapse/sessions/<session-id>.jsonl".to_string(),
         "  Resume latest        /resume latest".to_string(),
         "  Browse sessions      /session list".to_string(),
         "  Show prompt history  /history [count]".to_string(),
@@ -5694,8 +5693,7 @@ fn format_status_report(
             Some(raw) if raw != model => {
                 format!("\n  Model source     {} (raw: {raw})", p.source.as_str())
             }
-            Some(_) => format!("\n  Model source     {}", p.source.as_str()),
-            None => format!("\n  Model source     {}", p.source.as_str()),
+            _ => format!("\n  Model source     {}", p.source.as_str()),
         })
         .unwrap_or_default();
     blocks.extend([
@@ -6131,7 +6129,7 @@ fn render_memory_report() -> Result<String, Box<dyn std::error::Error>> {
             } else {
                 preview
             };
-            lines.push(format!("  {}. {}", index + 1, file.path.display(),));
+            lines.push(format!("  {}. {}", index + 1, file.path.display()));
             lines.push(format!(
                 "     lines={} preview={}",
                 file.content.lines().count(),
@@ -6223,8 +6221,7 @@ fn render_diff_report_for(cwd: &Path) -> Result<String, Box<dyn std::error::Erro
         .args(["rev-parse", "--is-inside-work-tree"])
         .current_dir(cwd)
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+        .is_ok_and(|o| o.status.success());
     if !in_git_repo {
         return Ok(format!(
             "Diff\n  Result           no git repository\n  Detail           {} is not inside a git project",
@@ -6256,8 +6253,7 @@ fn render_diff_json_for(cwd: &Path) -> Result<serde_json::Value, Box<dyn std::er
         .args(["rev-parse", "--is-inside-work-tree"])
         .current_dir(cwd)
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+        .is_ok_and(|o| o.status.success());
     if !in_git_repo {
         return Ok(serde_json::json!({
             "kind": "diff",
@@ -6482,11 +6478,11 @@ fn git_status_ok(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn command_exists(name: &str) -> bool {
-    Command::new("which")
+    let locator = if cfg!(windows) { "where.exe" } else { "which" };
+    Command::new(locator)
         .arg(name)
         .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+        .is_ok_and(|output| output.status.success())
 }
 
 fn write_temp_text_file(
@@ -7520,6 +7516,7 @@ struct AnthropicRuntimeClient {
 }
 
 impl AnthropicRuntimeClient {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         session_id: &str,
         model: String,
@@ -7596,6 +7593,7 @@ fn resolve_cli_auth_source() -> Result<AuthSource, Box<dyn std::error::Error>> {
     Ok(resolve_cli_auth_source_for_cwd()?)
 }
 
+#[allow(clippy::result_large_err)]
 fn resolve_cli_auth_source_for_cwd() -> Result<AuthSource, api::ApiError> {
     resolve_startup_auth_source(|| Ok(None))
 }
@@ -8973,16 +8971,16 @@ fn print_help_to(out: &mut impl Write) -> io::Result<()> {
         "      Show ACP/Zed editor integration status (currently unsupported; aliases: --acp, -acp)"
     )?;
     writeln!(out, "      Source of truth: {OFFICIAL_REPO_SLUG}")?;
-    writeln!(
-        out,
-        "      Warning: use the bundled Xynapse runtime"
-    )?;
+    writeln!(out, "      Warning: use the bundled Xynapse runtime")?;
     writeln!(out, "  xynapse dump-manifests [--manifests-dir PATH]")?;
     writeln!(out, "  xynapse bootstrap-plan")?;
     writeln!(out, "  xynapse agents")?;
     writeln!(out, "  xynapse mcp")?;
     writeln!(out, "  xynapse skills")?;
-    writeln!(out, "  xynapse system-prompt [--cwd PATH] [--date YYYY-MM-DD]")?;
+    writeln!(
+        out,
+        "  xynapse system-prompt [--cwd PATH] [--date YYYY-MM-DD]"
+    )?;
     writeln!(out, "  xynapse init")?;
     writeln!(
         out,
@@ -9443,24 +9441,24 @@ mod tests {
         let root = temp_dir();
         let cwd = root.join("project");
         let config_home = root.join("config-home");
-        std::fs::create_dir_all(cwd.join(".claw")).expect("project config dir should exist");
+        std::fs::create_dir_all(cwd.join(".xynapse")).expect("project config dir should exist");
         std::fs::create_dir_all(&config_home).expect("config home should exist");
         std::fs::write(
-            cwd.join(".claw").join("settings.json"),
+            cwd.join(".xynapse").join("settings.json"),
             r#"{"permissionMode":"acceptEdits"}"#,
         )
         .expect("project config should write");
 
-        let original_config_home = std::env::var("CLAW_CONFIG_HOME").ok();
+        let original_config_home = std::env::var("XYNAPSE_CONFIG_HOME").ok();
         let original_permission_mode = std::env::var("RUSTY_XYNAPSE_PERMISSION_MODE").ok();
-        std::env::set_var("CLAW_CONFIG_HOME", &config_home);
+        std::env::set_var("XYNAPSE_CONFIG_HOME", &config_home);
         std::env::remove_var("RUSTY_XYNAPSE_PERMISSION_MODE");
 
         let resolved = with_current_dir(&cwd, super::default_permission_mode);
 
         match original_config_home {
-            Some(value) => std::env::set_var("CLAW_CONFIG_HOME", value),
-            None => std::env::remove_var("CLAW_CONFIG_HOME"),
+            Some(value) => std::env::set_var("XYNAPSE_CONFIG_HOME", value),
+            None => std::env::remove_var("XYNAPSE_CONFIG_HOME"),
         }
         match original_permission_mode {
             Some(value) => std::env::set_var("RUSTY_XYNAPSE_PERMISSION_MODE", value),
@@ -9477,24 +9475,24 @@ mod tests {
         let root = temp_dir();
         let cwd = root.join("project");
         let config_home = root.join("config-home");
-        std::fs::create_dir_all(cwd.join(".claw")).expect("project config dir should exist");
+        std::fs::create_dir_all(cwd.join(".xynapse")).expect("project config dir should exist");
         std::fs::create_dir_all(&config_home).expect("config home should exist");
         std::fs::write(
-            cwd.join(".claw").join("settings.json"),
+            cwd.join(".xynapse").join("settings.json"),
             r#"{"permissionMode":"acceptEdits"}"#,
         )
         .expect("project config should write");
 
-        let original_config_home = std::env::var("CLAW_CONFIG_HOME").ok();
+        let original_config_home = std::env::var("XYNAPSE_CONFIG_HOME").ok();
         let original_permission_mode = std::env::var("RUSTY_XYNAPSE_PERMISSION_MODE").ok();
-        std::env::set_var("CLAW_CONFIG_HOME", &config_home);
+        std::env::set_var("XYNAPSE_CONFIG_HOME", &config_home);
         std::env::set_var("RUSTY_XYNAPSE_PERMISSION_MODE", "read-only");
 
         let resolved = with_current_dir(&cwd, super::default_permission_mode);
 
         match original_config_home {
-            Some(value) => std::env::set_var("CLAW_CONFIG_HOME", value),
-            None => std::env::remove_var("CLAW_CONFIG_HOME"),
+            Some(value) => std::env::set_var("XYNAPSE_CONFIG_HOME", value),
+            None => std::env::remove_var("XYNAPSE_CONFIG_HOME"),
         }
         match original_permission_mode {
             Some(value) => std::env::set_var("RUSTY_XYNAPSE_PERMISSION_MODE", value),
@@ -9514,7 +9512,7 @@ mod tests {
         let original_config_home = std::env::var("CLAW_CONFIG_HOME").ok();
         let original_api_key = std::env::var("ANTHROPIC_API_KEY").ok();
         let original_auth_token = std::env::var("ANTHROPIC_AUTH_TOKEN").ok();
-        std::env::set_var("CLAW_CONFIG_HOME", &config_home);
+        std::env::set_var("XYNAPSE_CONFIG_HOME", &config_home);
         std::env::remove_var("ANTHROPIC_API_KEY");
         std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
 
@@ -9650,7 +9648,7 @@ mod tests {
             parse_args(&args).expect("args should parse"),
             CliAction::Prompt {
                 prompt: "explain this".to_string(),
-                model: "xynapse-opus-4-6".to_string(),
+                model: "openai/gpt-4.1".to_string(),
                 output_format: CliOutputFormat::Json,
                 allowed_tools: None,
                 permission_mode: PermissionMode::DangerFullAccess,
@@ -9724,7 +9722,7 @@ mod tests {
             parse_args(&args).expect("args should parse"),
             CliAction::Prompt {
                 prompt: "explain this".to_string(),
-                model: "xynapse-opus-4-6".to_string(),
+                model: "openai/gpt-4.1".to_string(),
                 output_format: CliOutputFormat::Text,
                 allowed_tools: None,
                 permission_mode: PermissionMode::DangerFullAccess,
@@ -9738,9 +9736,9 @@ mod tests {
 
     #[test]
     fn resolves_known_model_aliases() {
-        assert_eq!(resolve_model_alias("opus"), "xynapse-opus-4-6");
-        assert_eq!(resolve_model_alias("sonnet"), "xynapse-sonnet-4-6");
-        assert_eq!(resolve_model_alias("haiku"), "xynapse-haiku-4-5-20251213");
+        assert_eq!(resolve_model_alias("opus"), "openai/gpt-4.1");
+        assert_eq!(resolve_model_alias("sonnet"), "openai/gpt-4.1-mini");
+        assert_eq!(resolve_model_alias("haiku"), "openai/gpt-4.1-nano");
         assert_eq!(resolve_model_alias("xynapse-opus"), "xynapse-opus");
     }
 
@@ -9763,16 +9761,16 @@ mod tests {
         let root = temp_dir();
         let cwd = root.join("project");
         let config_home = root.join("config-home");
-        std::fs::create_dir_all(cwd.join(".claw")).expect("project config dir should exist");
+        std::fs::create_dir_all(cwd.join(".xynapse")).expect("project config dir should exist");
         std::fs::create_dir_all(&config_home).expect("config home should exist");
         std::fs::write(
-            cwd.join(".claw").join("settings.json"),
+            cwd.join(".xynapse").join("settings.json"),
             r#"{"aliases":{"fast":"xynapse-haiku-4-5-20251213","smart":"opus","cheap":"grok-3-mini"}}"#,
         )
         .expect("project config should write");
 
-        let original_config_home = std::env::var("CLAW_CONFIG_HOME").ok();
-        std::env::set_var("CLAW_CONFIG_HOME", &config_home);
+        let original_config_home = std::env::var("XYNAPSE_CONFIG_HOME").ok();
+        std::env::set_var("XYNAPSE_CONFIG_HOME", &config_home);
 
         // when
         let direct = with_current_dir(&cwd, || resolve_model_alias_with_config("fast"));
@@ -9782,17 +9780,17 @@ mod tests {
         let builtin = with_current_dir(&cwd, || resolve_model_alias_with_config("haiku"));
 
         match original_config_home {
-            Some(value) => std::env::set_var("CLAW_CONFIG_HOME", value),
-            None => std::env::remove_var("CLAW_CONFIG_HOME"),
+            Some(value) => std::env::set_var("XYNAPSE_CONFIG_HOME", value),
+            None => std::env::remove_var("XYNAPSE_CONFIG_HOME"),
         }
         std::fs::remove_dir_all(root).expect("temp config root should clean up");
 
         // then
         assert_eq!(direct, "xynapse-haiku-4-5-20251213");
-        assert_eq!(chained, "xynapse-opus-4-6");
+        assert_eq!(chained, "openai/gpt-4.1");
         assert_eq!(cross_provider, "grok-3-mini");
         assert_eq!(unknown, "unknown-model");
-        assert_eq!(builtin, "xynapse-haiku-4-5-20251213");
+        assert_eq!(builtin, "openai/gpt-4.1-nano");
     }
 
     #[test]
@@ -9932,6 +9930,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn removed_login_and_logout_subcommands_error_helpfully() {
         let login = parse_args(&["login".to_string()]).expect_err("login should be removed");
         assert!(login.contains("ANTHROPIC_API_KEY"));
@@ -10112,7 +10111,7 @@ mod tests {
         // path (where they surface a misleading "missing Anthropic
         // credentials" error or burn API tokens on an empty prompt).
         let empty_err =
-            parse_args(&["".to_string()]).expect_err("empty positional arg should be rejected");
+            parse_args(&[String::new()]).expect_err("empty positional arg should be rejected");
         assert!(
             empty_err.starts_with("empty prompt:"),
             "empty-arg error should be specific, got: {empty_err}"
@@ -10123,7 +10122,7 @@ mod tests {
             whitespace_err.starts_with("empty prompt:"),
             "whitespace-only error should be specific, got: {whitespace_err}"
         );
-        let multi_empty_err = parse_args(&["".to_string(), "".to_string()])
+        let multi_empty_err = parse_args(&[String::new(), String::new()])
             .expect_err("multiple empty positional args should be rejected");
         assert!(
             multi_empty_err.starts_with("empty prompt:"),
@@ -10151,7 +10150,7 @@ mod tests {
                 model_flag_raw,
                 ..
             } => {
-                assert_eq!(model, "xynapse-sonnet-4-6", "sonnet alias should resolve");
+                assert_eq!(model, "openai/gpt-4.1-mini", "sonnet alias should resolve");
                 assert_eq!(
                     model_flag_raw.as_deref(),
                     Some("sonnet"),
@@ -10349,7 +10348,10 @@ mod tests {
 
         // Phase 1 contract: workspace/git/sandbox fields are still populated
         // (independent of config parse). Sandbox falls back to defaults.
-        assert_eq!(context.cwd, cwd.canonicalize().unwrap_or(cwd.clone()));
+        assert_eq!(
+            context.cwd.canonicalize().unwrap_or(context.cwd.clone()),
+            cwd.canonicalize().unwrap_or(cwd.clone())
+        );
         assert_eq!(
             context.loaded_config_files, 0,
             "loaded_config_files should be 0 when config parse fails"
@@ -10928,7 +10930,7 @@ mod tests {
             .expect("prompt shorthand should still work"),
             CliAction::Prompt {
                 prompt: "please debug this".to_string(),
-                model: "xynapse-opus-4-6".to_string(),
+                model: "openai/gpt-4.1".to_string(),
                 output_format: CliOutputFormat::Text,
                 allowed_tools: None,
                 permission_mode: crate::default_permission_mode(),
@@ -11179,7 +11181,7 @@ mod tests {
     fn formats_namespaced_omc_slash_command_with_contract_guidance() {
         let report = format_unknown_slash_command_message("oh-my-xynapsecode:hud");
         assert!(report.contains("unknown slash command: /oh-my-xynapsecode:hud"));
-        assert!(report.contains("Xynapse Code/OMC plugin command"));
+        assert!(report.contains("OMC plugin command"));
         assert!(report.contains("plugin slash commands"));
         assert!(report.contains("statusline"));
         assert!(report.contains("session hooks"));
@@ -11251,7 +11253,7 @@ mod tests {
         let error = parse_args(&["--resum".to_string()]).expect_err("unknown option should fail");
         assert!(error.contains("unknown option: --resum"));
         assert!(error.contains("Did you mean --resume?"));
-        assert!(error.contains("xynapse --help"));
+        assert!(error.contains("Run Xynapse runtime help"));
     }
 
     #[test]
@@ -11403,7 +11405,7 @@ mod tests {
         assert!(help.contains("/agents"));
         assert!(help.contains("/skills"));
         assert!(help.contains("/exit"));
-        assert!(help.contains("Auto-save            .claw/sessions/<session-id>.jsonl"));
+        assert!(help.contains("Auto-save            .xynapse/sessions/<session-id>.jsonl"));
         assert!(help.contains("Resume latest        /resume latest"));
     }
 
@@ -11415,7 +11417,7 @@ mod tests {
             vec!["session-old".to_string()],
         );
 
-        assert!(completions.contains(&"/model xynapse-sonnet-4-6".to_string()));
+        assert!(completions.contains(&"/model openai/gpt-4.1-mini".to_string()));
         assert!(completions.contains(&"/permissions workspace-write".to_string()));
         assert!(completions.contains(&"/session list".to_string()));
         assert!(completions.contains(&"/session switch session-current".to_string()));
@@ -11484,16 +11486,16 @@ mod tests {
         fs::create_dir_all(&root).expect("root dir");
         let config_home = root.join("config");
         fs::create_dir_all(&config_home).expect("config home dir");
-        std::env::set_var("CLAW_CONFIG_HOME", &config_home);
+        std::env::set_var("XYNAPSE_CONFIG_HOME", &config_home);
         std::env::remove_var("ANTHROPIC_MODEL");
         std::env::set_var("ANTHROPIC_MODEL", "sonnet");
 
         let resolved = with_current_dir(&root, || resolve_repl_model(DEFAULT_MODEL.to_string()));
 
-        assert_eq!(resolved, "xynapse-sonnet-4-6");
+        assert_eq!(resolved, "openai/gpt-4.1-mini");
 
         std::env::remove_var("ANTHROPIC_MODEL");
-        std::env::remove_var("CLAW_CONFIG_HOME");
+        std::env::remove_var("XYNAPSE_CONFIG_HOME");
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
 
@@ -11504,14 +11506,14 @@ mod tests {
         fs::create_dir_all(&root).expect("root dir");
         let config_home = root.join("config");
         fs::create_dir_all(&config_home).expect("config home dir");
-        std::env::set_var("CLAW_CONFIG_HOME", &config_home);
+        std::env::set_var("XYNAPSE_CONFIG_HOME", &config_home);
         std::env::remove_var("ANTHROPIC_MODEL");
 
         let resolved = with_current_dir(&root, || resolve_repl_model(DEFAULT_MODEL.to_string()));
 
         assert_eq!(resolved, DEFAULT_MODEL);
 
-        std::env::remove_var("CLAW_CONFIG_HOME");
+        std::env::remove_var("XYNAPSE_CONFIG_HOME");
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
 
@@ -11604,8 +11606,8 @@ mod tests {
         assert!(help.contains("xynapse mcp"));
         assert!(help.contains("xynapse skills"));
         assert!(help.contains("xynapse /skills"));
-        assert!(help.contains("ultraworkers/claw-code"));
-        assert!(help.contains("cargo install claw-code"));
+        assert!(help.contains("github.com/jabrailkhalil/xynapse"));
+        assert!(help.contains("deprecated stub"));
         assert!(!help.contains("xynapse login"));
         assert!(!help.contains("xynapse logout"));
     }
@@ -12020,7 +12022,7 @@ UU conflicted.rs",
         let handle = create_managed_session_handle("session-alpha").expect("jsonl handle");
         assert!(handle.path.ends_with("session-alpha.jsonl"));
 
-        let legacy_path = workspace.join(".claw/sessions/legacy.json");
+        let legacy_path = workspace.join(".xynapse/sessions/legacy.json");
         std::fs::create_dir_all(
             legacy_path
                 .parent()
@@ -12140,7 +12142,7 @@ UU conflicted.rs",
     fn unknown_omc_slash_command_guidance_explains_runtime_gap() {
         let message = format_unknown_slash_command("oh-my-xynapsecode:hud");
         assert!(message.contains("Unknown slash command: /oh-my-xynapsecode:hud"));
-        assert!(message.contains("Xynapse Code/OMC plugin command"));
+        assert!(message.contains("OMC plugin command"));
         assert!(message.contains("does not yet load plugin slash commands"));
     }
 
@@ -12148,7 +12150,7 @@ UU conflicted.rs",
     fn resume_usage_mentions_latest_shortcut() {
         let usage = render_resume_usage();
         assert!(usage.contains("/resume <session-path|session-id|latest>"));
-        assert!(usage.contains(".claw/sessions/<session-id>.jsonl"));
+        assert!(usage.contains(".xynapse/sessions/<session-id>.jsonl"));
         assert!(usage.contains("/session list"));
     }
 
@@ -12757,23 +12759,22 @@ UU conflicted.rs",
         fs::create_dir_all(&workspace).expect("workspace");
         let script_path = workspace.join("fixture-mcp.py");
         write_mcp_server_fixture(&script_path);
+        let python = if cfg!(windows) { "python" } else { "python3" };
         fs::write(
             config_home.join("settings.json"),
-            format!(
-                r#"{{
-                  "mcpServers": {{
-                    "alpha": {{
-                      "command": "python3",
-                      "args": ["{}"]
-                    }},
-                    "broken": {{
-                      "command": "python3",
-                      "args": ["-c", "import sys; sys.exit(0)"]
-                    }}
-                  }}
-                }}"#,
-                script_path.to_string_lossy()
-            ),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "mcpServers": {
+                    "alpha": {
+                        "command": python,
+                        "args": [script_path]
+                    },
+                    "broken": {
+                        "command": python,
+                        "args": ["-c", "import sys; sys.exit(0)"]
+                    }
+                }
+            }))
+            .expect("serialize mcp settings"),
         )
         .expect("write mcp settings");
 
@@ -12920,13 +12921,14 @@ UU conflicted.rs",
 
     #[test]
     fn build_runtime_runs_plugin_lifecycle_init_and_shutdown() {
-        // Serialize access to process-wide env vars so parallel tests that
-        // set/remove ANTHROPIC_API_KEY do not race with this test.
+        // Serialize access to process-wide env vars so parallel tests do not
+        // race with this test's dummy provider credential.
         let _guard = env_lock();
         let config_home = temp_dir();
         // Inject a dummy API key so runtime construction succeeds without real credentials.
         // This test only exercises plugin lifecycle (init/shutdown), never calls the API.
-        std::env::set_var("ANTHROPIC_API_KEY", "test-dummy-key-for-plugin-lifecycle");
+        let original_api_key = std::env::var_os("OPENAI_API_KEY");
+        std::env::set_var("OPENAI_API_KEY", "test-dummy-key-for-plugin-lifecycle");
         let workspace = temp_dir();
         let source_root = temp_dir();
         fs::create_dir_all(&config_home).expect("config home");
@@ -12975,7 +12977,10 @@ UU conflicted.rs",
         let _ = fs::remove_dir_all(config_home);
         let _ = fs::remove_dir_all(workspace);
         let _ = fs::remove_dir_all(source_root);
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        match original_api_key {
+            Some(value) => std::env::set_var("OPENAI_API_KEY", value),
+            None => std::env::remove_var("OPENAI_API_KEY"),
+        }
     }
 
     #[test]
@@ -13220,7 +13225,7 @@ mod dump_manifests_tests {
             "error message should mention missing commands.ts: {error_msg}"
         );
         assert!(
-            error_msg.contains("XYNAPSE_CODE_UPSTREAM"),
+            error_msg.contains("XYNAPSE_LAB_UPSTREAM"),
             "error message should explain how to supply the upstream path: {error_msg}"
         );
 

@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Xynapse. All rights reserved.
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
@@ -21,7 +21,8 @@ export interface IXynapseAccount {
 	name: string;
 	email: string;
 	isConfigured: boolean;
-	keys: Record<string, string>;
+	/** Names of local credential files. Secret contents are never stored here. */
+	keyFiles: string[];
 	createdAt: string;
 }
 

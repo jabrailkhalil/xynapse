@@ -304,7 +304,8 @@ function assertXynapseAssistantConnectorBundle(extensionPath: string): void {
 	const extensionJs = fs.readFileSync(path.join(extensionPath, 'out', 'extension.js'), 'utf8');
 	const guiJs = fs.readFileSync(path.join(extensionPath, 'gui', 'assets', 'index.js'), 'utf8');
 	for (const provider of ['yandex_gpt', 'gigachat']) {
-		if (!configYaml.includes(`provider: ${provider}`)) {
+		const providerPattern = new RegExp(`provider:\\s*["']?${provider}["']?(?:\\s|$)`);
+		if (!providerPattern.test(configYaml)) {
 			throw new Error(`xynapse-assistant config is missing provider ${provider}.`);
 		}
 		if (!extensionJs.includes(`"${provider}"`) && !extensionJs.includes(`'${provider}'`)) {
@@ -331,7 +332,10 @@ function fromLocalNormal(extensionPath: string): Stream {
 			return result.pipe(createStatsStream(extensionName));
 		}
 	}
-	const packageManager = extensionName === 'xynapse-assistant'
+	// These extensions ship pre-bundled runtime assets and intentionally exclude
+	// production node_modules via .vscodeignore. Asking vsce to walk npm here
+	// fails clean source builds even though the packaged runtime is self-contained.
+	const packageManager = new Set(['xynapse-assistant', 'material-icon-theme']).has(extensionName)
 		? vsce.PackageManager.None
 		: vsce.PackageManager.Npm;
 
@@ -440,7 +444,7 @@ export function fromGithub({ name, version, repo, sha256, metadata }: IExtension
  * All extensions that are known to have some native component and thus must be built on the
  * platform that is being built.
  */
-const nativeExtensions = [
+const nativeExtensions: string[] = [
 	// 'microsoft-authentication', // Xynapse: removed
 ];
 

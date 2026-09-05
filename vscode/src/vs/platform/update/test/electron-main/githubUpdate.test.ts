@@ -5,10 +5,13 @@
 
 import assert from 'assert';
 import { IProductConfiguration } from '../../../../base/common/product.js';
+import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
 import { UpdateType } from '../../common/update.js';
 import { extractVersion, getConfiguredGitHubAssetName, getGitHubReleaseVersion, isGitHubReleaseNewer, selectGitHubReleaseAsset } from '../../electron-main/githubUpdate.js';
 
 suite('GitHubUpdate', () => {
+	ensureNoDisposablesAreLeakedInTestSuite();
+
 	const baseProduct = {
 		version: '1.108.0',
 		nameShort: 'Xynapse',

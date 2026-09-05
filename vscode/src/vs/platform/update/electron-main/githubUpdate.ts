@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as semver from 'semver';
 import { IProductConfiguration } from '../../../base/common/product.js';
+import * as semver from '../../../base/common/semver/semver.js';
 import { UpdateType } from '../common/update.js';
 
 export interface IGitHubReleaseAsset {

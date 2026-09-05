@@ -1,13 +1,19 @@
 {
 	"nameShort": "Xynapse",
 	"nameLong": "Xynapse IDE",
+	"quality": "stable",
+	"companyName": "Dzhabrail Khalilov",
+	"copyright": "Copyright (C) 2026 Dzhabrail Khalilov. Licensed under MIT.",
+	"publisherUrl": "https://github.com/jabrailkhalil/xynapse",
+	"supportUrl": "https://github.com/jabrailkhalil/xynapse/issues",
+	"updatesUrl": "https://github.com/jabrailkhalil/xynapse/releases",
 	"applicationName": "xynapse",
 	"dataFolderName": ".xynapse",
 	"portable": "xynapse-portable-data",
 	"win32MutexName": "xynapse",
 	"licenseName": "MIT",
-	"licenseUrl": "https://github.com/AuraXynapse/xynapse-ide/blob/main/LICENSE.txt",
-	"serverLicenseUrl": "https://github.com/AuraXynapse/xynapse-ide/blob/main/LICENSE.txt",
+	"licenseUrl": "https://github.com/jabrailkhalil/xynapse/blob/master/LICENSE",
+	"serverLicenseUrl": "https://github.com/jabrailkhalil/xynapse/blob/master/LICENSE",
 	"serverGreeting": [],
 	"serverLicense": [],
 	"serverLicensePrompt": "",
@@ -16,7 +22,12 @@
 	"tunnelApplicationName": "xynapse-tunnel",
 	"githubUpdate": {
 		"owner": "jabrailkhalil",
-		"repo": "xynapse"
+		"repo": "xynapse",
+		"assetNames": {
+			"win32-x64-archive": "Xynapse-portable-win32-x64-1.108.0.zip",
+			"win32-x64-user": "XynapseSetup-x64-1.108.0.exe",
+			"win32-x64-system": "XynapseSetup-x64-1.108.0.exe"
+		}
 	},
 	"win32DirName": "Xynapse",
 	"win32NameVersion": "Xynapse IDE",
@@ -34,11 +45,10 @@
 	"darwinProfilePayloadUUID": "CF808BE7-53F3-46C6-A7E2-7EDB98A5E959",
 	"linuxIconName": "xynapse",
 	"licenseFileName": "LICENSE.txt",
-	"reportIssueUrl": "https://github.com/AuraXynapse/xynapse-ide/issues/new",
+	"reportIssueUrl": "https://github.com/jabrailkhalil/xynapse/issues/new/choose",
 	"enableTelemetry": false,
 	"nodejsRepository": "https://nodejs.org",
 	"urlProtocol": "xynapse",
-	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.cdn.xynapse.dev/stable/{{commit}}/out/vs/workbench/contrib/webview/browser/pre/",
 	"builtInExtensions": [],
 	"configurationDefaults": {
 		"window.openFilesInNewWindow": "off",

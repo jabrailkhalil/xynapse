@@ -204,20 +204,20 @@ const Button = (title: string, href: string) => `[${title}](${href})`;
 export const walkthroughs: GettingStartedWalkthroughContent = [
 	{
 		id: 'Setup',
-		title: localize('gettingStarted.setup.title', "Добро пожаловать в Xynapse"),
-		description: localize('gettingStarted.setup.description', "Настройте редактор под себя и начните программировать"),
+		title: localize('gettingStarted.setup.title', "Welcome to Xynapse"),
+		description: localize('gettingStarted.setup.description', "Customize your editor and start coding"),
 		isFeatured: true,
 		icon: setupIcon,
 		when: '!isWeb',
-		walkthroughPageTitle: localize('gettingStarted.setup.walkthroughPageTitle', 'Настройка Xynapse'),
+		walkthroughPageTitle: localize('gettingStarted.setup.walkthroughPageTitle', 'Set up Xynapse'),
 		next: 'Beginner',
 		content: {
 			type: 'steps',
 			steps: [
 				{
 					id: 'pickColorTheme',
-					title: localize('gettingStarted.pickColor.title', "Выберите тему оформления"),
-					description: localize('gettingStarted.pickColor.description.interpolated', "Выберите тему, которая подходит вам.\n{0}", Button(localize('titleID', "Еще темы из списка"), 'command:workbench.action.selectTheme')),
+					title: localize('gettingStarted.pickColor.title', "Choose a color theme"),
+					description: localize('gettingStarted.pickColor.description.interpolated', "Choose a theme that works for you.\n{0}", Button(localize('titleID', "Browse Color Themes"), 'command:workbench.action.selectTheme')),
 					completionEvents: [
 						'onSettingChanged:workbench.colorTheme',
 						'onCommand:workbench.action.selectTheme'
@@ -226,21 +226,21 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				},
 				{
 					id: 'settingsSync',
-					title: localize('gettingStarted.settingsSync.title', "Синхронизация настроек"),
-					description: localize('gettingStarted.settingsSync.description.interpolated', "Сохраните ваши настройки и синхронизируйте их между устройствами.\n{0}", Button(localize('enableSync', "Включить синхронизацию"), 'command:workbench.userDataSync.actions.turnOn')),
+					title: localize('gettingStarted.xynapse.settingsSync.title', "Sync your settings"),
+					description: localize('gettingStarted.xynapse.settingsSync.description.interpolated', "Back up your settings and keep them synchronized across devices.\n{0}", Button(localize('xynapseEnableSync', "Enable Settings Sync"), 'command:workbench.userDataSync.actions.turnOn')),
 					when: 'syncStatus != uninitialized',
 					completionEvents: ['onEvent:sync-enabled'],
 					media: {
-						type: 'svg', altText: 'Синхронизация настроек', path: 'settingsSync.svg'
+						type: 'svg', altText: 'Settings Sync', path: 'settingsSync.svg'
 					},
 				},
 				{
 					id: 'openFolder',
-					title: localize('gettingStarted.openFolder.title', "Откройте проект"),
-					description: localize('gettingStarted.openFolder.description.interpolated', "Начните работу, открыв папку с вашим проектом.\n{0}", Button(localize('openFolder', "Открыть папку"), 'command:workbench.action.files.openFolder')),
+					title: localize('gettingStarted.xynapse.openFolder.title', "Open your project"),
+					description: localize('gettingStarted.openFolder.description.interpolated', "Get started by opening your project folder.\n{0}", Button(localize('openFolder', "Open Folder"), 'command:workbench.action.files.openFolder')),
 					when: 'workspaceFolderCount == 0',
 					media: {
-						type: 'svg', altText: 'Открыть папку', path: 'openFolder.svg'
+						type: 'svg', altText: 'Open Folder', path: 'openFolder.svg'
 					},
 				}
 			]
@@ -249,20 +249,20 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 
 	{
 		id: 'SetupWeb',
-		title: localize('gettingStarted.setupWeb.title', "Начните работу с Xynapse Web"),
-		description: localize('gettingStarted.setupWeb.description', "Настройте редактор, изучите основы и начните программировать"),
+		title: localize('gettingStarted.setupWeb.title', "Get started with Xynapse Web"),
+		description: localize('gettingStarted.setupWeb.description', "Customize the editor, learn the basics, and start coding"),
 		isFeatured: true,
 		icon: setupIcon,
 		when: 'isWeb',
 		next: 'Beginner',
-		walkthroughPageTitle: localize('gettingStarted.setupWeb.walkthroughPageTitle', 'Настройка Xynapse Web'),
+		walkthroughPageTitle: localize('gettingStarted.setupWeb.walkthroughPageTitle', 'Set up Xynapse Web'),
 		content: {
 			type: 'steps',
 			steps: [
 				{
 					id: 'pickColorThemeWeb',
-					title: localize('gettingStarted.pickColor.title', "Choose your theme"),
-					description: localize('gettingStarted.pickColor.description.interpolated', "The right theme helps you focus on your code, is easy on your eyes, and is simply more fun to use.\n{0}", Button(localize('titleID', "Browse Color Themes"), 'command:workbench.action.selectTheme')),
+					title: localize('gettingStarted.web.pickColor.title', "Choose your theme"),
+					description: localize('gettingStarted.web.pickColor.description.interpolated', "The right theme helps you focus on your code, is easy on your eyes, and is simply more fun to use.\n{0}", Button(localize('webTitleID', "Browse Color Themes"), 'command:workbench.action.selectTheme')),
 					completionEvents: [
 						'onSettingChanged:workbench.colorTheme',
 						'onCommand:workbench.action.selectTheme'
@@ -281,10 +281,10 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'extensionsWebWeb',
 					title: localize('gettingStarted.extensions.title', "Code with extensions"),
-					description: localize('gettingStarted.extensionsWeb.description.interpolated', "Расширения — это супер-силы Xynapse. Множество из них доступно в веб-версии.\n{0}", Button(localize('browsePopularWeb', "Обзор расширений"), 'command:workbench.extensions.action.showPopularExtensions')),
+					description: localize('gettingStarted.extensionsWeb.description.interpolated', "Extensions add powerful capabilities to Xynapse, and many are available on the web.\n{0}", Button(localize('browsePopularWeb', "Browse Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
 					when: 'workspacePlatform == \'webworker\'',
 					media: {
-						type: 'svg', altText: 'Магазин расширений', path: 'extensions-web.svg'
+						type: 'svg', altText: 'Extensions view', path: 'extensions-web.svg'
 					},
 				},
 				{
@@ -298,8 +298,8 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				},
 				{
 					id: 'settingsSyncWeb',
-					title: localize('gettingStarted.settingsSync.title', "Sync settings across devices"),
-					description: localize('gettingStarted.settingsSync.description.interpolated', "Keep your essential customizations backed up and updated across all your devices.\n{0}", Button(localize('enableSync', "Backup and Sync Settings"), 'command:workbench.userDataSync.actions.turnOn')),
+					title: localize('gettingStarted.web.settingsSync.title', "Sync settings across devices"),
+					description: localize('gettingStarted.web.settingsSync.description.interpolated', "Keep your essential customizations backed up and updated across all your devices.\n{0}", Button(localize('webEnableSync', "Backup and Sync Settings"), 'command:workbench.userDataSync.actions.turnOn')),
 					when: 'syncStatus != uninitialized',
 					completionEvents: ['onEvent:sync-enabled'],
 					media: {
@@ -309,13 +309,13 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'commandPaletteTaskWeb',
 					title: localize('gettingStarted.commandPalette.title', "Unlock productivity with the Command Palette "),
-					description: localize('gettingStarted.commandPalette.description.interpolated', "Выполняйте команды без мыши для любых задач в Xynapse.\n{0}", Button(localize('commandPalette', "Открыть палитру команд"), 'command:workbench.action.showCommands')),
+					description: localize('gettingStarted.commandPalette.description.interpolated', "Run any Xynapse command without reaching for the mouse.\n{0}", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
 					media: { type: 'svg', altText: 'Command Palette overlay for searching and executing commands.', path: 'commandPalette.svg' },
 				},
 				{
 					id: 'pickAFolderTask-WebWeb',
 					title: localize('gettingStarted.setup.OpenFolder.title', "Open up your code"),
-					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "Всё готово для начала работы. Откройте локальный проект или удалённый репозиторий.\n{0}\n{1}", Button(localize('openFolder', "Открыть папку"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Открыть репозиторий"), 'command:remoteHub.openRepository')),
+					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "You are ready to start. Open a local project or a remote repository.\n{0}\n{1}", Button(localize('openFolder', "Open Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Open Repository"), 'command:remoteHub.openRepository')),
 					when: 'workspaceFolderCount == 0',
 					media: {
 						type: 'svg', altText: 'Explorer view showing buttons for opening folder and cloning repository.', path: 'openFolder.svg'
@@ -335,13 +335,13 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 	},
 	{
 		id: 'SetupAccessibility',
-		title: localize('gettingStarted.setupAccessibility.title', "Специальные возможности"),
-		description: localize('gettingStarted.setupAccessibility.description', "Узнайте об инструментах и горячих клавишах для доступности Xynapse."),
+		title: localize('gettingStarted.setupAccessibility.title', "Accessibility"),
+		description: localize('gettingStarted.setupAccessibility.description', "Learn about Xynapse accessibility tools and keyboard shortcuts."),
 		isFeatured: true,
 		icon: setupIcon,
 		when: CONTEXT_ACCESSIBILITY_MODE_ENABLED.key,
 		next: 'Setup',
-		walkthroughPageTitle: localize('gettingStarted.setupAccessibility.walkthroughPageTitle', 'Специальные возможности Xynapse'),
+		walkthroughPageTitle: localize('gettingStarted.setupAccessibility.walkthroughPageTitle', 'Xynapse Accessibility'),
 		content: {
 			type: 'steps',
 			steps: [
@@ -372,7 +372,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'commandPaletteTaskAccessibility',
 					title: localize('gettingStarted.commandPaletteAccessibility.title', "Unlock productivity with the Command Palette "),
-					description: localize('gettingStarted.commandPaletteAccessibility.description.interpolated', "Выполняйте команды без мыши для любых задач в Xynapse.\n{0}", Button(localize('commandPalette', "Открыть палитру команд"), 'command:workbench.action.showCommands')),
+					description: localize('gettingStarted.commandPaletteAccessibility.description.interpolated', "Run any Xynapse command without reaching for the mouse.\n{0}", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
 					media: { type: 'markdown', path: 'empty' },
 				},
 				{
@@ -452,20 +452,20 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'settingsAndSync',
 					title: localize('gettingStarted.settings.title', "Tune your settings"),
-					description: localize('gettingStarted.settingsAndSync.description.interpolated', "Настройте все аспекты Xynapse и [синхронизируйте](command:workbench.userDataSync.actions.turnOn) настройки между устройствами.\n{0}", Button(localize('tweakSettings', "Открыть настройки"), 'command:toSide:workbench.action.openSettings')),
+					description: localize('gettingStarted.settingsAndSync.description.interpolated', "Customize every aspect of Xynapse and [synchronize](command:workbench.userDataSync.actions.turnOn) settings across devices.\n{0}", Button(localize('tweakSettings', "Open Settings"), 'command:toSide:workbench.action.openSettings')),
 					when: 'workspacePlatform != \'webworker\' && syncStatus != uninitialized',
 					completionEvents: ['onEvent:sync-enabled'],
 					media: {
-						type: 'svg', altText: 'Настройки Xynapse', path: 'settings.svg'
+						type: 'svg', altText: 'Xynapse Settings', path: 'settings.svg'
 					},
 				},
 				{
 					id: 'extensions',
 					title: localize('gettingStarted.extensions.title', "Code with extensions"),
-					description: localize('gettingStarted.extensions.description.interpolated', "Расширения — это супер-силы Xynapse. Они добавляют полезные хаки, расширяют функциональность и открывают новые возможности.\n{0}", Button(localize('browsePopular', "Обзор популярных расширений"), 'command:workbench.extensions.action.showPopularExtensions')),
+					description: localize('gettingStarted.extensions.description.interpolated', "Extensions add languages, tools, and workflows to Xynapse.\n{0}", Button(localize('browsePopular', "Browse Popular Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
 					when: 'workspacePlatform != \'webworker\'',
 					media: {
-						type: 'svg', altText: 'Магазин расширений Xynapse', path: 'extensions.svg'
+						type: 'svg', altText: 'Xynapse Extensions view', path: 'extensions.svg'
 					},
 				},
 				{

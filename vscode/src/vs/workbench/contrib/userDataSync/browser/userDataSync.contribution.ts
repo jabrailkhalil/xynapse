@@ -3,4 +3,4 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Xynapse: settings sync to Microsoft completely disabled — no contributions registered
+// Xynapse: settings sync to Microsoft completely disabled - no contributions registered

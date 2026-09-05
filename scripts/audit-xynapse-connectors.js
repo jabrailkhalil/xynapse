@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const childProcess = require("child_process");
+const { isDeepStrictEqual } = require("util");
 
 const repoRoot = path.resolve(__dirname, "..");
 
@@ -28,15 +29,17 @@ const extensionRoots = [
   },
   {
     name: "portable",
-    root: path.join(
-      repoRoot,
-      "portable-build",
-      "xynapse-portable",
-      "resources",
-      "app",
-      "extensions",
-      "xynapse-assistant",
-    ),
+    root:
+      process.env.XYNAPSE_PORTABLE_EXTENSION_ROOT ||
+      path.join(
+        repoRoot,
+        "portable-build",
+        "xynapse-portable",
+        "resources",
+        "app",
+        "extensions",
+        "xynapse-assistant",
+      ),
     required: false,
   },
 ];
@@ -68,6 +71,21 @@ function sha256(filePath) {
     .createHash("sha256")
     .update(fs.readFileSync(filePath))
     .digest("hex");
+}
+
+function parityMatches(sourcePath, candidatePath, relativePath) {
+  if (relativePath.endsWith(".json")) {
+    try {
+      return isDeepStrictEqual(
+        JSON.parse(readText(sourcePath)),
+        JSON.parse(readText(candidatePath)),
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  return sha256(candidatePath) === sha256(sourcePath);
 }
 
 function parseScalar(value) {
@@ -409,10 +427,9 @@ for (const file of parityFiles) {
   if (!exists(sourceFile)) {
     continue;
   }
-  const sourceHash = sha256(sourceFile);
   for (const entry of presentRoots.filter((item) => item.name !== "source")) {
     const candidate = path.join(entry.root, file);
-    if (exists(candidate) && sha256(candidate) !== sourceHash) {
+    if (exists(candidate) && !parityMatches(sourceFile, candidate, file)) {
       fail(`${entry.name}: ${file} differs from source`);
     }
   }
@@ -451,4 +468,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("\nOK: source, app, and portable connector bundles are in sync.");
+console.log(
+  `\nOK: connector bundles are in sync across ${presentRoots.map((entry) => entry.name).join(", ")}.`,
+);

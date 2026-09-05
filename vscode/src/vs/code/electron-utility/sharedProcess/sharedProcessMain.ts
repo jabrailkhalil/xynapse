@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// import { hostname, release } from 'os'; // Xynapse: unused — telemetry disabled
+// import { hostname, release } from 'os'; // Xynapse: unused - telemetry disabled
 import { MessagePortMain, MessageEvent } from '../../../base/parts/sandbox/node/electronTypes.js';
 import { toErrorMessage } from '../../../base/common/errorMessage.js';
 import { onUnexpectedError, setUnexpectedErrorHandler } from '../../../base/common/errors.js';
@@ -300,7 +300,7 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 		const activeWindowRouter = new StaticRouter(ctx => activeWindowManager.getActiveClientId().then(id => ctx === id));
 		services.set(IExtensionRecommendationNotificationService, new ExtensionRecommendationNotificationServiceChannelClient(this.server.getChannel('extensionRecommendationNotification', activeWindowRouter)));
 
-		// Xynapse: telemetry completely disabled — no 1DS appender, no data collection
+		// Xynapse: telemetry completely disabled - no 1DS appender, no data collection
 		const telemetryService: ITelemetryService = NullTelemetryService;
 		const appenders: ITelemetryAppender[] = [NullAppender];
 

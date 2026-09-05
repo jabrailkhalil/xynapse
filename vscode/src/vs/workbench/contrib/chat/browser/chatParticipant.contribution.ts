@@ -28,7 +28,7 @@ import { IRawChatParticipantContribution } from '../common/participants/chatPart
 import { ChatAgentLocation, ChatModeKind } from '../common/constants.js';
 import { ChatViewId } from './chat.js';
 
-// --- Chat Container & View Registration (disabled — Xynapse Assistant replaces Copilot)
+// --- Chat Container & View Registration (disabled - Xynapse Assistant replaces Copilot)
 
 const chatParticipantExtensionPoint = extensionsRegistry.ExtensionsRegistry.registerExtensionPoint<IRawChatParticipantContribution[]>({
 	extensionPoint: 'chatParticipants',

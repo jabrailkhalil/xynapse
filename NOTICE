@@ -1,0 +1,21 @@
+Xynapse IDE
+Copyright (c) 2026 Dzhabrail Khalilov
+
+Xynapse IDE is distributed under the MIT License. See LICENSE.
+
+This product is built from and contains modified portions of Code - OSS,
+Copyright (c) Microsoft Corporation, distributed under the MIT License. The
+corresponding license and third-party notices are retained under vscode/.
+
+The built-in Xynapse Assistant is based on modified portions of Continue,
+Copyright (c) Continue Dev, Inc., distributed under the Apache License 2.0. Its
+license and third-party notices are retained under plugins/continue-main/ and
+inside the packaged extension.
+
+The bundled Xynapse command-line runtime includes modified portions of the
+Claw Code Rust workspace (ultraworkers/claw-code), distributed under the MIT
+License declared by that workspace. Its corresponding source is retained under
+.external/claw-code/rust/.
+
+Electron, Chromium, Node.js, and other bundled dependencies retain their own
+licenses and notices in the source tree and generated distribution.

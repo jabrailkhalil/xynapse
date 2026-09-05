@@ -42,7 +42,7 @@ const compilations = [
 	'extensions/git/tsconfig.json',
 	'extensions/git-base/tsconfig.json',
 	'extensions/github/tsconfig.json',
-	// 'extensions/github-authentication/tsconfig.json', // Xynapse: removed
+	'extensions/github-authentication/tsconfig.json',
 	'extensions/grunt/tsconfig.json',
 	'extensions/gulp/tsconfig.json',
 	'extensions/html-language-features/client/tsconfig.json',
@@ -57,7 +57,7 @@ const compilations = [
 	'extensions/merge-conflict/tsconfig.json',
 	// 'extensions/mermaid-chat-features/tsconfig.json', // Xynapse: removed
 	'extensions/terminal-suggest/tsconfig.json',
-	// 'extensions/microsoft-authentication/tsconfig.json', // Xynapse: removed
+	'extensions/microsoft-authentication/tsconfig.json',
 	'extensions/notebook-renderers/tsconfig.json',
 	'extensions/npm/tsconfig.json',
 	'extensions/php-language-features/tsconfig.json',

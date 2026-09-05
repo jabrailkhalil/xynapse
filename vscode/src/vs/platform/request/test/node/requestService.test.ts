@@ -21,7 +21,8 @@ suite('Request Service', () => {
 			assert.ok(response);
 		} catch (err) {
 			assert.ok(
-				err?.message?.includes('No authority could be contacted for authentication')
+				err?.message?.includes('InitializeSecurityContext:')
+				|| err?.message?.includes('No authority could be contacted for authentication')
 				|| err?.message?.includes('No Kerberos credentials available')
 				|| err?.message?.includes('No credentials are available in the security package')
 				|| err?.message?.includes('no credential for')

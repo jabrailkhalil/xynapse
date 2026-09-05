@@ -87,11 +87,11 @@ function main() {
 	// VSCODE_GLOBALS: file root
 	globalThis._VSCODE_FILE_ROOT = baseUrl.href;
 
-	if (args.build) {
-		// when running from `out-build`, ensure to load the default
-		// messages file, because all `nls.localize` calls have their
-		// english values removed and replaced by an index.
-		globalThis._VSCODE_NLS_MESSAGES = _require(`${REPO_ROOT}/${out}/nls.messages.json`);
+	// Xynapse's regular compile also applies the NLS transform. Load the table
+	// whenever it is present; source-style localize calls simply do not use it.
+	const nlsMessagesPath = `${REPO_ROOT}/${out}/nls.messages.json`;
+	if (fs.existsSync(nlsMessagesPath)) {
+		globalThis._VSCODE_NLS_MESSAGES = _require(nlsMessagesPath);
 	}
 
 	// Test file operations that are common across platforms. Used for test infra, namely snapshot tests
