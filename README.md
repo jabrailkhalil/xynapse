@@ -8,6 +8,8 @@
 
 A Windows IDE built on Code - OSS, with Xynapse Assistant and BVC planning included.
 
+[Website and features](https://code.clickn.dev/en/) · [All clickn.dev projects](https://clickn.dev/)
+
 [![IDE 1.108.0](https://img.shields.io/badge/IDE-1.108.0-6366f1?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/v1.108.0)
 [![Assistant 1.0.1](https://img.shields.io/badge/Assistant-1.0.1-8b5cf6?style=flat-square)](https://github.com/jabrailkhalil/xynapse/releases/tag/assistant-v1.0.1-bvc.0.1.1)
 [![BVC 0.1.1](https://img.shields.io/badge/BVC-0.1.1-0891b2?style=flat-square)](./plugins/continue-main/packages/bvc/README.md)
